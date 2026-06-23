@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
 import { getProgress, saveProgress } from './api.js';
@@ -14,6 +14,8 @@ function LoadingScreen({ message = 'Loading…' }) {
     </div>
   );
 }
+
+const LESSONS = import.meta.glob('../lessons/*.jsx');
 
 export default function App() {
   const [student, setStudent]                 = useState(null);
@@ -32,11 +34,15 @@ export default function App() {
     setLoadingLesson(true);
     setActiveUnit(unitId);
     try {
-      const mod = await import(`../lessons/${unitId}.jsx`);
+      const path = `../lessons/${unitId}.jsx`;
+      const loader = LESSONS[path];
+      if (!loader) throw new Error('No lesson file found: ' + unitId);
+      const mod = await loader();
       setLessonComponent(() => mod.default);
     } catch (err) {
       console.error('Could not load lesson:', unitId, err);
-      setLessonComponent(null); setActiveUnit(null);
+      setLessonComponent(null);
+      setActiveUnit(null);
     }
     setLoadingLesson(false);
   }
