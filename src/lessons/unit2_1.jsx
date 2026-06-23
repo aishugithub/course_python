@@ -544,7 +544,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit2_1() {
+export default function Unit2_1({ student, onUnitComplete }) {
   const sections = [
     { id: "levels", label: "Language Levels" },
     { id: "pipeline", label: "Translation Pipeline" },
@@ -564,7 +564,7 @@ export default function Unit2_1() {
     <TranslationSim />,
     <WhyHighLevel />,
     <DecodeChallenge />,
-    <Quiz onComplete={() => markComplete(4)} />,
+    <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (

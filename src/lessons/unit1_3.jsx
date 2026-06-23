@@ -436,7 +436,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit1_3() {
+export default function Unit1_3({ student, onUnitComplete }) {
   const sections = [
     { id: "timeline", label: "Timeline" },
     { id: "thenvsnow", label: "Then vs Now" },
@@ -467,7 +467,7 @@ export default function Unit1_3() {
 
     <ThenVsNow />,
     <LangTree />,
-    <Quiz onComplete={() => markComplete(3)} />,
+    <Quiz onComplete={() => { markComplete(3); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (

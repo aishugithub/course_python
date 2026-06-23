@@ -463,7 +463,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit2_2() {
+export default function Unit2_2({ student, onUnitComplete }) {
   const sections = [
     { id: "flipper", label: "Bit Flipper" },
     { id: "bytes", label: "Bits & Bytes" },
@@ -478,7 +478,7 @@ export default function Unit2_2() {
   const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted(p => [...p, idx]); };
   const goNext = () => { markComplete(activeSection); setActiveSection(s => Math.min(sections.length - 1, s + 1)); };
 
-  const content = [<BitFlipper />, <BitsAndBytes />, <EverythingIsBinary />, <BuildMessage />, <Quiz onComplete={() => markComplete(4)} />];
+  const content = [<BitFlipper />, <BitsAndBytes />, <EverythingIsBinary />, <BuildMessage />, <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />];
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>

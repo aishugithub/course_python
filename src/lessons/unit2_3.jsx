@@ -528,7 +528,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit2_3() {
+export default function Unit2_3({ student, onUnitComplete }) {
   const sections = [
     { id: "why", label: "Why Assembly?" },
     { id: "decoder", label: "Instruction Decoder" },
@@ -548,7 +548,7 @@ export default function Unit2_3() {
     <InstructionDecoder />,
     <ProgramWalkthrough />,
     <AssemblyVsPython />,
-    <Quiz onComplete={() => markComplete(4)} />,
+    <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (

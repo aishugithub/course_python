@@ -539,7 +539,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit3_3() {
+export default function Unit3_3({ student, onUnitComplete }) {
   const sections = [
     { id: "hybrid", label: "Python is Hybrid" },
     { id: "bytecode", label: "Bytecode Pipeline" },
@@ -559,7 +559,7 @@ export default function Unit3_3() {
     <BytecodeDive />,
     <PVMExplained />,
     <FullPicture />,
-    <Quiz onComplete={() => markComplete(4)} />,
+    <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (

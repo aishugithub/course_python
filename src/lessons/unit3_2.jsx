@@ -679,7 +679,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit3_2() {
+export default function Unit3_2({ student, onUnitComplete }) {
   const sections = [
     { id: "analogy", label: "Live Interpreter" },
     { id: "repl", label: "Try the REPL" },
@@ -699,7 +699,7 @@ export default function Unit3_2() {
     <REPLSimulator />,
     <CompileVsInterpret />,
     <ProsAndCons />,
-    <Quiz onComplete={() => markComplete(4)} />,
+    <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (

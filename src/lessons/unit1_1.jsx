@@ -295,7 +295,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main App ───────────────────────────────────────────────────────────────
-export default function Unit1_1() {
+export default function Unit1_1({ student, onUnitComplete }) {
   const sections = [
     { id: "intro", label: "Overview" },
     { id: "ipu", label: "Input → Process → Output" },
@@ -433,7 +433,7 @@ export default function Unit1_1() {
       <p style={{ color: COLORS.muted, fontSize: 13, marginBottom: 20 }}>
         3 questions to check your understanding of Unit 1.1.
       </p>
-      <Quiz onComplete={(s) => setQuizScore(s)} />
+      <Quiz onComplete={(s) => { setQuizScore(s); onUnitComplete && onUnitComplete(); }} />
     </div>,
   ];
 

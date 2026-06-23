@@ -546,7 +546,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit3_1() {
+export default function Unit3_1({ student, onUnitComplete }) {
   const sections = [
     { id: "analogy", label: "The Analogy" },
     { id: "pipeline", label: "Pipeline" },
@@ -566,7 +566,7 @@ export default function Unit3_1() {
     <CompilationPipeline />,
     <CompilationProperties />,
     <SpotTheError />,
-    <Quiz onComplete={() => markComplete(4)} />,
+    <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (

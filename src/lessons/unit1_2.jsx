@@ -425,7 +425,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit1_2() {
+export default function Unit1_2({ student, onUnitComplete }) {
   const sections = [
     { id: "intro", label: "What is an Algorithm?" },
     { id: "properties", label: "4 Properties" },
@@ -445,7 +445,7 @@ export default function Unit1_2() {
     <AlgoProperties />,
     <Flowchart />,
     <AlgoVsProgram />,
-    <Quiz onComplete={() => markComplete(4)} />,
+    <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (

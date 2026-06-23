@@ -551,7 +551,7 @@ function Quiz({ onComplete }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-export default function Unit2_4() {
+export default function Unit2_4({ student, onUnitComplete }) {
   const sections = [
     { id: "ladder", label: "Language Ladder" },
     { id: "features", label: "What They Handle" },
@@ -571,7 +571,7 @@ export default function Unit2_4() {
     <AutomaticFeatures />,
     <LanguageFamilies />,
     <MatchChallenge />,
-    <Quiz onComplete={() => markComplete(4)} />,
+    <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />,
   ];
 
   return (
