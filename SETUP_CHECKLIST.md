@@ -27,8 +27,12 @@
 6. Set up Google Sheet + Apps Script (Code.gs) → get GAS URL
 7. Paste GAS URL into config/gas.config.js
 8. npm run dev → test locally
-9. git init → git add . → git commit -m "init" → git branch -M main → git remote add origin YOUR_REPO_URL → git push origin main
+9. git init → git add . → git commit -m "init" → git branch -M main → git remote add origin https://github.com/aishugithub/course_python → git push origin main
 10. GitHub repo → Settings → Actions → Read and write permissions → Save
 11. Wait for green tick in Actions tab
 12. GitHub repo → Settings → Pages → gh-pages branch → Save
 13. Done! Site is live at https://aishugithub.github.io/REPO_NAME/
+
+
+You need to give permissin for Actions in Github Settings
+You need to enable pages. choose the gh-pages and save.

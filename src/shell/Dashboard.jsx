@@ -10,13 +10,9 @@ export default function Dashboard({ student, completedUnits, onSelectUnit }) {
   const totalUnits = COURSE_CONFIG.modules.reduce((acc, m) => acc + m.units.length, 0);
   const pct = Math.round((completedUnits.length / totalUnits) * 100);
 
-  function isUnlocked(moduleIdx, unitIdx) {
-    if (moduleIdx === 0 && unitIdx === 0) return true;
-    let prevUnitId;
-    if (unitIdx > 0) { prevUnitId = COURSE_CONFIG.modules[moduleIdx].units[unitIdx - 1].unitId; }
-    else { const pm = COURSE_CONFIG.modules[moduleIdx - 1]; prevUnitId = pm.units[pm.units.length - 1].unitId; }
-    return completedUnits.includes(prevUnitId);
-  }
+  // Free navigation: every unit is always clickable, in any order.
+  // completedUnits is still used to show progress (✅ vs ▶️) and the
+  // overall % bar, but no longer gates which units can be opened.
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'system-ui, sans-serif' }}>
@@ -53,18 +49,17 @@ export default function Dashboard({ student, completedUnits, onSelectUnit }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               {mod.units.map((unit, uIdx) => {
                 const done = completedUnits.includes(unit.unitId);
-                const unlocked = isUnlocked(mIdx, uIdx);
                 const accent = MODULE_COLORS[mIdx % MODULE_COLORS.length];
                 return (
-                  <div key={unit.unitId} onClick={() => unlocked && onSelectUnit(unit.unitId)}
-                    style={{ background: done ? '#0D2818' : unlocked ? C.card : C.surface, border: `1px solid ${done ? C.green : unlocked ? accent + '55' : C.border}`, borderRadius: 10, padding: '14px 18px', minWidth: 200, maxWidth: 260, cursor: unlocked ? 'pointer' : 'not-allowed', opacity: unlocked ? 1 : 0.45, transition: 'transform 0.15s' }}
-                    onMouseEnter={e => { if (unlocked) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  <div key={unit.unitId} onClick={() => onSelectUnit(unit.unitId)}
+                    style={{ background: done ? '#0D2818' : C.card, border: `1px solid ${done ? C.green : accent + '55'}`, borderRadius: 10, padding: '14px 18px', minWidth: 200, maxWidth: 260, cursor: 'pointer', transition: 'transform 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = ''; }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ color: C.muted, fontSize: 11, fontFamily: 'monospace' }}>{unit.unitId.replace('_', '.')}</span>
-                      <span style={{ fontSize: 14 }}>{done ? '✅' : unlocked ? '▶️' : '🔒'}</span>
+                      <span style={{ fontSize: 14 }}>{done ? '✅' : '▶️'}</span>
                     </div>
-                    <div style={{ color: done ? C.green : unlocked ? C.text : C.muted, fontSize: 14, fontWeight: 600, marginTop: 6 }}>{unit.title}</div>
+                    <div style={{ color: done ? C.green : C.text, fontSize: 14, fontWeight: 600, marginTop: 6 }}>{unit.title}</div>
                   </div>
                 );
               })}
