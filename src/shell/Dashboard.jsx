@@ -6,26 +6,39 @@ const C = {
 };
 const MODULE_COLORS = ['#58A6FF','#BC8CFF','#3FB950','#E3B341','#F0883E','#39D5C4'];
 
-export default function Dashboard({ student, completedUnits, onSelectUnit }) {
+export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin }) {
   const totalUnits = COURSE_CONFIG.modules.reduce((acc, m) => acc + m.units.length, 0);
   const pct = Math.round((completedUnits.length / totalUnits) * 100);
+  const isGuest = !student;
 
   // Free navigation: every unit is always clickable, in any order.
   // completedUnits is still used to show progress (✅ vs ▶️) and the
   // overall % bar, but no longer gates which units can be opened.
+  // Guests (student === null) get the exact same Dashboard -- their
+  // completedUnits just comes from localStorage instead of Sheets
+  // (see guestProgress.js + App.jsx).
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ color: C.muted, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>SRET E-Learning</div>
+          <div style={{ color: C.muted, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 }}>Foothold</div>
           <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>{COURSE_CONFIG.courseTitle}</h1>
           <p style={{ color: C.muted, fontSize: 13, margin: '4px 0 0' }}>{COURSE_CONFIG.subtitle}</p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ color: C.text, fontWeight: 600 }}>{student.name}</div>
-          <div style={{ color: C.muted, fontSize: 12, fontFamily: 'monospace' }}>{student.rollNo}</div>
-        </div>
+        {isGuest ? (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ color: C.text, fontWeight: 600, fontSize: 14 }}>👋 Browsing as Guest</div>
+            <button onClick={onRequestLogin} style={{ marginTop: 4, background: 'transparent', border: `1px solid ${C.blue}`, color: C.blue, borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+              Sign in to save progress
+            </button>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ color: C.text, fontWeight: 600 }}>{student.name}</div>
+            <div style={{ color: C.muted, fontSize: 12, fontFamily: 'monospace' }}>{student.rollNo}</div>
+          </div>
+        )}
       </div>
       <div style={{ height: 4, background: C.border }}>
         <div style={{ height: '100%', width: `${pct}%`, background: C.green, transition: 'width 0.6s' }} />

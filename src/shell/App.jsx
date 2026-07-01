@@ -1,7 +1,9 @@
 import { useState, Suspense } from 'react';
+import Landing from './Landing.jsx';
 import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
 import { getProgress, saveProgress } from './api.js';
+import { getGuestProgress, saveGuestProgress } from './guestProgress.js';
 import COURSE_CONFIG from '../../config/course.config.js';
 
 const C = { bg: '#0D1117', muted: '#8B949E' };
@@ -17,17 +19,36 @@ function LoadingScreen({ message = 'Loading…' }) {
 
 const LESSONS = import.meta.glob('../lessons/*.jsx');
 
+// view walks: 'landing' -> 'dashboard' (guest or signed-in) -> 'lesson'.
+// 'login' is reachable from either 'landing' or 'dashboard' (guest wanting
+// to save progress), and always returns to 'dashboard' one way or another.
 export default function App() {
-  const [student, setStudent]                 = useState(null);
+  const [view, setView]                       = useState('landing');
+  const [student, setStudent]                 = useState(null); // null = guest
   const [completedUnits, setCompletedUnits]   = useState([]);
   const [activeUnit, setActiveUnit]           = useState(null);
   const [LessonComponent, setLessonComponent] = useState(null);
   const [loadingLesson, setLoadingLesson]     = useState(false);
+  const [savingProgress, setSavingProgress]   = useState(false);
 
-  async function handleLogin(studentData) {
+  // "Explore the Dashboard" from Landing, or "continue without an account"
+  // from Login -- both land here. Guest progress comes from this browser's
+  // localStorage, not the Sheets backend.
+  function handleExploreGuest() {
+    setStudent(null);
+    setCompletedUnits(getGuestProgress(COURSE_CONFIG.courseId));
+    setView('dashboard');
+  }
+
+  function handleGoToLogin() { setView('login'); }
+
+  // Called by Login.jsx after either a successful sign-in OR a successful
+  // registration -- both return the same { rollNo, name, batch, email } shape.
+  async function handleLoginSuccess(studentData) {
     setStudent(studentData);
     const completed = await getProgress(studentData.rollNo, COURSE_CONFIG.courseId);
     setCompletedUnits(completed);
+    setView('dashboard');
   }
 
   async function handleSelectUnit(unitId) {
@@ -49,15 +70,33 @@ export default function App() {
 
   async function handleUnitComplete() {
     if (!activeUnit) return;
-    await saveProgress(student.rollNo, COURSE_CONFIG.courseId, activeUnit);
+    if (student) {
+      // Signed-in: persist to Sheets. This can be slow (free Apps Script
+      // backend), so show a brief "saving" state rather than freezing
+      // with no feedback.
+      setSavingProgress(true);
+      await saveProgress(student.rollNo, COURSE_CONFIG.courseId, activeUnit);
+      setSavingProgress(false);
+    } else {
+      // Guest: instant, local, no network round-trip.
+      saveGuestProgress(COURSE_CONFIG.courseId, activeUnit);
+    }
     setCompletedUnits(prev => [...new Set([...prev, activeUnit])]);
     setActiveUnit(null); setLessonComponent(null);
   }
 
   function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); }
 
-  if (!student) return <Login onLogin={handleLogin} />;
+  if (view === 'landing') {
+    return <Landing onExploreGuest={handleExploreGuest} onGoToLogin={handleGoToLogin} />;
+  }
+
+  if (view === 'login') {
+    return <Login onLogin={handleLoginSuccess} onBack={handleExploreGuest} />;
+  }
+
   if (loadingLesson) return <LoadingScreen message="Loading lesson…" />;
+  if (savingProgress) return <LoadingScreen message="Saving your progress… this can take a few seconds." />;
 
   if (activeUnit && LessonComponent) {
     return (
@@ -72,5 +111,12 @@ export default function App() {
     );
   }
 
-  return <Dashboard student={student} completedUnits={completedUnits} onSelectUnit={handleSelectUnit} />;
+  return (
+    <Dashboard
+      student={student}
+      completedUnits={completedUnits}
+      onSelectUnit={handleSelectUnit}
+      onRequestLogin={handleGoToLogin}
+    />
+  );
 }

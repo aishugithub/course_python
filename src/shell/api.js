@@ -16,6 +16,18 @@ export async function loginStudent(rollNo, password) {
   }
 }
 
+export async function registerStudent(email, password, name) {
+  try {
+    const url = `${GAS_URL}?action=register&username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&name=${encodeURIComponent(name)}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error('register failed:', err);
+    return { success: false, message: 'Network error. Please try again.' };
+  }
+}
+
 export async function saveProgress(rollNo, courseId, unitId) {
   try {
     const url = `${GAS_URL}?action=saveProgress&rollNo=${encodeURIComponent(rollNo)}&courseId=${encodeURIComponent(courseId)}&unitId=${encodeURIComponent(unitId)}`;

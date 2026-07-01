@@ -33,6 +33,7 @@ function handleRequest(params) {
 function routeAction(body) {
   switch (body.action) {
     case 'login':        return handleLogin(body);
+    case 'register':     return handleRegister(body);
     case 'saveProgress': return handleSaveProgress(body);
     case 'getProgress':  return handleGetProgress(body);
     default:             return { success: false, message: 'Unknown action' };
@@ -50,6 +51,51 @@ function handleLogin(body) {
     }
   }
   return { success: false, message: 'Invalid roll number or password.' };
+}
+
+// ------------------------------------------------------------
+// Self-registration for the public, worldwide version of the
+// course (as opposed to professor-provisioned SRFET students,
+// who are added to the Students sheet by hand and use handleLogin
+// above). Here the "username" a learner logs in with IS their
+// email address, and the password is one they invent for this
+// site only -- it is never their real email account password.
+// The same Students sheet holds both kinds of rows; column 0
+// (historically "RollNo") just becomes the login handle, whether
+// that's a roll number or an email address. Column layout stays
+// identical so handleLogin/handleGetProgress/handleSaveProgress
+// don't need to change at all.
+// ------------------------------------------------------------
+function handleRegister(body) {
+  const email = String(body.username || '').trim().toLowerCase();
+  const password = String(body.password || '').trim();
+  const name = String(body.name || '').trim();
+
+  if (!email || !password || !name) {
+    return { success: false, message: 'Name, email, and password are all required.' };
+  }
+  // Very light email shape check -- the real validation (does this
+  // inbox exist) isn't something Apps Script can do, so we don't try.
+  if (email.indexOf('@') === -1) {
+    return { success: false, message: 'Please enter a valid email address.' };
+  }
+  if (password.length < 6) {
+    return { success: false, message: 'Please choose a password with at least 6 characters.' };
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Students');
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim().toLowerCase() === email) {
+      return { success: false, message: 'An account with this email already exists. Please sign in instead.' };
+    }
+  }
+
+  // Row shape matches handleLogin's [rollNo, password, name, batch, email]:
+  // rollNo slot = the email (that's what they'll type in to sign back in),
+  // batch slot marks this as a self-registered public account (not a batch year).
+  sheet.appendRow([email, password, name, 'Self-registered', email]);
+  return { success: true, student: { rollNo: email, name, batch: 'Self-registered', email } };
 }
 
 function handleSaveProgress(body) {
