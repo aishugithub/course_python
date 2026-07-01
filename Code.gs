@@ -36,8 +36,35 @@ function routeAction(body) {
     case 'register':     return handleRegister(body);
     case 'saveProgress': return handleSaveProgress(body);
     case 'getProgress':  return handleGetProgress(body);
+    case 'logEvent':     return handleLogEvent(body);
     default:             return { success: false, message: 'Unknown action' };
   }
+}
+
+// ------------------------------------------------------------
+// Usage analytics. One row per event: a page/session started,
+// a lesson was opened, a lesson was completed, or someone signed
+// up. AnonId identifies a browser even for guests who never log
+// in; UserId is filled in only once someone is signed in. Creates
+// the Events tab itself on first call, so no manual sheet setup
+// is required beyond redeploying this script.
+// ------------------------------------------------------------
+function handleLogEvent(body) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Events');
+  if (!sheet) {
+    sheet = ss.insertSheet('Events');
+    sheet.appendRow(['Timestamp', 'AnonId', 'UserId', 'EventType', 'CourseId', 'UnitId']);
+  }
+  sheet.appendRow([
+    new Date().toISOString(),
+    body.anonId || '',
+    body.userId || '',
+    body.eventType || '',
+    body.courseId || '',
+    body.unitId || '',
+  ]);
+  return { success: true };
 }
 
 function handleLogin(body) {

@@ -6,7 +6,7 @@ const C = {
 };
 const MODULE_COLORS = ['#58A6FF','#BC8CFF','#3FB950','#E3B341','#F0883E','#39D5C4'];
 
-export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin }) {
+export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin, onSignOff }) {
   const totalUnits = COURSE_CONFIG.modules.reduce((acc, m) => acc + m.units.length, 0);
   const pct = Math.round((completedUnits.length / totalUnits) * 100);
   const isGuest = !student;
@@ -37,6 +37,9 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
           <div style={{ textAlign: 'right' }}>
             <div style={{ color: C.text, fontWeight: 600 }}>{student.name}</div>
             <div style={{ color: C.muted, fontSize: 12, fontFamily: 'monospace' }}>{student.rollNo}</div>
+            <button onClick={onSignOff} style={{ marginTop: 4, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+              Sign Off
+            </button>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { loginStudent, registerStudent } from './api.js';
+import { logEvent } from './analytics.js';
 import COURSE_CONFIG from '../../config/course.config.js';
 
 const C = {
@@ -42,7 +43,10 @@ export default function Login({ onLogin, onBack }) {
     setLoading(true); setError('');
     const result = await registerStudent(email.trim(), newPassword, name.trim());
     setLoading(false);
-    if (result.success) { onLogin(result.student); }
+    if (result.success) {
+      logEvent('signup', { userId: result.student.rollNo }); // only on a real new account, not every sign-in
+      onLogin(result.student);
+    }
     else { setError(result.message || 'Could not create your account. Please try again.'); }
   }
 
