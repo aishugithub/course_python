@@ -116,21 +116,32 @@ export default function App() {
   if (savingProgress) return <LoadingScreen message="Saving your progress… this can take a few seconds." />;
 
   if (activeUnit && LessonComponent) {
-    // The back button is a fixed overlay, so it never affects layout on its
-    // own -- without this left padding it sits directly on top of whatever
-    // the lesson renders in its own top-left corner (the "MODULE X > UNIT
-    // X.Y" breadcrumb), hiding it. Reserving a left gutter and shifting the
-    // whole lesson right clears that, without touching any lesson file.
+    // A small icon-only button instead of a text pill: on a phone screen,
+    // reserving a fixed margin to dodge the lesson's own header would waste
+    // a big chunk of a very small viewport. A compact circular button covers
+    // only a tiny corner, and the arrow is a self-explanatory "back" icon on
+    // its own -- the title/aria-label add a hover tooltip for desktop users
+    // without needing any permanent on-screen text or layout shift.
     return (
-      <div style={{ minHeight: '100vh', background: '#0D1117' }}>
-        <div style={{ position: 'fixed', top: 16, left: 16, zIndex: 1000 }}>
-          <button onClick={handleBackToDashboard} style={{ background: '#1C2333', border: '1px solid #30363D', color: '#8B949E', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
+      <div>
+        <div style={{ position: 'fixed', top: 12, left: 12, zIndex: 1000 }}>
+          <button
+            onClick={handleBackToDashboard}
+            title="Back to Dashboard"
+            aria-label="Back to Dashboard"
+            style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'rgba(28,35,51,0.9)', border: '1px solid #30363D',
+              color: '#C9D1D9', fontSize: 18, lineHeight: 1, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            ←
+          </button>
         </div>
-        <div style={{ paddingLeft: 150 }}>
-          <Suspense fallback={<LoadingScreen message="Preparing lesson…" />}>
-            <LessonComponent student={student} onUnitComplete={handleUnitComplete} />
-          </Suspense>
-        </div>
+        <Suspense fallback={<LoadingScreen message="Preparing lesson…" />}>
+          <LessonComponent student={student} onUnitComplete={handleUnitComplete} />
+        </Suspense>
       </div>
     );
   }
