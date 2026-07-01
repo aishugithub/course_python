@@ -43,6 +43,28 @@ const COURSE_CONFIG = {
 		{ unitId: "Unit3_3", title: "Python" },
       ],
     },
+	{
+      moduleId:    "M4",
+      moduleTitle: "Your First Python Program",
+      icon:        "",
+      units: [
+        { unitId: "Unit4_1", title: "Your First Program" },
+        { unitId: "Unit4_2", title: "Variables & Memory" },
+		{ unitId: "Unit4_3", title: "Input & Type Conversion" },
+		{ unitId: "Unit4_4", title: "Operators & Expressions" },
+      ],
+    },
+	{
+      moduleId:    "M5",
+      moduleTitle: "Making Decisions",
+      icon:        "",
+      units: [
+        { unitId: "Unit5_1", title: "Booleans & Truthy/Falsy Values" },
+        { unitId: "Unit5_2", title: "if / elif / else" },
+		{ unitId: "Unit5_3", title: "Nested Conditions & Boolean Logic" },
+		{ unitId: "Unit5_4", title: "Capstone: Decision Maker" },
+      ],
+    },
   ],
 };
 
