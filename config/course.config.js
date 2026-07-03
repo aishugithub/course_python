@@ -65,6 +65,17 @@ const COURSE_CONFIG = {
 		{ unitId: "Unit5_4", title: "Capstone: Decision Maker" },
       ],
     },
+	{
+      moduleId:    "M6",
+      moduleTitle: "Repetition",
+      icon:        "",
+      units: [
+        { unitId: "Unit6_1", title: "The while Loop" },
+        { unitId: "Unit6_2", title: "The for Loop & range()" },
+        { unitId: "Unit6_3", title: "break, continue & Nested Loops" },
+        { unitId: "Unit6_4", title: "Capstone: Number-Guessing Game" },
+      ],
+    },
   ],
 };
 
