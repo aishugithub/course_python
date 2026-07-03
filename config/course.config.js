@@ -64,6 +64,7 @@ const COURSE_CONFIG = {
         { unitId: "Unit5_2", title: "if / elif / else" },
 		{ unitId: "Unit5_3", title: "Nested Conditions & Boolean Logic" },
 		{ unitId: "Unit5_4", title: "Capstone: Decision Maker" },
+		{ unitId: "Unit5_C", title: "The Crucible", optional: true },
       ],
     },
 	{
@@ -75,6 +76,7 @@ const COURSE_CONFIG = {
         { unitId: "Unit6_2", title: "The for Loop & range()" },
         { unitId: "Unit6_3", title: "break, continue & Nested Loops" },
         { unitId: "Unit6_4", title: "Capstone: Number-Guessing Game" },
+        { unitId: "Unit6_C", title: "The Crucible", optional: true },
       ],
     },
 	{
@@ -87,6 +89,7 @@ const COURSE_CONFIG = {
         { unitId: "Unit7_3", title: "List Methods & Loop Patterns" },
         { unitId: "Unit7_4", title: "Tuples & Dictionaries" },
         { unitId: "Unit7_5", title: "Capstone: Student Marks Manager" },
+        { unitId: "Unit7_C", title: "The Crucible", optional: true },
       ],
     },
 	{
@@ -98,6 +101,7 @@ const COURSE_CONFIG = {
         { unitId: "Unit8_2", title: "Parameters & Return Values" },
         { unitId: "Unit8_3", title: "Scope & the Call Stack" },
         { unitId: "Unit8_4", title: "Grand Capstone: Marks Manager 2.0" },
+        { unitId: "Unit8_C", title: "The Crucible", optional: true },
       ],
     },
   ],
