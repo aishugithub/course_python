@@ -102,6 +102,22 @@ export default function App() {
     setActiveUnit(null); setLessonComponent(null);
   }
 
+  // Crucible (challenge unit) stage completions. Stages persist as
+  // pseudo-unitIds like "Unit4_C@spark" in the SAME stores as lessons
+  // (Progress sheet / guest localStorage) -- no backend change needed.
+  // The Dashboard filters these out of counts via the "@" marker.
+  // Deliberately not awaited: stage progress is also held in state, and
+  // a slow save must never stall the game feel of the Crucible.
+  function handleStageComplete(stageId) {
+    if (student) {
+      saveProgress(student.rollNo, COURSE_CONFIG.courseId, stageId);
+    } else {
+      saveGuestProgress(COURSE_CONFIG.courseId, stageId);
+    }
+    logEvent('challenge_stage_complete', { unitId: stageId, userId: student?.rollNo || '' });
+    setCompletedUnits(prev => [...new Set([...prev, stageId])]);
+  }
+
   function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); }
 
   if (view === 'landing') {
@@ -140,7 +156,14 @@ export default function App() {
           </button>
         </div>
         <Suspense fallback={<LoadingScreen message="Preparing lesson…" />}>
-          <LessonComponent student={student} onUnitComplete={handleUnitComplete} />
+          {/* Regular lessons use only the first two props; Crucible units
+              also read challengeProgress + onStageComplete for gating. */}
+          <LessonComponent
+            student={student}
+            onUnitComplete={handleUnitComplete}
+            challengeProgress={completedUnits}
+            onStageComplete={handleStageComplete}
+          />
         </Suspense>
       </div>
     );

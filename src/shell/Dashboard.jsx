@@ -7,8 +7,17 @@ const C = {
 const MODULE_COLORS = ['#58A6FF','#BC8CFF','#3FB950','#E3B341','#F0883E','#39D5C4'];
 
 export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin, onSignOff }) {
-  const totalUnits = COURSE_CONFIG.modules.reduce((acc, m) => acc + m.units.length, 0);
-  const pct = Math.round((completedUnits.length / totalUnits) * 100);
+  // Optional units (Crucible challenges, optional: true in the config) are
+  // bonus content: they never count toward the course percentage, so a
+  // student who finishes every lesson but skips challenges still sees 100%.
+  // completedUnits can also contain stage pseudo-ids like "Unit4_C@spark";
+  // counting only against required unitIds filters those out too.
+  const requiredIds = new Set(
+    COURSE_CONFIG.modules.flatMap(m => m.units.filter(u => !u.optional).map(u => u.unitId))
+  );
+  const totalUnits = requiredIds.size;
+  const doneCount = completedUnits.filter(id => requiredIds.has(id)).length;
+  const pct = Math.round((doneCount / totalUnits) * 100);
   const isGuest = !student;
 
   // Free navigation: every unit is always clickable, in any order.
@@ -50,7 +59,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 24 }}>
           <div style={{ fontSize: 32 }}>🎯</div>
           <div>
-            <div style={{ color: C.text, fontWeight: 600 }}>{completedUnits.length} of {totalUnits} units completed</div>
+            <div style={{ color: C.text, fontWeight: 600 }}>{doneCount} of {totalUnits} units completed</div>
             <div style={{ color: C.muted, fontSize: 13 }}>{pct}% through the course · Keep going!</div>
           </div>
         </div>
@@ -65,15 +74,18 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               {mod.units.map((unit, uIdx) => {
                 const done = completedUnits.includes(unit.unitId);
-                const accent = MODULE_COLORS[mIdx % MODULE_COLORS.length];
+                const isBonus = !!unit.optional;
+                const accent = isBonus ? '#F0883E' : MODULE_COLORS[mIdx % MODULE_COLORS.length];
                 return (
                   <div key={unit.unitId} onClick={() => onSelectUnit(unit.unitId)}
-                    style={{ background: done ? '#0D2818' : C.card, border: `1px solid ${done ? C.green : accent + '55'}`, borderRadius: 10, padding: '14px 18px', minWidth: 200, maxWidth: 260, cursor: 'pointer', transition: 'transform 0.15s' }}
+                    style={{ background: done ? '#0D2818' : isBonus ? '#1A130D' : C.card, border: `1px solid ${done ? C.green : accent + (isBonus ? '88' : '55')}`, borderRadius: 10, padding: '14px 18px', minWidth: 200, maxWidth: 260, cursor: 'pointer', transition: 'transform 0.15s' }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = ''; }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ color: C.muted, fontSize: 11, fontFamily: 'monospace' }}>{unit.unitId.replace('_', '.')}</span>
-                      <span style={{ fontSize: 14 }}>{done ? '✅' : '▶️'}</span>
+                      <span style={{ color: isBonus ? accent : C.muted, fontSize: 11, fontFamily: 'monospace' }}>
+                        {isBonus ? 'BONUS · CHALLENGE' : unit.unitId.replace('_', '.')}
+                      </span>
+                      <span style={{ fontSize: 14 }}>{done ? '✅' : isBonus ? '🔥' : '▶️'}</span>
                     </div>
                     <div style={{ color: done ? C.green : C.text, fontSize: 14, fontWeight: 600, marginTop: 6 }}>{unit.title}</div>
                   </div>

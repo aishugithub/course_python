@@ -52,6 +52,7 @@ const COURSE_CONFIG = {
         { unitId: "Unit4_2", title: "Variables & Memory" },
 		{ unitId: "Unit4_3", title: "Input & Type Conversion" },
 		{ unitId: "Unit4_4", title: "Operators & Expressions" },
+		{ unitId: "Unit4_C", title: "The Crucible", optional: true },
       ],
     },
 	{
