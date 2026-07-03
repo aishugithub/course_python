@@ -88,6 +88,17 @@ const COURSE_CONFIG = {
         { unitId: "Unit7_5", title: "Capstone: Student Marks Manager" },
       ],
     },
+	{
+      moduleId:    "M8",
+      moduleTitle: "Functions & Modular Thinking",
+      icon:        "",
+      units: [
+        { unitId: "Unit8_1", title: "Why Functions?" },
+        { unitId: "Unit8_2", title: "Parameters & Return Values" },
+        { unitId: "Unit8_3", title: "Scope & the Call Stack" },
+        { unitId: "Unit8_4", title: "Grand Capstone: Marks Manager 2.0" },
+      ],
+    },
   ],
 };
 
