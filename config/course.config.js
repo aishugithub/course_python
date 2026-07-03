@@ -76,6 +76,18 @@ const COURSE_CONFIG = {
         { unitId: "Unit6_4", title: "Capstone: Number-Guessing Game" },
       ],
     },
+	{
+      moduleId:    "M7",
+      moduleTitle: "Organizing Data",
+      icon:        "",
+      units: [
+        { unitId: "Unit7_1", title: "Strings in Depth" },
+        { unitId: "Unit7_2", title: "Lists" },
+        { unitId: "Unit7_3", title: "List Methods & Loop Patterns" },
+        { unitId: "Unit7_4", title: "Tuples & Dictionaries" },
+        { unitId: "Unit7_5", title: "Capstone: Student Marks Manager" },
+      ],
+    },
   ],
 };
 
