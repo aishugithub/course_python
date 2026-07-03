@@ -92,6 +92,15 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
             you have exactly what you need to understand it, with just enough support to carry you
             the rest of the way on your own.
           </p>
+          <p style={{ color: C.soft, fontSize: 14, lineHeight: 1.7, margin: '18px 0 0', paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <strong style={{ color: C.text }}>The research behind this course:</strong> I'm{' '}
+            <strong style={{ color: C.text }}>Aishwarya</strong>, a professor of engineering, and
+            Foothold is my action research in education — a study of whether active learning through
+            interactive content helps beginners learn programming better than reading or watching
+            alone. That's why every single lesson here is something you <em>do</em>, not something
+            you sit through. Your anonymous progress through the lessons quietly contributes to this
+            research and helps make the course better for the next learner.
+          </p>
         </div>
       </div>
 

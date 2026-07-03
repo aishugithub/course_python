@@ -8,7 +8,7 @@
 [ ] vite.config.js              — base field
 
 ## Files that NEVER change:
-- index.html                    (always says SRET E-Learning)
+- index.html                    (title: "Foothold — Learn Python")
 - src/shell/App.jsx
 - src/shell/Login.jsx
 - src/shell/Dashboard.jsx
