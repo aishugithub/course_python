@@ -48,6 +48,7 @@ const COURSE_CONFIG = {
       moduleTitle: "Your First Python Program",
       icon:        "",
       units: [
+        { unitId: "Unit4_0", title: "Running Python on Your Own Machine" },
         { unitId: "Unit4_1", title: "Your First Program" },
         { unitId: "Unit4_2", title: "Variables & Memory" },
 		{ unitId: "Unit4_3", title: "Input & Type Conversion" },
@@ -77,6 +78,15 @@ const COURSE_CONFIG = {
         { unitId: "Unit6_3", title: "break, continue & Nested Loops" },
         { unitId: "Unit6_4", title: "Capstone: Number-Guessing Game" },
         { unitId: "Unit6_C", title: "The Crucible", optional: true },
+      ],
+    },
+	{
+      moduleId:    "M6.5",
+      moduleTitle: "Computational Thinking I — Thinking in Algorithms",
+      icon:        "",
+      units: [
+        { unitId: "UnitCT1_1", title: "The Four Moves & the Accumulator" },
+        { unitId: "UnitCT1_2", title: "Counting & Building with Loops" },
       ],
     },
 	{
