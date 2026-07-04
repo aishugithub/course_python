@@ -89,6 +89,8 @@ const COURSE_CONFIG = {
         { unitId: "UnitCT1_2", title: "Counting & Building with Loops" },
         { unitId: "UnitCT1_3", title: "Deciding Inside a Loop" },
         { unitId: "UnitCT1_4", title: "Patterns & Nested Loops" },
+        { unitId: "UnitCT1_5", title: "Capstone: Crack It Yourself" },
+        { unitId: "UnitCT1_C", title: "The Crucible", optional: true },
       ],
     },
 	{
@@ -105,6 +107,19 @@ const COURSE_CONFIG = {
       ],
     },
 	{
+      moduleId:    "M7.5",
+      moduleTitle: "Computational Thinking II — Algorithms on Data",
+      icon:        "",
+      units: [
+        { unitId: "UnitCT2_1", title: "Scanning a List" },
+        { unitId: "UnitCT2_2", title: "Searching: Linear & Binary" },
+        { unitId: "UnitCT2_3", title: "Sorting: Bubble, Selection & Insertion" },
+        { unitId: "UnitCT2_4", title: "Matrices: Grids of Data" },
+        { unitId: "UnitCT2_5", title: "String Algorithms" },
+        { unitId: "UnitCT2_C", title: "The Crucible", optional: true },
+      ],
+    },
+	{
       moduleId:    "M8",
       moduleTitle: "Functions & Modular Thinking",
       icon:        "",
@@ -114,6 +129,14 @@ const COURSE_CONFIG = {
         { unitId: "Unit8_3", title: "Scope & the Call Stack" },
         { unitId: "Unit8_4", title: "Grand Capstone: Marks Manager 2.0" },
         { unitId: "Unit8_C", title: "The Crucible", optional: true },
+      ],
+    },
+	{
+      moduleId:    "M8.5",
+      moduleTitle: "Computational Thinking III — Thinking Recursively",
+      icon:        "",
+      units: [
+        { unitId: "UnitCT3_1", title: "The Recursive Idea" },
       ],
     },
 	{
