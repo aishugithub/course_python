@@ -104,6 +104,31 @@ const COURSE_CONFIG = {
         { unitId: "Unit8_C", title: "The Crucible", optional: true },
       ],
     },
+	{
+      moduleId:    "M9",
+      moduleTitle: "When Things Go Wrong",
+      icon:        "",
+      units: [
+        { unitId: "Unit9_1", title: "Errors Aren't Failures" },
+        { unitId: "Unit9_2", title: "Catching & Raising" },
+        { unitId: "Unit9_3", title: "Files: Making Data Survive" },
+        { unitId: "Unit9_4", title: "Capstone: The Persistent Marks Manager" },
+        { unitId: "Unit9_C", title: "The Crucible", optional: true },
+      ],
+    },
+	{
+      moduleId:    "M10",
+      moduleTitle: "Object-Oriented Programming",
+      icon:        "",
+      units: [
+        { unitId: "Unit10_1", title: "Why Objects?" },
+        { unitId: "Unit10_2", title: "__init__ & self" },
+        { unitId: "Unit10_3", title: "Methods & Encapsulation" },
+        { unitId: "Unit10_4", title: "Inheritance" },
+        { unitId: "Unit10_5", title: "Capstone: Marks Manager 3.0" },
+        { unitId: "Unit10_C", title: "The Crucible", optional: true },
+      ],
+    },
   ],
 };
 
