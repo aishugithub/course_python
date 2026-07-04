@@ -137,6 +137,9 @@ const COURSE_CONFIG = {
       icon:        "",
       units: [
         { unitId: "UnitCT3_1", title: "The Recursive Idea" },
+        { unitId: "UnitCT3_2", title: "Recursion in Action" },
+        { unitId: "UnitCT3_3", title: "Tower of Hanoi" },
+        { unitId: "UnitCT3_C", title: "The Crucible", optional: true },
       ],
     },
 	{
@@ -160,8 +163,35 @@ const COURSE_CONFIG = {
         { unitId: "Unit10_2", title: "__init__ & self" },
         { unitId: "Unit10_3", title: "Methods & Encapsulation" },
         { unitId: "Unit10_4", title: "Inheritance" },
+        { unitId: "Unit10_6", title: "Polymorphism & Abstraction" },
+        { unitId: "Unit10_7", title: "User-Defined Exceptions" },
         { unitId: "Unit10_5", title: "Capstone: Marks Manager 3.0" },
         { unitId: "Unit10_C", title: "The Crucible", optional: true },
+      ],
+    },
+	{
+      moduleId:    "M11",
+      moduleTitle: "Pythonic Python & the Ecosystem",
+      icon:        "",
+      units: [
+        { unitId: "Unit11_1", title: "Sets: Unique Collections" },
+        { unitId: "Unit11_2", title: "Modules & the Ecosystem" },
+      ],
+    },
+	{
+      moduleId:    "M12",
+      moduleTitle: "Working with Real Data",
+      icon:        "",
+      units: [
+        { unitId: "Unit12_1", title: "Meet Pandas: DataFrames" },
+      ],
+    },
+	{
+      moduleId:    "M13",
+      moduleTitle: "Data Visualization",
+      icon:        "",
+      units: [
+        { unitId: "Unit13_1", title: "Charts with Matplotlib" },
       ],
     },
   ],
