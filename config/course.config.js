@@ -87,6 +87,8 @@ const COURSE_CONFIG = {
       units: [
         { unitId: "UnitCT1_1", title: "The Four Moves & the Accumulator" },
         { unitId: "UnitCT1_2", title: "Counting & Building with Loops" },
+        { unitId: "UnitCT1_3", title: "Deciding Inside a Loop" },
+        { unitId: "UnitCT1_4", title: "Patterns & Nested Loops" },
       ],
     },
 	{
