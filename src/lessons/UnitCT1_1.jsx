@@ -138,16 +138,17 @@ function FourMoves() {
 // ── Section 3: The Accumulator + Trace ───────────────────────────────────────
 const TRACE_CODE = ["total = 0", "for i in range(1, 6):", "    total = total + i", "print(total)"];
 
+const N = 5; // our target: we add the numbers 1 up to n = 5. n is fixed — it never changes while the loop runs.
 const TRACE_STEPS = (() => {
-  const steps = [{ line: 0, i: null, total: 0, left: [1, 2, 3, 4, 5], out: [], desc: "Create the accumulator. total starts at 0 — the running sum before we've added anything." }];
+  const steps = [{ line: 0, i: null, total: 0, out: [], desc: "Create the accumulator. total starts at 0 — the running sum before we've added anything. Our target is n = 5, and n stays 5 the whole time." }];
   let total = 0;
-  for (let v = 1; v <= 5; v++) {
-    steps.push({ line: 1, i: v, total, left: [v + 1, v + 2, v + 3, v + 4, v + 5].filter((x) => x <= 5), out: [], desc: `for line: any values left? Yes → i becomes ${v}.` });
+  for (let v = 1; v <= N; v++) {
+    steps.push({ line: 1, i: v, total, out: [], desc: `Loop check: is the counter i (= ${v}) still within 1…n? Yes → step into the body with i = ${v}.` });
     total = total + v;
-    steps.push({ line: 2, i: v, total, left: [v + 1, v + 2, v + 3, v + 4, v + 5].filter((x) => x <= 5), out: [], desc: `Add i to the box: total = ${total - v} + ${v} = ${total}. The answer grows one step at a time.` });
+    steps.push({ line: 2, i: v, total, out: [], desc: `Add i to the box: total = ${total - v} + ${v} = ${total}. The answer grows one step at a time.` });
   }
-  steps.push({ line: 1, i: 5, total, left: [], out: [], desc: "for line: any values left? NO → the loop ends." });
-  steps.push({ line: 3, i: 5, total, left: [], out: [total], desc: `Print the finished accumulator: ${total}.` });
+  steps.push({ line: 1, i: N + 1, total, out: [], desc: `Loop check: the counter tries to step up to i = ${N + 1}. But ${N + 1} is past n (= ${N}) — range(1, 6) counts up to 6 but stops before it, so there is no round for ${N + 1}. Because i has moved beyond n, THIS is the exact moment the loop ends — the loop stops because the counter ran past the target, not by magic.` });
+  steps.push({ line: 3, i: N + 1, total, out: [total], desc: `The loop is finished. Now print the completed accumulator: ${total}.` });
   return steps;
 })();
 
@@ -204,13 +205,13 @@ function Accumulator() {
             <div style={{ color: C.teal, fontSize: 10, letterSpacing: 1, marginBottom: 6 }}>ACCUMULATOR · total</div>
             <div style={{ color: C.text, fontSize: 26, fontWeight: 700, fontFamily: "monospace" }}>{s.total}</div>
           </div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
-            <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>i</div>
-            <div style={{ color: C.accent, fontSize: 18, fontWeight: 700, fontFamily: "monospace" }}>{s.i === null ? "—" : s.i}</div>
+          <div style={{ background: C.card, border: `1px solid ${s.i === N + 1 ? C.red : C.border}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
+            <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>i · THE COUNTER</div>
+            <div style={{ color: s.i === N + 1 ? C.red : C.accent, fontSize: 18, fontWeight: 700, fontFamily: "monospace" }}>{s.i === null ? "—" : s.i}{s.i === N + 1 ? " ✕ past n" : ""}</div>
           </div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
-            <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>VALUES LEFT</div>
-            <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 14, color: s.left.length ? C.green : C.red }}>{s.left.length ? s.left.join(", ") : "empty"}</div>
+          <div style={{ background: C.card, border: `1px solid ${C.purple}55`, borderRadius: 10, padding: 12, textAlign: "center" }}>
+            <div style={{ color: C.purple, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>n · TARGET (never changes)</div>
+            <div style={{ color: C.purple, fontSize: 18, fontWeight: 700, fontFamily: "monospace" }}>{N}</div>
           </div>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
             <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>OUTPUT</div>

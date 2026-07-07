@@ -282,6 +282,10 @@ except ValueError as e:
         your program's rules — "fail fast" instead of storing nonsense. And <code style={{ color: C.teal }}>except
         ValueError as e</code> captures the exception object so you can print its message. You are now on both
         sides: raising AND catching.
+        <br /><br />
+        <span style={{ color: C.teal }}>Coming up:</span> here you're raising Python's <em>built-in</em> errors. Once
+        you learn classes, you'll define your <strong style={{ color: C.text }}>own</strong> error types (e.g.{" "}
+        <code style={{ color: C.teal }}>class MarksError(Exception)</code>) — that's <strong style={{ color: C.text }}>Unit 10.6, User-Defined Exceptions</strong>.
       </>)}
     </div>
   );

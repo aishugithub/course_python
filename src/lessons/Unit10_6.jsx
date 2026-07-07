@@ -271,7 +271,7 @@ function Quiz({ onComplete }) {
           background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
           border: `1px solid ${C.accent}55`,
         }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 10.6 Complete!</div>
+          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 10.5 Complete!</div>
           <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
             The four OOP pillars are complete: encapsulation, inheritance, <strong style={{ color: C.accent }}>polymorphism and abstraction</strong>.<br /><br />
             Next: continue to the Module 10 capstone and Crucible, then Module 11.
@@ -353,7 +353,7 @@ export default function Unit10_6({ student, onUnitComplete }) {
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🧬</div>
         <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.6</div>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.5</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Polymorphism &amp; Abstraction</div>
         </div>
         <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>

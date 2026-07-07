@@ -139,7 +139,17 @@ export default function App() {
     // its own -- the title/aria-label add a hover tooltip for desktop users
     // without needing any permanent on-screen text or layout shift.
     return (
-      <div>
+      <div className="lesson-viewport">
+        {/* Desktop-only upscale: lessons hardcode maxWidth:780, which leaves
+            ~25% of a wide monitor empty. zoom scales fonts, widgets and
+            spacing together (780px column → ~975px effective at 1.25).
+            Phones/tablets never match the media query, so mobile rendering
+            is untouched byte-for-byte. Tune 1.25 here if it feels off. */}
+        <style>{`
+          @media (min-width: 1200px) {
+            .lesson-viewport { zoom: 1.25; }
+          }
+        `}</style>
         <div style={{ position: 'fixed', top: 12, left: 12, zIndex: 1000 }}>
           <button
             onClick={handleBackToDashboard}

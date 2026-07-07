@@ -1,4 +1,4 @@
-// Unit 10.5 — Capstone: Marks Manager 3.0 (Student + Classroom objects)
+// Unit 10.7 — Capstone: Marks Manager 3.0 (Student + Classroom objects)
 import { useState } from "react";
 
 const C = {
@@ -560,7 +560,7 @@ export default function Unit10_5({ student, onUnitComplete }) {
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
         <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.5</div>
+          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.7</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Capstone: Marks Manager 3.0</div>
         </div>
         <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
