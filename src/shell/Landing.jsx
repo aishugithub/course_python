@@ -1,4 +1,5 @@
 import COURSE_CONFIG from '../../config/course.config.js';
+import { BRAND as B, FONT, MONO } from './brand.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Foothold Landing page — CREAM BRAND EDITION
@@ -7,30 +8,9 @@ import COURSE_CONFIG from '../../config/course.config.js';
 // (view === 'landing'). The two callbacks are the only wiring to the rest of
 // the app: onExploreGuest → guest Dashboard, onGoToLogin → Login screen.
 //
-// Design source: "Foothold python_branding/brand" (README.html, v1 handoff).
-// This page deliberately uses the LIGHT brand palette (cream/navy/amber) so it
-// feels like the course's front cover; the Dashboard and lessons inside keep
-// their dark GitHub-style theme. Fonts (Space Grotesk / Space Mono) are loaded
-// once in index.html.
+// All colors/fonts come from ./brand.js — the single brand source shared by
+// every shell page. Fonts are loaded once in index.html.
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Brand palette, straight from the handoff README.
-const B = {
-  cream: '#F1EEE6',    // page background
-  card: '#FFFFFF',     // card surfaces
-  creamDeep: '#EDE8DC',// inline-code chips
-  border: '#E7E0D2',   // hairline borders
-  navy: '#16294A',     // primary text, solid buttons, dark panel
-  slate: '#40506A',    // secondary body text
-  mist: '#8A97AB',     // muted small print
-  amber: '#E7A13E',    // the accent step / highlights
-  bronze: '#B08343',   // kicker (small uppercase mono) text
-  codeBrown: '#B0651F',// code text on cream chips
-  panelText: '#E7EAF0',// light text on the navy panel
-};
-
-const FONT = "'Space Grotesk', system-ui, sans-serif";
-const MONO = "'Space Mono', monospace";
 
 // ── Brand mark: the three climbing steps (navy, navy, amber), same geometry
 //    as brand/svg/foothold-mark-color.svg, inlined so it needs no asset fetch
@@ -181,10 +161,11 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
             paddingTop: 16, borderTop: `1px solid ${B.border}`,
           }}>
             <strong style={{ color: B.navy }}>The research behind this course:</strong> I'm{' '}
-            <strong style={{ color: B.navy }}>Aishwarya</strong>, a professor of engineering,
-            and Foothold is my action research in education — a study of whether active
-            learning through interactive content helps beginners learn programming better
-            than reading or watching alone. That's why every single lesson here is something
+            <strong style={{ color: B.navy }}>Aishwarya</strong>, an assistant professor of
+            engineering who believes nobody learns to swim by watching. Foothold is my action
+            research in education — a study of whether active learning through interactive
+            content helps beginners learn programming better than reading or watching
+            alone. That's why every single lesson here is something
             you <em>do</em>, not something you sit through. Your anonymous progress through
             the lessons quietly contributes to this research and helps make the course better
             for the next learner.

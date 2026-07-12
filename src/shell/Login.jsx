@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { loginStudent, registerStudent } from './api.js';
 import { logEvent } from './analytics.js';
 import COURSE_CONFIG from '../../config/course.config.js';
+import { BRAND as B, FONT, MONO } from './brand.js';
 
+// Local aliases mapped onto the shared brand palette (see brand.js) so this
+// page matches the Landing/Dashboard cream look. Old dark-theme names kept
+// where it keeps the JSX diff small (e.g. `blue` is now the navy action color).
 const C = {
-  bg: '#0D1117', surface: '#161B22', card: '#1C2333', border: '#30363D',
-  blue: '#58A6FF', green: '#3FB950', red: '#F85149', yellow: '#D29922', muted: '#8B949E',
-  text: '#E6EDF3', soft: '#C9D1D9',
+  bg: B.cream, surface: B.card, card: B.creamDeep, border: B.border,
+  blue: B.navy, green: B.green, red: B.red, yellow: B.codeBrown, muted: B.mist,
+  text: B.navy, soft: B.slate,
 };
 
 export default function Login({ onLogin, onBack }) {
@@ -51,13 +55,18 @@ export default function Login({ onLogin, onBack }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif', padding: '24px 16px' }}>
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '40px 40px', width: '100%', maxWidth: 420, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, padding: '24px 16px' }}>
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '40px 40px', width: '100%', maxWidth: 420, boxShadow: '0 8px 28px rgba(22,41,74,0.10)' }}>
 
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>🪜</div>
+          {/* Brand mark: the three climbing steps (see brand.js / logo handoff) */}
+          <svg width="52" height="52" viewBox="0 0 100 100" aria-hidden="true" style={{ display: 'inline-block', marginBottom: 10 }}>
+            <rect x="8" y="60" width="26" height="26" rx="7" fill={B.navy} />
+            <rect x="37" y="37" width="26" height="26" rx="7" fill={B.navy} />
+            <rect x="66" y="14" width="26" height="26" rx="7" fill={B.amber} />
+          </svg>
           <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>Foothold</h1>
-          <p style={{ color: C.blue, fontSize: 15, fontWeight: 600, margin: '6px 0 0' }}>{COURSE_CONFIG.courseTitle}</p>
+          <p style={{ color: B.bronze, fontFamily: MONO, fontSize: 13, fontWeight: 700, margin: '6px 0 0' }}>{COURSE_CONFIG.courseTitle}</p>
         </div>
 
         {/* ── Sign in / Register toggle ── */}
@@ -66,7 +75,8 @@ export default function Login({ onLogin, onBack }) {
             <button key={m} onClick={() => { setMode(m); setError(''); }}
               style={{
                 flex: 1, padding: '10px 0', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700,
-                background: mode === m ? C.blue : 'transparent', color: mode === m ? '#0D1117' : C.muted,
+                background: mode === m ? C.blue : 'transparent', color: mode === m ? '#FFFFFF' : C.muted,
+                fontFamily: FONT,
               }}>
               {m === 'signin' ? 'Sign In' : 'Create Account'}
             </button>
@@ -137,7 +147,7 @@ const inputStyle = {
 
 function ErrorBox({ text }) {
   return (
-    <div style={{ background: '#2D1117', border: `1px solid ${C.red}`, borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: C.red, fontSize: 13 }}>
+    <div style={{ background: '#FBEBEA', border: `1px solid ${C.red}`, borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: C.red, fontSize: 13 }}>
       {text}
     </div>
   );
@@ -146,7 +156,7 @@ function ErrorBox({ text }) {
 function SubmitButton({ loading, label, loadingLabel }) {
   return (
     <button type="submit" disabled={loading}
-      style={{ width: '100%', padding: '12px', borderRadius: 8, background: loading ? C.muted : C.blue, color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}>
+      style={{ width: '100%', padding: '12px', borderRadius: 8, background: loading ? C.muted : C.blue, color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: FONT }}>
       {loading ? loadingLabel : label}
     </button>
   );
