@@ -6,20 +6,22 @@ import { getProgress, saveProgress } from './api.js';
 import { getGuestProgress, saveGuestProgress } from './guestProgress.js';
 import { logEvent } from './analytics.js';
 import COURSE_CONFIG from '../../config/course.config.js';
-import { BRAND, FONT } from './brand.js';
+import { DARK, FONT } from './brand.js';
 
-// Loading screens are part of the cream-brand shell (see brand.js): landing,
-// dashboard and login are all cream, so a dark flash here would look broken.
+// Loading screens now use the DARK shell palette (see brand.js): landing,
+// dashboard and login are all dark-and-on-brand, and the lessons are dark too,
+// so a dark loading screen sits seamlessly between any two views — no flash.
 function LoadingScreen({ message = 'Loading…' }) {
   return (
-    <div style={{ minHeight: '100vh', background: BRAND.cream, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, gap: 16 }}>
-      {/* The brand mark doubles as the loading glyph — steps to climb. */}
+    <div style={{ minHeight: '100vh', background: DARK.bgDeep, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, gap: 16 }}>
+      {/* The brand mark doubles as the loading glyph — steps to climb. On dark,
+          the two lower steps go light and the summit stays amber. */}
       <svg width="48" height="48" viewBox="0 0 100 100" aria-hidden="true">
-        <rect x="8" y="60" width="26" height="26" rx="7" fill={BRAND.navy} />
-        <rect x="37" y="37" width="26" height="26" rx="7" fill={BRAND.navy} />
-        <rect x="66" y="14" width="26" height="26" rx="7" fill={BRAND.amber} />
+        <rect x="8" y="60" width="26" height="26" rx="7" fill={DARK.inkSoft} />
+        <rect x="37" y="37" width="26" height="26" rx="7" fill={DARK.inkSoft} />
+        <rect x="66" y="14" width="26" height="26" rx="7" fill={DARK.amber} />
       </svg>
-      <div style={{ color: BRAND.slate, fontSize: 15 }}>{message}</div>
+      <div style={{ color: DARK.inkSoft, fontSize: 15 }}>{message}</div>
     </div>
   );
 }
