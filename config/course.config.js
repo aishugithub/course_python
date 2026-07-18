@@ -156,7 +156,9 @@ const COURSE_CONFIG = {
           blurb: "append, sort, sum, max — the daily toolkit of every working programmer." },
         { unitId: "Unit7_4", title: "Tuples & Dictionaries",
           blurb: "Lock data down with tuples; look it up instantly with dicts." },
-        { unitId: "Unit7_5", title: "Capstone: Student Marks Manager",
+        { unitId: "Unit7_5", title: "Sets: Unique Collections",
+          blurb: "Duplicates vanish, membership checks turn instant. The most underrated container." },
+        { unitId: "Unit7_6", title: "Capstone: Student Marks Manager",
           blurb: "A real records system for a whole class. Your biggest build yet." },
         { unitId: "Unit7_C", title: "The Crucible", optional: true,
           blurb: "Data structures duel. One wrong index, and the Crucible will find it." },
@@ -264,9 +266,7 @@ const COURSE_CONFIG = {
       icon:        "",
       blurb: "You can write Python. Now write it the way Pythonistas do.",
       units: [
-        { unitId: "Unit11_1", title: "Sets: Unique Collections",
-          blurb: "Duplicates vanish, membership checks turn instant. The most underrated container." },
-        { unitId: "Unit11_2", title: "Modules & the Ecosystem",
+        { unitId: "Unit11_1", title: "Modules & the Ecosystem",
           blurb: "pip, venv, and the gigantic toolbox Python hands you for free." },
       ],
     },
@@ -292,6 +292,23 @@ const COURSE_CONFIG = {
           blurb: "Statistical beauty in one line: distributions, correlations, heatmaps." },
         { unitId: "Unit13_3", title: "Interactive Charts with Plotly",
           blurb: "Charts you can zoom, hover and play with. Data viz that talks back." },
+      ],
+    },
+    {
+      // ── PYTHON LAB (MED23CL202) — the e-observation record ──
+      // Separate supplementary track. Every experiment unit is optional:true
+      // so it is excluded from the Python course % — the lab is its own thing,
+      // linked from the dashboard as a companion to the course. Each unit's
+      // three-stage-per-program work is logged (algorithm/flowchart/program)
+      // against a signed-in student's roll number via the existing
+      // onStageComplete plumbing, exactly like the Crucible.
+      moduleId:    "LAB",
+      moduleTitle: "Python Lab — e-Record (MED23CL202)",
+      icon:        "",
+      blurb: "Your lab observation notebook, online. Each experiment: sequence the algorithm, assemble the flowchart, run the program — recorded against your roll number.",
+      units: [
+        { unitId: "UnitLAB1", title: "Experiment 1 — Data Types, Operators & Conditionals", optional: true,
+          blurb: "Two programs (BMI · temperature converter), each as algorithm → flowchart → run-it. Real Python, in your browser." },
       ],
     },
   ],

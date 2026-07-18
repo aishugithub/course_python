@@ -10,156 +10,149 @@ const C = {
 
 // ── Section 1: The Need ──────────────────────────────────────────────────────
 function TheNeed() {
-  const raw = ["Math", "Physics", "Math", "CS", "Physics", "Math"];
-  const unique = [...new Set(raw)];
   return (
     <div>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A list keeps every item, in order, duplicates and all. But sometimes you only care about the{" "}
-        <strong style={{ color: C.text }}>distinct</strong> items — the unique subjects a student took, the set of
-        IPs that hit a server. That's a <strong style={{ color: C.teal }}>set</strong>: an unordered collection with
-        <strong> no duplicates</strong>.
+        You've written a lot from scratch — even square roots and random numbers by hand. But Python ships with a
+        huge <strong style={{ color: C.text }}>standard library</strong> of ready-made code, and millions more
+        packages are a command away. A <strong style={{ color: C.teal }}>module</strong> is just a file of code you
+        can <code style={{ color: C.teal }}>import</code> and reuse.
       </p>
 
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>LIST (with repeats)</div>
-        <div style={{ fontFamily: "monospace", fontSize: 13, color: C.text, marginBottom: 12 }}>[{raw.map((x) => `"${x}"`).join(", ")}]</div>
-        <div style={{ textAlign: "center", color: C.accent, fontSize: 13, marginBottom: 12 }}>↓ set(subjects) — dedup in one step ↓</div>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>SET (unique only)</div>
-        <div style={{ fontFamily: "monospace", fontSize: 13, color: C.green }}>{"{"}{unique.map((x) => `"${x}"`).join(", ")}{"}"}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+        <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 14 }}>
+          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>❌ Reinvent it</div>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`# square root by hand?\nguess = n / 2\nfor i in range(20):\n    guess = (guess + n/guess)/2`}</pre>
+        </div>
+        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 14 }}>
+          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>✅ Import it</div>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`import math\nprint(math.sqrt(n))`}</pre>
+        </div>
       </div>
 
       <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Two superpowers:</strong> a set automatically drops duplicates, and
-        checking <code style={{ color: C.purple }}>"CS" in myset</code> is <em>very</em> fast — much faster than
-        scanning a long list.
+        🔑 <strong style={{ color: C.purple }}>"Batteries included."</strong> Python's standard library has modules
+        for maths, randomness, dates, files, the web and more — all free, already installed. Don't rebuild; import.
       </div>
     </div>
   );
 }
 
-// ── Section 2: Set basics ────────────────────────────────────────────────────
-function Basics() {
+// ── Section 2: import forms ──────────────────────────────────────────────────
+function ImportForms() {
+  const [mode, setMode] = useState("plain");
+  const modes = {
+    plain: {
+      label: "import math", color: C.teal,
+      code: "import math\n\nprint(math.sqrt(16))   # 4.0\nprint(math.pi)         # 3.14159...",
+      note: "Import the whole module; reach inside with the dot: math.sqrt, math.pi. The name stays clearly labelled.",
+    },
+    from: {
+      label: "from … import", color: C.orange,
+      code: "from random import randint\n\nprint(randint(1, 6))   # a dice roll, no 'random.' prefix",
+      note: "Pull specific names in directly, so you can use randint() without the module prefix. Handy for a few frequent tools.",
+    },
+    alias: {
+      label: "import … as", color: C.purple,
+      code: "import statistics as st\n\nprint(st.mean([80, 90, 100]))   # 90",
+      note: "Give a module a short nickname. You'll see this constantly later: import numpy as np, import pandas as pd.",
+    },
+  };
+  const m = modes[mode];
+
+  return (
+    <div>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
+        Three ways to bring code in. All put an <code style={{ color: C.teal }}>import</code> line at the top of your
+        file.
+      </p>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        {Object.entries(modes).map(([k, mv]) => (
+          <button key={k} onClick={() => setMode(k)} style={{
+            flex: 1, minWidth: 120, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "monospace",
+            background: mode === k ? mv.color + "22" : C.card,
+            border: `1.5px solid ${mode === k ? mv.color : C.border}`, color: mode === k ? mv.color : C.muted,
+          }}>{mv.label}</button>
+        ))}
+      </div>
+
+      <pre style={{ background: "#0A0E14", border: `1px solid ${m.color}44`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre" }}>{m.code}</pre>
+
+      <div style={{ marginTop: 14, background: m.color + "14", border: `1px solid ${m.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
+        {m.note}
+      </div>
+
+      <div style={{ marginTop: 14, background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
+        🔑 <strong style={{ color: C.teal }}>A few standard modules worth knowing:</strong>{" "}
+        <code style={{ color: C.text }}>math</code>, <code style={{ color: C.text }}>random</code>,{" "}
+        <code style={{ color: C.text }}>statistics</code>, <code style={{ color: C.text }}>datetime</code>,{" "}
+        <code style={{ color: C.text }}>json</code>. You'll meet datetime and json in Module 12.
+      </div>
+    </div>
+  );
+}
+
+// ── Section 3: your own modules ──────────────────────────────────────────────
+function OwnModule() {
   return (
     <div>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        Create a set with curly braces or <code style={{ color: C.teal }}>set()</code>, add with{" "}
-        <code style={{ color: C.teal }}>.add()</code>. Adding a duplicate simply does nothing.
+        Here's the neat part: <strong style={{ color: C.text }}>any .py file you write is a module.</strong> Put
+        reusable functions in one file and import them into another — exactly how big programs stay organised.
       </p>
 
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 12, lineHeight: 1.85, whiteSpace: "pre" }}>
-        subjects = {"{"}"Math", "CS"{"}"}{"        "}<span style={{ color: C.muted }}># a set literal</span>{"\n"}
-        subjects.add("Physics"){"       "}<span style={{ color: C.muted }}># {"{"}Math, CS, Physics{"}"}</span>{"\n"}
-        subjects.add("Math"){"          "}<span style={{ color: C.muted }}># ignored — already there</span>{"\n"}
-        print(len(subjects)){"          "}<span style={{ color: C.muted }}># 3</span>{"\n"}
-        print("CS" in subjects){"       "}<span style={{ color: C.muted }}># True — fast check</span>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+        <div style={{ background: "#0A0E14", border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14 }}>
+          <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, marginBottom: 8, fontFamily: "monospace" }}>marks_tools.py</div>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`def average(nums):\n    return sum(nums) / len(nums)\n\ndef passed(mark):\n    return mark >= 50`}</pre>
+        </div>
+        <div style={{ background: "#0A0E14", border: `1px solid ${C.orange}44`, borderRadius: 10, padding: 14 }}>
+          <div style={{ color: C.orange, fontSize: 11, fontWeight: 700, marginBottom: 8, fontFamily: "monospace" }}>main.py</div>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`from marks_tools import average\n\nscores = [80, 90, 100]\nprint(average(scores))   # 90.0`}</pre>
+        </div>
       </div>
 
-      <div style={{ background: C.red + "12", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 16px", fontSize: 12.5, color: C.muted, lineHeight: 1.7, marginBottom: 14 }}>
-        ⚠️ <strong style={{ color: C.red }}>The empty-set trap:</strong> <code style={{ color: C.red }}>{"{}"}</code> is
-        an empty <em>dictionary</em>, not a set! For an empty set you must write{" "}
-        <code style={{ color: C.green }}>set()</code>.
-      </div>
-
-      <div style={{ background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.teal }}>Sets are unordered.</strong> There's no set[0] — items have no
-        position. You loop over a set or test membership, but you don't index it.
+      <div style={{ background: C.purple + "15", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
+        🔑 <strong style={{ color: C.purple }}>The import name is the filename without .py.</strong>{" "}
+        <code style={{ color: C.purple }}>marks_tools.py</code> becomes <code style={{ color: C.purple }}>import marks_tools</code>.
+        This is how you break a big project into tidy, reusable files.
       </div>
     </div>
   );
 }
 
-// ── Section 3: Set operations ────────────────────────────────────────────────
-function Operations() {
-  const [op, setOp] = useState("union");
-  const A = ["Math", "Physics", "CS"];
-  const B = ["Physics", "CS", "Biology"];
-  const results = {
-    union: { label: "Union  A | B", color: C.green, out: ["Math", "Physics", "CS", "Biology"], note: "Everything in either set — all subjects taken by either student.", sym: "|" },
-    inter: { label: "Intersection  A & B", color: C.teal, out: ["Physics", "CS"], note: "Only items in BOTH — subjects they share.", sym: "&" },
-    diff: { label: "Difference  A - B", color: C.orange, out: ["Math"], note: "In A but not B — what the first student takes that the second doesn't.", sym: "-" },
-  };
-  const r = results[op];
-
+// ── Section 4: pip & venv ────────────────────────────────────────────────────
+function PipVenv() {
   return (
     <div>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Sets do math. Given two students' subjects, combine or compare them with single operators.
+        Beyond the standard library is <strong style={{ color: C.text }}>PyPI</strong> — hundreds of thousands of
+        community packages. You install them with <code style={{ color: C.green }}>pip</code>, Python's package
+        manager, from your terminal (not inside a .py file).
       </p>
-
-      <div style={{ display: "flex", gap: 14, justifyContent: "center", marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.accent}55`, borderRadius: 10, padding: 12, minWidth: 130 }}>
-          <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>A = student 1</div>
-          {A.map((x) => <div key={x} style={{ fontFamily: "monospace", fontSize: 12, color: C.text }}>{x}</div>)}
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.purple}55`, borderRadius: 10, padding: 12, minWidth: 130 }}>
-          <div style={{ color: C.purple, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>B = student 2</div>
-          {B.map((x) => <div key={x} style={{ fontFamily: "monospace", fontSize: 12, color: C.text }}>{x}</div>)}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-        {Object.entries(results).map(([k, rv]) => (
-          <button key={k} onClick={() => setOp(k)} style={{
-            flex: 1, minWidth: 120, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "monospace",
-            background: op === k ? rv.color + "22" : C.card,
-            border: `1.5px solid ${op === k ? rv.color : C.border}`, color: op === k ? rv.color : C.muted,
-          }}>A {rv.sym} B</button>
-        ))}
-      </div>
-
-      <div style={{ background: "#0A0E14", border: `1.5px solid ${r.color}55`, borderRadius: 10, padding: 16, marginBottom: 12 }}>
-        <div style={{ color: r.color, fontSize: 12, fontWeight: 700, marginBottom: 8, fontFamily: "monospace" }}>{r.label}</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {r.out.map((x) => <div key={x} style={{ fontFamily: "monospace", fontSize: 13, background: r.color + "18", border: `1px solid ${r.color}55`, borderRadius: 6, padding: "4px 10px", color: r.color }}>{x}</div>)}
-        </div>
-      </div>
-
-      <div style={{ background: r.color + "14", border: `1px solid ${r.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-        {r.note}
-      </div>
-
-      <div style={{ marginTop: 14, background: C.purple + "15", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>One operator replaces a whole loop.</strong> Finding common
-        subjects with lists would need a nested loop; with sets it's just <code style={{ color: C.purple }}>A &amp; B</code>.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 4: When to use ───────────────────────────────────────────────────
-function WhenToUse() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Reach for a set when order doesn't matter and one of these is true:
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-        {[
-          ["🧹", "Remove duplicates", "unique = set(items) — the fastest dedup in Python. Wrap in list() if you need a list back."],
-          ["⚡", "Fast membership tests", '"x" in myset is near-instant even for millions of items; "x" in mylist scans one by one.'],
-          ["🔗", "Compare collections", "Common tags (A & B), all tags (A | B), missing tags (A - B) — set math, no loops."],
-        ].map(([icon, title, body], i) => (
-          <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, display: "flex", gap: 12 }}>
-            <div style={{ fontSize: 20 }}>{icon}</div>
-            <div>
-              <div style={{ color: C.text, fontWeight: 600, fontSize: 13, marginBottom: 3 }}>{title}</div>
-              <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>{body}</div>
-            </div>
-          </div>
-        ))}
-      </div>
 
       <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>list vs set — pick by the job:</div>
-        <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`marks   = [88, 90, 88]   # LIST: order & repeats matter
-tags    = {"py", "ai"}   # SET: unique, unordered, fast "in"`}</pre>
+        <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>in the terminal:</div>
+        <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.green, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`pip install requests      # download a package
+# then, in your .py file:
+import requests`}</pre>
+      </div>
+
+      <div style={{ background: C.card, border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
+        <div style={{ color: C.teal, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>🧪 Virtual environments (venv)</div>
+        <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.7, marginBottom: 8 }}>
+          Different projects need different package versions. A <strong style={{ color: C.text }}>virtual
+          environment</strong> is a private, isolated box of packages for one project — so Project A's libraries
+          never clash with Project B's.
+        </div>
+        <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`python -m venv env      # create an isolated environment
+# activate it, then pip install inside it`}</pre>
       </div>
 
       <div style={{ background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.green }}>Set completes your collection toolkit:</strong> list (ordered,
-        repeats), tuple (fixed), dict (key→value), and now set (unique, unordered). Four containers, four jobs.
+        🔑 <strong style={{ color: C.green }}>The ecosystem is Python's superpower.</strong> pip + venv are how
+        you'll soon install NumPy, Pandas and Matplotlib for the data modules — each project in its own clean box.
       </div>
     </div>
   );
@@ -169,33 +162,43 @@ tags    = {"py", "ai"}   # SET: unique, unordered, fast "in"`}</pre>
 function Quiz({ onComplete }) {
   const questions = [
     {
-      q: "What happens when you add a duplicate item to a set?",
-      options: ["It raises an error", "It's silently ignored — the set keeps only unique items", "It's added twice", "The set is cleared"],
-      answer: 1,
-      explain: "Sets store each value at most once. Adding something already present simply has no effect — that's what makes set() a one-step dedup.",
-    },
-    {
-      q: "Which creates an EMPTY set?",
-      options: ["{}", "set()", "[]", "()"],
-      answer: 1,
-      explain: "{} is an empty dictionary! You must use set() for an empty set. {1, 2} works for a non-empty set literal.",
-    },
-    {
-      q: "To get the subjects TWO students have in common, you'd use…",
-      options: ["A | B (union)", "A & B (intersection)", "A - B (difference)", "len(A)"],
-      answer: 1,
-      explain: "Intersection (A & B) returns items present in both sets — exactly the shared subjects. One operator instead of a nested loop.",
-    },
-    {
-      q: "Why is  \"x\" in myset  faster than  \"x\" in mylist  for large collections?",
+      q: "What is a module in Python?",
       options: [
-        "Sets are always small",
-        "A set is built for instant lookup, while a list must be scanned item by item",
-        "Lists can't be searched",
-        "They're the same speed",
+        "A special kind of loop",
+        "A file of Python code you can import and reuse",
+        "A type of variable",
+        "A built-in error",
       ],
       answer: 1,
-      explain: "Sets use hashing for near-instant membership tests. A list has to walk from the front until it finds the item (or reaches the end).",
+      explain: "A module is just a .py file. Python's standard library is a big collection of them, and any file you write is one too.",
+    },
+    {
+      q: "After  from random import randint,  how do you call it?",
+      options: ["random.randint(1, 6)", "randint(1, 6)", "import.randint(1, 6)", "randint.random(1, 6)"],
+      answer: 1,
+      explain: "'from random import randint' pulls randint directly into your namespace, so you call it without the random. prefix.",
+    },
+    {
+      q: "You wrote  marks_tools.py.  How do you import its  average  function?",
+      options: [
+        "import average from marks_tools",
+        "from marks_tools import average",
+        "import marks_tools.py",
+        "from marks_tools.py import average",
+      ],
+      answer: 1,
+      explain: "Use the filename WITHOUT .py: from marks_tools import average. Your own files are modules just like the standard library.",
+    },
+    {
+      q: "What are pip and venv for?",
+      options: [
+        "pip runs your code; venv debugs it",
+        "pip installs third-party packages from PyPI; venv gives each project its own isolated package box",
+        "They're the same tool",
+        "They replace import",
+      ],
+      answer: 1,
+      explain: "pip downloads packages the standard library doesn't include; a venv keeps each project's packages separate so versions don't clash.",
     },
   ];
 
@@ -220,20 +223,20 @@ function Quiz({ onComplete }) {
         <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
         <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
         <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Sets are now part of your toolkit." :
-            score >= 2 ? "Good — replay Operations to lock in union/intersection/difference." :
-              "Revisit Basics and Operations, then try again."}
+          {score === 4 ? "You can stand on the shoulders of the whole Python ecosystem." :
+            score >= 2 ? "Good — replay Import Forms to lock in the three styles." :
+              "Revisit Import Forms and Your Own Modules, then try again."}
         </div>
         <div style={{
           padding: "20px", borderRadius: 12,
           background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
           border: `1px solid ${C.accent}55`,
         }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 11.1 Complete!</div>
+          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 11.2 Complete!</div>
           <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Unique collections, fast membership, and set math.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 11.2 — Modules & the Ecosystem.</strong> Stop
-            rewriting code: import Python's built-in libraries and install others with pip.
+            import, your own modules, and pip + venv for the wider ecosystem.<br /><br />
+            <strong style={{ color: C.accent }}>Next up: Module 12 — Working with Real Data.</strong> Dates, JSON,
+            and your first taste of NumPy and Pandas — the on-ramp to data science.
           </div>
         </div>
       </div>
@@ -283,9 +286,9 @@ function Quiz({ onComplete }) {
 export default function Unit11_1({ student, onUnitComplete }) {
   const sections = [
     { id: "need", label: "The Need" },
-    { id: "basics", label: "Set Basics" },
-    { id: "ops", label: "Set Operations" },
-    { id: "when", label: "When to Use" },
+    { id: "import", label: "import Forms" },
+    { id: "own", label: "Your Own Modules" },
+    { id: "pip", label: "pip & venv" },
     { id: "quiz", label: "Quiz & Wrap-up" },
   ];
 
@@ -296,13 +299,13 @@ export default function Unit11_1({ student, onUnitComplete }) {
   const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
 
   const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Unique Things, No Order</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Set Basics</h3><Basics /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Set Operations</h3><Operations /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>When to Use a Set</h3><WhenToUse /></div>,
+    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Don't Reinvent — Import</h3><TheNeed /></div>,
+    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Three Ways to import</h3><ImportForms /></div>,
+    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Your Own Modules</h3><OwnModule /></div>,
+    <div><h3 style={{ color: C.text, marginBottom: 6 }}>pip &amp; Virtual Environments</h3><PipVenv /></div>,
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on sets.</p>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on modules and the ecosystem.</p>
       <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
     </div>,
   ];
@@ -310,10 +313,10 @@ export default function Unit11_1({ student, onUnitComplete }) {
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🎛️</div>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📦</div>
         <div>
           <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 11 › UNIT 11.1</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Sets: Unique Collections</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>Modules &amp; the Ecosystem</div>
         </div>
         <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
       </div>

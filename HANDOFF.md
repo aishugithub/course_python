@@ -180,3 +180,14 @@ Aishu asked to (1) add a forward pointer only (no move) for user-defined excepti
 **Lab coverage now: Exp 14 (Matplotlib) = 13.1 ✓; Exp 15 (Seaborn + Plotly) = 13.2 + 13.3 ✓. Every one of the 15 lab experiments is fully backed.**
 
 **Still pending (all OPTIONAL / deferred by Aishu — nothing lab-blocking remains):** M11 comprehensions/generators; M12 datetime / JSON / NumPy units; optional Crucibles for M11–M13; shell — confirm `lesson_complete` reaches the Events tab, build the Looker Studio dashboard. Next substantive horizon (not yet planned): the applied AI/ML, cybersecurity, and IoT tracks. Aishu runs `npm run build`/`deploy` locally (Windows node_modules; Linux sandbox can't run the project build — syntax verified via standalone esbuild only).
+
+## SESSION UPDATE 2026-07-13 — Sets moved from M11 into M7 (collections) + shell dark theme
+
+Two changes this session; both config/lesson/shell only, no backend change.
+
+- **Sets relocated to its container family.** The Sets lesson had been sitting in **M11 "Pythonic Python & the Ecosystem"** (as Unit11_1), separated from the other collections which all live in **M7 "Organizing Data"** (Strings, Lists, List Methods, Tuples & Dictionaries). Aishu flagged this as a mistake and — since the site is still pre-launch and no learner progress needs preserving — asked for a clean renumber. Done:
+  - **Files renamed:** `Unit7_5.jsx` (capstone) → `Unit7_6.jsx`; `Unit11_1.jsx` (sets) → `Unit7_5.jsx`; `Unit11_2.jsx` (modules) → `Unit11_1.jsx`. First rename went via `git mv`; the sandbox git index then corrupted (`bad signature`, `index.lock` unlinkable — permission) so the remaining two were done with plain `mv`. **Aishu: on Windows, run `git add -A` (or delete `.git/index.lock` first if it lingers) so git re-picks up the renames — the working tree is correct, only the sandbox's git index is unhappy.**
+  - **Inside each renamed file:** the exported component name and the visible `MODULE x › UNIT x.y` breadcrumb were updated to match (7.6 capstone, 7.5 sets, 11.1 modules).
+  - **`course.config.js`:** M7 now = 7.1 Strings, 7.2 Lists, 7.3 List Methods, 7.4 Tuples & Dictionaries, **7.5 Sets**, **7.6 Capstone**, 7.C Crucible. M11 now = **11.1 Modules & the Ecosystem** only. (Note: M11 title still reads "Pythonic Python & the Ecosystem" but now holds a single unit — worth reconsidering the module name/whether to fold it elsewhere. Lab Exp 3 coverage unchanged: sets is now 7.5, modules 11.1.)
+
+- **Shell re-themed dark + on-brand.** Landing, Dashboard and Login were cream while every lesson is dark, so the shell now uses a new `DARK` token block in `src/shell/brand.js` (surfaces match the lessons' GitHub-dark greys; amber stays the hero accent). `App.jsx` loading screen and `index.html` theme-color also flipped to dark. Cream tokens kept in brand.js as a fallback.
