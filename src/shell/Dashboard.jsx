@@ -64,11 +64,44 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
     }
   }
 
-  // Accordion state: a Set of open moduleIds. Starts with only the next-up
-  // module open (or the first module for a brand-new / fully-done learner).
-  const [openModules, setOpenModules] = useState(
-    () => new Set([nextModuleId || COURSE_CONFIG.modules[0].moduleId])
-  );
+  // ---- Remembering where the learner was -------------------------------
+  // App.jsx unmounts the Dashboard while a lesson is open and mounts a FRESH
+  // one when the learner comes back, so any accordion state held only in
+  // useState is wiped on every return trip. That is why the dashboard used to
+  // snap back to Module 1: the "next up" module is computed from COMPLETED
+  // units, and someone browsing ahead into Module 4 without having ticked off
+  // Module 1 still has M1 as their next-up.
+  // Fix: whenever a unit is opened we stash its moduleId in localStorage, and
+  // on mount we prefer that remembered module over the computed next-up one.
+  // localStorage (not useState) is what survives the unmount.
+  const LAST_MODULE_KEY = 'foothold_last_module';
+
+  const readLastModule = () => {
+    try {
+      const saved = localStorage.getItem(LAST_MODULE_KEY);
+      // Guard against a stale id left over from an older course config.
+      return COURSE_CONFIG.modules.some(m => m.moduleId === saved) ? saved : null;
+    } catch {
+      return null; // private-browsing / storage disabled — fall through silently
+    }
+  };
+
+  // Which module should be open on this mount, in priority order:
+  //   1. the module of the unit they were last inside (returning learner)
+  //   2. the module holding their next incomplete unit (fresh session)
+  //   3. the very first module (brand-new or fully-finished learner)
+  const initialOpenModule =
+    readLastModule() || nextModuleId || COURSE_CONFIG.modules[0].moduleId;
+
+  // Accordion state: a Set of open moduleIds.
+  const [openModules, setOpenModules] = useState(() => new Set([initialOpenModule]));
+
+  // Wraps the onSelectUnit prop so opening any unit also records its module.
+  // App.jsx is untouched — the remembering happens entirely on this side.
+  const selectUnit = (unitId, moduleId) => {
+    try { localStorage.setItem(LAST_MODULE_KEY, moduleId); } catch { /* ignore */ }
+    onSelectUnit(unitId);
+  };
   function toggleModule(moduleId) {
     setOpenModules(prev => {
       const next = new Set(prev);
@@ -212,7 +245,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                         const isNext = unit.unitId === nextUnitId;
                         return (
                           <div key={unit.unitId} className="fh-unit"
-                            onClick={() => onSelectUnit(unit.unitId)}
+                            onClick={() => selectUnit(unit.unitId, mod.moduleId)}
                             style={{
                               display: 'flex', alignItems: 'flex-start', gap: 12,
                               padding: '10px 18px 10px 46px',

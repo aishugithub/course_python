@@ -51,6 +51,221 @@ const C = {
 };
 
 // ============================================================================
+// WIDGET 0 — ShapeOfPython  ("No ; No { }")
+// ----------------------------------------------------------------------------
+//  WHY THIS WIDGET EXISTS (and why it comes FIRST)
+//  ----------------------------------------------
+//  Every student arriving at this course has already written C. In C, two
+//  pieces of punctuation carry the entire structure of a program:
+//      ;    -> "this statement is finished"
+//      { }  -> "these statements belong together as one block"
+//  Python throws BOTH away. If we teach print() before saying this out loud,
+//  the student silently assumes the C rules still apply, and then trips over
+//  IndentationError for weeks without understanding why. So this widget runs
+//  before any Python is taught: it takes ONE familiar C program and strips it
+//  down to Python in four visible steps, so the student SEES the punctuation
+//  die rather than being told about it.
+//
+//  Teaching order used here (deliberate): need first -> contrast with C ->
+//  then the rule. Same order used across the whole course.
+// ============================================================================
+
+// A tiny helper that renders one line of code made of coloured segments.
+// Each segment is { t: "text", k: kind } where kind decides the colour:
+//   ""  -> ordinary code            (normal text colour)
+//   "p" -> punctuation under the spotlight   (yellow — "look at me")
+//   "d" -> doomed: about to be deleted by Python (red + struck through)
+//   "g" -> the Python replacement that takes over the job (green)
+function CodeLine({ segs, num }) {
+  const colourFor = (k) =>
+    k === "d" ? C.red : k === "p" ? C.yellow : k === "g" ? C.green : C.text;
+  return (
+    <div style={{ display: "flex", gap: 10, fontFamily: "monospace", fontSize: 12.5, marginBottom: 3, whiteSpace: "pre" }}>
+      <span style={{ color: C.border, minWidth: 14, textAlign: "right" }}>{num}</span>
+      <span>
+        {segs.map((s, i) => (
+          <span
+            key={i}
+            style={{
+              color: colourFor(s.k),
+              textDecoration: s.k === "d" ? "line-through" : "none",
+              opacity: s.k === "d" ? 0.75 : 1,
+              fontWeight: s.k === "g" ? 700 : 400,
+              background: s.k === "g" ? C.green + "22" : "transparent",
+              transition: "all 0.3s",
+            }}
+          >
+            {s.t}
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+function ShapeOfPython() {
+  // Which of the four transformation steps is on screen (0-based).
+  const [step, setStep] = useState(0);
+
+  // The SAME program, shown at four stages of being translated from C into
+  // Python. Writing all four out by hand (rather than computing them) keeps
+  // the teaching intent explicit and the highlighting exact.
+  const stages = [
+    {
+      title: "1 · C, exactly as you already know it",
+      file: "hello.c",
+      lines: [
+        [{ t: "#include <stdio.h>" }],
+        [{ t: "int main() " }, { t: "{", k: "p" }],
+        [{ t: "    int marks = 72" }, { t: ";", k: "p" }],
+        [{ t: '    printf("Hello!\\n")' }, { t: ";", k: "p" }],
+        [{ t: "    if (marks > 40) " }, { t: "{", k: "p" }],
+        [{ t: '        printf("Pass\\n")' }, { t: ";", k: "p" }],
+        [{ t: "    ", }, { t: "}", k: "p" }],
+        [{ t: "    return 0" }, { t: ";", k: "p" }],
+        [{ t: "}", k: "p" }],
+      ],
+      caption:
+        "Look only at the yellow characters. They carry no meaning of their own — they are pure structure. The ; announces 'this statement has ended'. The { } announce 'these statements belong together'. The compiler genuinely needs them, because to C your program is one long stream of characters where newlines mean nothing at all.",
+    },
+    {
+      title: "2 · Python deletes every semicolon",
+      file: "hello.c → hello.py",
+      lines: [
+        [{ t: "#include <stdio.h>", k: "d" }],
+        [{ t: "int main() " }, { t: "{", k: "p" }],
+        [{ t: "    int marks = 72" }, { t: ";", k: "d" }],
+        [{ t: '    printf("Hello!\\n")' }, { t: ";", k: "d" }],
+        [{ t: "    if (marks > 40) " }, { t: "{", k: "p" }],
+        [{ t: '        printf("Pass\\n")' }, { t: ";", k: "d" }],
+        [{ t: "    " }, { t: "}", k: "p" }],
+        [{ t: "    return 0" }, { t: ";", k: "d" }],
+        [{ t: "}", k: "p" }],
+      ],
+      caption:
+        "In Python the statement delimiter is the NEWLINE itself. One line = one statement. You do not announce the end of an instruction — pressing Enter already announced it. (Python will technically still accept a ; between two statements on one line, but real Python code never does this. Treat it as not existing.)",
+    },
+    {
+      title: "3 · Python deletes every brace",
+      file: "hello.py",
+      lines: [
+        [{ t: "int main() " }, { t: "{", k: "d" }],
+        [{ t: "    int marks = 72" }],
+        [{ t: '    printf("Hello!\\n")' }],
+        [{ t: "    if (marks > 40) " }, { t: "{", k: "d" }],
+        [{ t: "        " , k: "g" }, { t: 'printf("Pass\\n")' }],
+        [{ t: "    " }, { t: "}", k: "d" }],
+        [{ t: "    return 0" }],
+        [{ t: "}", k: "d" }],
+      ],
+      caption:
+        "Here is the important part. Those 4 or 8 spaces on the left were ALWAYS there in your C code — you indented out of politeness, and the compiler ignored them completely. Python simply promotes that indentation to being the real thing. The green space is now doing the job the braces used to do: 'this line is inside the if'.",
+    },
+    {
+      title: "4 · What is left is Python",
+      file: "hello.py",
+      lines: [
+        [{ t: "marks = 72" }],
+        [{ t: 'print("Hello!")' }],
+        [{ t: "if marks > 40" }, { t: ":", k: "g" }],
+        [{ t: "    ", k: "g" }, { t: 'print("Pass")' }],
+      ],
+      caption:
+        "Nine lines became four, and nothing was lost. The colon : opens a block, the indentation holds it. Don't worry about what if does yet — that's Module 5. Right now only notice the SHAPE: no semicolons, no braces, no main(), no #include. This is what people mean when they call Python a 'high-level' language — the punctuation that existed for the compiler's benefit is gone, and what remains is close to what you would have written on paper anyway.",
+    },
+  ];
+
+  const s = stages[step];
+
+  return (
+    <div>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
+        Before you write a single line of Python, you need to unlearn two habits
+        from C. In C, structure is made of punctuation. In Python, structure is
+        made of <strong style={{ color: C.accent }}>layout</strong>. Step through
+        the same program below and watch the punctuation disappear.
+      </p>
+
+      {/* Step indicator — four dots showing where we are in the transformation. */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {stages.map((_, i) => (
+          <div key={i} style={{
+            flex: 1, height: 4, borderRadius: 2,
+            background: i <= step ? C.accent : C.border, transition: "background 0.3s",
+          }} />
+        ))}
+      </div>
+
+      <div style={{ color: C.accent, fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{s.title}</div>
+
+      {/* The code pane, re-rendered for whichever stage we're on. */}
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+        <div style={{ padding: "8px 12px", background: C.surface, borderBottom: `1px solid ${C.border}`, fontSize: 11, color: C.muted, letterSpacing: 1 }}>
+          {s.file}
+        </div>
+        <div style={{ padding: "12px 14px", minHeight: 150 }}>
+          {s.lines.map((segs, i) => <CodeLine key={i} segs={segs} num={i + 1} />)}
+        </div>
+      </div>
+
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12, minHeight: 92 }}>
+        {s.caption}
+      </div>
+
+      {/* Back / Next controls for stepping through the transformation. */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={() => setStep((v) => Math.max(0, v - 1))} disabled={step === 0} style={{
+          flex: 1, padding: "10px", borderRadius: 8, background: C.card,
+          border: `1.5px solid ${C.border}`, color: step === 0 ? C.border : C.text,
+          fontWeight: 600, fontSize: 13, cursor: step === 0 ? "not-allowed" : "pointer",
+        }}>◀ Back</button>
+        <button onClick={() => setStep((v) => Math.min(stages.length - 1, v + 1))} disabled={step === stages.length - 1} style={{
+          flex: 2, padding: "10px", borderRadius: 8,
+          background: step === stages.length - 1 ? C.border : C.accentGlow,
+          border: "none", color: "#fff", fontWeight: 600, fontSize: 13,
+          cursor: step === stages.length - 1 ? "not-allowed" : "pointer",
+        }}>
+          {step === stages.length - 1 ? "That's the whole idea ✓" : "Next step ▶"}
+        </button>
+      </div>
+
+      {/* --- The two rules, stated plainly once the animation has made the point. --- */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 18 }}>
+        <div style={{ background: C.accent + "14", border: `1px solid ${C.accent}44`, borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Rule 1 — the delimiter</div>
+          <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>
+            C ends a statement with <code style={{ color: C.yellow }}>;</code>.<br />
+            Python ends a statement with a <strong style={{ color: C.text }}>new line</strong>.
+          </div>
+        </div>
+        <div style={{ background: C.purple + "14", border: `1px solid ${C.purple}44`, borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ color: C.purple, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Rule 2 — the block</div>
+          <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>
+            C groups statements with <code style={{ color: C.yellow }}>{"{ }"}</code>.<br />
+            Python groups them with <strong style={{ color: C.text }}>indentation</strong>.
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14, background: C.red + "14", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 14px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
+        ⚠️ <strong style={{ color: C.red }}>The consequence students always miss:</strong> in C, indentation
+        is a <em>style</em> choice — you could write your whole program on one line and it would still compile.
+        In Python, indentation is <em>syntax</em>. Move a line four spaces to the right and you have changed
+        what the program means. Delete the spaces and the program stops running at all
+        (<code style={{ color: C.red }}>IndentationError</code>). Whitespace is no longer invisible.
+      </div>
+
+      <div style={{ marginTop: 12, background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 14px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
+        🔑 <strong style={{ color: C.purple }}>Key idea:</strong> Python did not invent a new way to lay out code —
+        it just made the layout you were <em>already</em> using the official one. That is the trade: you give up the
+        freedom to format however you like, and in exchange every Python program on earth looks readable,
+        and you type far less punctuation. This is the single biggest reason Python "feels" higher level than C.
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // WIDGET 1 — CodeRunner
 // A simulated "editor + terminal" so the learner can press a Run button and
 // watch Python execute their program line by line, exactly like it would in
@@ -346,6 +561,31 @@ function CommentDemo() {
 // ============================================================================
 function Quiz({ onComplete }) {
   const questions = [
+    // The first two questions test the C→Python structural shift taught in the
+    // "No ; No { }" section. They come first deliberately: this is the idea the
+    // rest of the course silently depends on.
+    {
+      q: "In Python, what marks the END of a statement?",
+      options: [
+        "A semicolon ;",
+        "A closing brace }",
+        "The end of the line — a new line means a new statement",
+        "A full stop .",
+      ],
+      answer: 2,
+      explain: "C needs a ; because to the compiler your program is one long stream of characters where newlines carry no meaning. Python treats the newline itself as the delimiter, so one line = one statement and the ; is unnecessary.",
+    },
+    {
+      q: "In Python, what decides which statements belong together as a block?",
+      options: [
+        "Curly braces { }",
+        "How far the lines are indented",
+        "The keywords BEGIN and END",
+        "Nothing — Python has no blocks",
+      ],
+      answer: 1,
+      explain: "Python replaces { } with indentation. In C you indented for readability and the compiler ignored it; in Python that same indentation IS the syntax. Change the indentation and you change what the program means — which is why IndentationError exists.",
+    },
     {
       q: 'What does print("Hi there") do?',
       options: [
@@ -426,14 +666,14 @@ function Quiz({ onComplete }) {
     const final = score + (selected === questions[current].answer ? 1 : 0);
     return (
       <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{final >= 3 ? "🎉" : "👍"}</div>
+        <div style={{ fontSize: 52 }}>{final >= 4 ? "🎉" : "👍"}</div>
         <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>
           You scored {final} / {questions.length}
         </div>
         <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {final === 4
+          {final === questions.length
             ? "Perfect! You can now read and predict simple Python programs with confidence."
-            : final >= 2
+            : final >= 3
             ? "Good work — revisit the Spot the Bug section to sharpen your eye for syntax."
             : "No worries — go through the Run and Comment sections again, then retry."}
         </div>
@@ -506,6 +746,7 @@ export default function Unit4_1({ student, onUnitComplete }) {
   // see the `content` array further down, which must stay in the same order.
   const sections = [
     { id: "intro", label: "From Concept to Code" },
+    { id: "shape", label: "No ; No { }" },
     { id: "run", label: "print() — Run It" },
     { id: "bugs", label: "Spot the Bug" },
     { id: "comments", label: "Comments" },
@@ -573,37 +814,50 @@ export default function Unit4_1({ student, onUnitComplete }) {
         🔑 <strong style={{ color: C.yellow }}>Key idea:</strong> Every large Python program — even one with
         millions of lines — is built the same way: one small, correct instruction at a time. Today, your
         program will have just one job: talk back to you on the screen.
+        <br /><br />
+        But first — a warning for anyone coming from C. Python does not use{" "}
+        <code style={{ color: C.red }}>;</code> and does not use{" "}
+        <code style={{ color: C.red }}>{"{ }"}</code>. Before you write a line of it, spend two minutes on
+        the next section and see exactly what replaced them.
       </div>
     </div>,
 
-    // 1 — the CodeRunner widget: simulated editor + terminal.
+    // 1 — ShapeOfPython: the C→Python punctuation strip. This MUST come before
+    // the print() section, because everything after it silently relies on the
+    // student having accepted that newline = delimiter and indent = block.
+    <div>
+      <h3 style={{ color: C.text, marginBottom: 6 }}>No Semicolons. No Braces.</h3>
+      <ShapeOfPython />
+    </div>,
+
+    // 2 — the CodeRunner widget: simulated editor + terminal.
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>print() — Your First Instruction</h3>
       <CodeRunner />
     </div>,
 
-    // 2 — the SyntaxChallenge widget: predict run vs error.
+    // 3 — the SyntaxChallenge widget: predict run vs error.
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>Spot the Bug</h3>
       <SyntaxChallenge />
     </div>,
 
-    // 3 — the CommentDemo widget: comments are ignored by Python.
+    // 4 — the CommentDemo widget: comments are ignored by Python.
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>Comments — Notes Python Ignores</h3>
       <CommentDemo />
     </div>,
 
-    // 4 — the closing Quiz. Note the onComplete callback: it marks THIS
-    // section (index 4) as done for the progress bar, and separately calls
+    // 5 — the closing Quiz. Note the onComplete callback: it marks THIS
+    // section (index 5) as done for the progress bar, and separately calls
     // the onUnitComplete prop, which is what actually persists completion
     // of Unit 4.1 back in App.jsx / the Google Apps Script backend.
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-        4 questions to check your understanding of Unit 4.1.
+        6 questions to check your understanding of Unit 4.1.
       </p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
+      <Quiz onComplete={() => { markComplete(5); onUnitComplete && onUnitComplete(); }} />
     </div>,
   ];
 

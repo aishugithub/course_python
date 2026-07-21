@@ -83,7 +83,7 @@ function TruthinessTester() {
     { label: "[]", falsy: true, group: "Collections", rule: "The EMPTY list is falsy." },
     { label: "[0]", falsy: false, group: "Collections", rule: "A list containing one falsy item is still a non-empty list, so the LIST itself is truthy." },
     { label: "{}", falsy: true, group: "Collections", rule: "The empty dictionary is falsy — same rule as empty lists." },
-    { label: "None", falsy: true, group: "Special", rule: "None represents 'nothing at all' and is always falsy." },
+    { label: "None", falsy: true, group: "Special", rule: "None is a built-in CONSTANT (capital N, no quotes) meaning 'no value at all' — Python's equivalent of NULL in C. It is not 0 and not \"\"; those are values. None is the absence of one, so it is always falsy." },
     { label: "False", falsy: true, group: "Special", rule: "The bool value False is, unsurprisingly, falsy." },
   ];
 
@@ -155,7 +155,28 @@ function PitfallChallenge() {
     { code: 'if "0":\n    print("yes")\nelse:\n    print("no")', prediction: "yes", reason: 'The string "0" is NOT empty — it has one character in it — so it is truthy, even though it looks like the falsy number 0.' },
     { code: 'if []:\n    print("yes")\nelse:\n    print("no")', prediction: "no", reason: "An empty list is falsy." },
     { code: 'if [0]:\n    print("yes")\nelse:\n    print("no")', prediction: "yes", reason: "This list is NOT empty — it contains one item (which happens to be the falsy number 0) — so the LIST itself is truthy." },
-    { code: 'if None:\n    print("yes")\nelse:\n    print("no")', prediction: "no", reason: "None is always falsy, in every context." },
+    {
+      code: 'if None:\n    print("yes")\nelse:\n    print("no")',
+      prediction: "no",
+      // preNote is shown BEFORE the student guesses. None has not been formally
+      // introduced anywhere yet, so asking them to predict without it is unfair.
+      preNote: (
+        <>
+          <strong style={{ color: C.accent }}>First, meet <code>None</code>.</strong>{" "}
+          <code style={{ color: C.accent }}>None</code> is a built-in <em>constant</em> in Python —
+          a permanent, ready-made value that means <em>"no value at all"</em>. It is written with a
+          capital N and no quotes, exactly like <code style={{ color: C.accent }}>True</code> and{" "}
+          <code style={{ color: C.accent }}>False</code>. It is Python's version of C's{" "}
+          <code style={{ color: C.yellow }}>NULL</code>. Note that{" "}
+          <code style={{ color: C.accent }}>None</code> is not 0, not{" "}
+          <code style={{ color: C.accent }}>""</code>, and not{" "}
+          <code style={{ color: C.accent }}>False</code> — those are all <em>some</em> value.{" "}
+          <code style={{ color: C.accent }}>None</code> is the absence of one.
+        </>
+      ),
+      reason:
+        "None is Python's built-in constant for \"nothing here\" — the value a variable holds when it has been given no meaningful value yet, and the value a function returns when it returns nothing. Since it represents an absence, it is ALWAYS falsy, in every context. So the if branch is skipped and \"no\" is printed.",
+    },
   ];
 
   const [current, setCurrent] = useState(0);
@@ -179,6 +200,16 @@ function PitfallChallenge() {
       </p>
 
       <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>Snippet {current + 1} of {snippets.length} · Score: {score}</div>
+
+      {/* Shown before guessing, whenever a snippet uses something not yet taught. */}
+      {s.preNote && (
+        <div style={{
+          background: C.accent + "14", border: `1px solid ${C.accent}44`, borderRadius: 8,
+          padding: "12px 14px", marginBottom: 14, fontSize: 13, color: C.muted, lineHeight: 1.7,
+        }}>
+          {s.preNote}
+        </div>
+      )}
 
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px", marginBottom: 14, fontFamily: "monospace", fontSize: 13, color: C.text, whiteSpace: "pre-wrap" }}>{s.code}</pre>
 
@@ -308,7 +339,7 @@ function Quiz({ onComplete }) {
       q: "What does bool(None) return?",
       options: ["True", "False", "None", "Error — None cannot be converted to bool"],
       answer: 1,
-      explain: "None always evaluates to False in a boolean context — it represents the absence of a value.",
+      explain: "None is Python's built-in constant for the absence of a value (like NULL in C), so bool(None) is False. Careful: bool(None) returns the bool False, it does not return None itself.",
     },
     {
       q: 'Why might if result: be risky if result could legitimately be 0?',
