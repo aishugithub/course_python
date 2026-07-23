@@ -63,18 +63,23 @@ function LoanEligibility() {
 }
 
 // ── Nested If ────────────────────────────────────────────────────────────────
-function NestedWeather() {
-  const [raining, setRaining] = useState(true);
-  const [temp, setTemp] = useState(8);
+function NestedEligibility() {
+  // Two facts every student here already tracks about themselves.
+  const [attendance, setAttendance] = useState(82);
+  const [internal, setInternal] = useState(26);
 
+  // Mirrors the Python below exactly, so the live result is always trustworthy.
   let message;
-  if (raining) {
-    if (temp < 10) message = "Heavy coat + umbrella";
-    else message = "Just an umbrella";
+  if (attendance >= 75) {
+    if (internal >= 20) message = "Eligible - hall ticket issued";
+    else message = "Eligible, but internals are low - meet your mentor";
   } else {
-    if (temp < 10) message = "Heavy coat, no umbrella needed";
-    else message = "Light clothing, enjoy!";
+    if (internal >= 20) message = "Shortage - apply for condonation";
+    else message = "Not eligible - repeat the semester";
   }
+
+  // Which branch of the OUTER if we are in — used to highlight the live path.
+  const outerTrue = attendance >= 75;
 
   return (
     <div>
@@ -83,38 +88,55 @@ function NestedWeather() {
         this is called nesting. Each level of nesting gets its own extra indentation.
       </p>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-        <button onClick={() => setRaining((v) => !v)} style={{
-          flex: 1, padding: 12, borderRadius: 8, cursor: "pointer",
-          background: raining ? C.teal + "22" : C.card, border: `1.5px solid ${raining ? C.teal : C.border}`,
-          color: raining ? C.teal : C.text, fontWeight: 600,
-        }}>{raining ? "🌧️ Raining" : "☀️ Not Raining"}</button>
-        <div style={{ flex: 1 }}>
-          <label style={{ color: C.muted, fontSize: 11 }}>temp = {temp}°C</label>
-          <input type="range" min={-5} max={35} value={temp} onChange={(e) => setTemp(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
+        Here is a rule you already live under. The college checks{" "}
+        <strong style={{ color: C.accent }}>attendance</strong> first. Only then does it look at your{" "}
+        <strong style={{ color: C.accent }}>internal marks</strong> — and what low internals MEAN
+        depends entirely on which side of the attendance rule you landed on. Move both sliders and
+        watch all four outcomes.
+      </p>
+
+      <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <label style={{ color: C.muted, fontSize: 11 }}>
+            attendance = <strong style={{ color: outerTrue ? C.green : C.red }}>{attendance}%</strong>
+            <span style={{ color: C.border }}> (need 75)</span>
+          </label>
+          <input type="range" min={0} max={100} value={attendance} onChange={(e) => setAttendance(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <label style={{ color: C.muted, fontSize: 11 }}>
+            internal = <strong style={{ color: internal >= 20 ? C.green : C.red }}>{internal}</strong>
+            <span style={{ color: C.border }}> / 40 (need 20)</span>
+          </label>
+          <input type="range" min={0} max={40} value={internal} onChange={(e) => setInternal(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
         </div>
       </div>
 
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8 }}>
-{`if raining:
-    if temp < 10:
-        print("Heavy coat + umbrella")
+{`if attendance >= 75:
+    if internal >= 20:
+        print("Eligible - hall ticket issued")
     else:
-        print("Just an umbrella")
+        print("Eligible, but internals are low - meet your mentor")
 else:
-    if temp < 10:
-        print("Heavy coat, no umbrella needed")
+    if internal >= 20:
+        print("Shortage - apply for condonation")
     else:
-        print("Light clothing, enjoy!")`}
+        print("Not eligible - repeat the semester")`}
       </pre>
 
       <div style={{ marginTop: 14, background: C.green + "18", border: `1.5px solid ${C.green}55`, borderRadius: 10, padding: 14, textAlign: "center", fontFamily: "monospace", fontSize: 14, color: C.green }}>
         &gt; {message}
       </div>
 
-      <div style={{ marginTop: 16, background: C.yellow + "18", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
+      <div style={{ marginTop: 16, background: C.yellow + "18", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
         🔑 <strong style={{ color: C.yellow }}>Key idea:</strong> the inner if only even gets CHECKED if the
         outer if's condition was True — nesting means "this decision only matters in this specific situation."
+        Notice that <code style={{ color: C.accent }}>internal {"<"} 20</code> appears in BOTH branches, but
+        means something completely different in each: on one side it's advice, on the other it decides your
+        semester. That is why this cannot be flattened into a single{" "}
+        <code style={{ color: C.accent }}>and</code> condition.
       </div>
     </div>
   );
@@ -367,7 +389,7 @@ export default function Unit5_3({ student, onUnitComplete }) {
     </div>,
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>Nested if Statements</h3>
-      <NestedWeather />
+      <NestedEligibility />
     </div>,
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>Short-Circuit Evaluation</h3>

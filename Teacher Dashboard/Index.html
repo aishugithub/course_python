@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<!-- ==========================================================================
+     INDEX.HTML  —  TEACHER PROGRESS DASHBOARD (client side / the page you see)
+     --------------------------------------------------------------------------
+     HOW THIS FITS THE APP
+       • Dashboard.gs -> doGet() serves THIS file when you open the web-app URL.
+       • On load, the script at the bottom calls the server function
+         getDashboardData() (defined in Dashboard.gs) via google.script.run.
+       • When the data comes back, render() builds the two sections you asked
+         for: "Course Progress" and "Lab e-Record". A tab bar switches between
+         them; everything is sorted by RollNo (your reg-no order).
+     NOTE: this is a single self-contained file — all CSS and JS are inline, so
+     there is nothing else to deploy.
+=========================================================================== -->
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <style>
+      /* ---- Design tokens: one place to tweak the palette ------------------ */
+      :root {
+        --bg:#0d1117; --surface:#161b22; --card:#1c232c; --border:#2b333d;
+        --text:#e6edf3; --muted:#8b98a5; --teal:#2dd4bf; --accent:#7c9fff;
+        --good:#3fb950; --warn:#d29922; --bar-bg:#21262d;
+      }
+      * { box-sizing:border-box; }
+      body {
+        margin:0; background:var(--bg); color:var(--text);
+        font-family:'Segoe UI',system-ui,sans-serif; font-size:14px;
+      }
+
+      /* ---- Top header ------------------------------------------------------ */
+      header {
+        background:var(--surface); border-bottom:1px solid var(--border);
+        padding:14px 22px; display:flex; align-items:center; gap:14px;
+      }
+      header .logo {
+        width:34px; height:34px; border-radius:9px;
+        background:linear-gradient(135deg,var(--teal),var(--accent));
+        display:flex; align-items:center; justify-content:center; font-size:18px;
+      }
+      header h1 { font-size:16px; margin:0; font-weight:600; }
+      header .sub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+      header .meta { margin-left:auto; font-size:11.5px; color:var(--muted); text-align:right; }
+
+      /* ---- Tab bar (Course vs Lab) ---------------------------------------- */
+      .tabs { display:flex; gap:6px; padding:14px 22px 0; }
+      .tab {
+        padding:9px 18px; border-radius:9px 9px 0 0; cursor:pointer;
+        background:transparent; color:var(--muted); border:1px solid transparent;
+        border-bottom:none; font-weight:600; font-size:13px;
+      }
+      .tab.active {
+        background:var(--surface); color:var(--text);
+        border-color:var(--border);
+      }
+
+      /* ---- Layout & cards -------------------------------------------------- */
+      .wrap { padding:18px 22px 60px; }
+      .panel { display:none; }              /* hidden until its tab is chosen  */
+      .panel.active { display:block; }
+
+      /* ---- Summary strip (little stat chips) ------------------------------ */
+      .summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+      .stat {
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:10px; padding:10px 16px; min-width:120px;
+      }
+      .stat .n { font-size:20px; font-weight:800; color:var(--teal); }
+      .stat .l { font-size:11px; color:var(--muted); margin-top:2px; }
+
+      /* ---- Tables ---------------------------------------------------------- */
+      table { border-collapse:collapse; width:100%; background:var(--surface);
+              border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+      th, td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--border);
+               font-size:12.5px; vertical-align:middle; }
+      th { background:var(--card); color:var(--muted); font-weight:600;
+           position:sticky; top:0; z-index:1; }
+      tr:last-child td { border-bottom:none; }
+      td.reg { font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap; }
+      td.name { font-weight:600; }
+
+      /* ---- Progress bar (course %) ---------------------------------------- */
+      .bar { background:var(--bar-bg); border-radius:6px; height:9px; width:150px;
+             overflow:hidden; display:inline-block; vertical-align:middle; }
+      .bar > span { display:block; height:100%;
+                    background:linear-gradient(90deg,var(--teal),var(--accent)); }
+      .pct { display:inline-block; width:38px; text-align:right;
+             font-variant-numeric:tabular-nums; margin-left:8px; font-weight:700; }
+
+      /* ---- Module mini-grid (per-student breakdown) ----------------------- */
+      .mods { display:flex; gap:3px; flex-wrap:wrap; }
+      .mod { font-size:9.5px; padding:2px 5px; border-radius:4px;
+             background:var(--card); border:1px solid var(--border); color:var(--muted); }
+      .mod.full { background:var(--good); color:#04250f; border-color:transparent; font-weight:700; }
+      .mod.part { background:var(--warn); color:#2a1e00; border-color:transparent; }
+
+      /* ---- Lab stage dots -------------------------------------------------- */
+      .stagewrap { display:flex; gap:8px; flex-wrap:wrap; }
+      .exp { border:1px solid var(--border); border-radius:8px; padding:6px 8px;
+             background:var(--card); min-width:0; }
+      .exp .title { font-size:10.5px; color:var(--muted); margin-bottom:4px; white-space:nowrap; }
+      .dots { display:flex; gap:3px; }
+      .dot { width:15px; height:15px; border-radius:4px; font-size:10px;
+             display:flex; align-items:center; justify-content:center;
+             background:var(--bar-bg); color:var(--muted); }
+      .dot.done { background:var(--good); color:#04250f; font-weight:700; }
+      .exp.notbuilt { opacity:0.45; }
+      .badge { font-size:9px; padding:1px 5px; border-radius:4px; margin-left:6px;
+               background:var(--teal); color:#04251f; font-weight:700; }
+      .empty { color:var(--muted); padding:30px; text-align:center; }
+      .loading { color:var(--muted); padding:40px; text-align:center; }
+      .err { color:#ff7b72; padding:20px; }
+    </style>
+  </head>
+
+  <body>
+    <!-- ---- Header ---------------------------------------------------------- -->
+    <header>
+      <div class="logo">📊</div>
+      <div>
+        <h1>Class Progress Dashboard</h1>
+        <div class="sub">Python Programming (Foothold) · Python Lab MED23CL202</div>
+      </div>
+      <div class="meta" id="meta">Loading…</div>
+    </header>
+
+    <!-- ---- Tab bar: the two sections you asked for ------------------------- -->
+    <div class="tabs">
+      <div class="tab active" id="tabCourse" onclick="switchTab('course')">Course Progress</div>
+      <div class="tab" id="tabLab" onclick="switchTab('lab')">Lab e-Record</div>
+    </div>
+
+    <div class="wrap">
+      <!-- Course panel -->
+      <div class="panel active" id="panelCourse">
+        <div class="summary" id="courseSummary"></div>
+        <div id="courseTable" class="loading">Loading class data…</div>
+      </div>
+
+      <!-- Lab panel -->
+      <div class="panel" id="panelLab">
+        <div class="summary" id="labSummary"></div>
+        <div id="labTable" class="loading">Loading lab data…</div>
+      </div>
+    </div>
+
+    <script>
+      // ======================================================================
+      //  CLIENT LOGIC
+      //  DATA holds the payload from the server once it arrives. We keep it in a
+      //  module-level variable so both render functions can read the same copy.
+      // ======================================================================
+      let DATA = null;
+
+      // ---- 1. Tab switching ------------------------------------------------
+      //  Purely visual: toggle which panel + tab carries the `active` class.
+      function switchTab(which) {
+        document.getElementById('tabCourse').classList.toggle('active', which === 'course');
+        document.getElementById('tabLab').classList.toggle('active', which === 'lab');
+        document.getElementById('panelCourse').classList.toggle('active', which === 'course');
+        document.getElementById('panelLab').classList.toggle('active', which === 'lab');
+      }
+
+      // ---- 2. Tiny HTML-escaper -------------------------------------------
+      //  Student names/emails are user data; escape them so a stray "<" can
+      //  never break the table or inject markup.
+      function esc(v) {
+        return String(v == null ? '' : v)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+
+      // ---- 3. Ask the server for data on page load -------------------------
+      //  google.script.run is the bridge to Dashboard.gs. We register success
+      //  and failure handlers, then call the server function.
+      google.script.run
+        .withSuccessHandler(onData)
+        .withFailureHandler(onError)
+        .getDashboardData();
+
+      function onError(err) {
+        document.getElementById('meta').textContent = 'Error';
+        document.getElementById('courseTable').innerHTML =
+          '<div class="err">Could not load data: ' + esc(err && err.message) +
+          '.<br>Check the SPREADSHEET_ID and tab names in Dashboard.gs.</div>';
+      }
+
+      // ---- 4. Data arrived: stash it and render both panels ----------------
+      function onData(payload) {
+        DATA = payload;
+        document.getElementById('meta').innerHTML =
+          esc(payload.students.length) + ' students · course out of ' +
+          esc(payload.courseTotalUnits) + ' units<br>Generated ' + esc(payload.generatedAt);
+        renderCourse();
+        renderLab();
+      }
+
+      // ---- 5. COURSE PANEL -------------------------------------------------
+      //  One row per student (reg-no order): reg no, name, a % bar, and a
+      //  compact module grid (green = module fully done, amber = partial).
+      function renderCourse() {
+        const st = DATA.students;
+        if (!st.length) { document.getElementById('courseTable').innerHTML =
+          '<div class="empty">No students found in the Students tab.</div>'; return; }
+
+        // -- summary chips: class average %, fully-complete count, not-started --
+        const avg = Math.round(st.reduce((a,s)=>a+s.course.pct,0) / st.length);
+        const fullCount = st.filter(s => s.course.pct === 100).length;
+        const notStarted = st.filter(s => s.course.done === 0).length;
+        document.getElementById('courseSummary').innerHTML =
+          chip(avg + '%','class average') +
+          chip(fullCount,'completed course') +
+          chip(notStarted,'not started') +
+          chip(st.length,'students');
+
+        // -- build the table --
+        let h = '<table><thead><tr>' +
+                '<th>#</th><th>Reg No</th><th>Name</th><th>Batch</th>' +
+                '<th>Course Completion</th><th>Modules (M1 → M13)</th>' +
+                '</tr></thead><tbody>';
+        st.forEach(function (s, i) {
+          // module grid: one chip per module, coloured by fullness
+          const mods = s.course.modules.map(function (m) {
+            const cls = m.done === m.total ? 'full' : (m.done > 0 ? 'part' : '');
+            return '<span class="mod ' + cls + '" title="' + esc(m.title) +
+                   ': ' + m.done + '/' + m.total + '">' + esc(m.id) + '</span>';
+          }).join('');
+          h += '<tr>' +
+                 '<td class="reg">' + (i+1) + '</td>' +
+                 '<td class="reg">' + esc(s.rollNo) + '</td>' +
+                 '<td class="name">' + esc(s.name) + '</td>' +
+                 '<td>' + esc(s.batch) + '</td>' +
+                 '<td><span class="bar"><span style="width:' + s.course.pct + '%"></span></span>' +
+                     '<span class="pct">' + s.course.pct + '%</span>' +
+                     '<span style="color:var(--muted);font-size:11px;margin-left:6px">' +
+                        s.course.done + '/' + s.course.total + '</span></td>' +
+                 '<td><div class="mods">' + mods + '</div></td>' +
+               '</tr>';
+        });
+        h += '</tbody></table>';
+        document.getElementById('courseTable').innerHTML = h;
+      }
+
+      // ---- 6. LAB PANEL (stage-level, as you chose) ------------------------
+      //  One row per student. For each experiment we draw a little box with a
+      //  dot per stage (green ✓ = done). Built experiments show their 6 stages;
+      //  not-yet-built experiments are dimmed placeholders. A ✓ badge marks a
+      //  fully submitted experiment record.
+      function renderLab() {
+        const st = DATA.students;
+        if (!st.length) { document.getElementById('labTable').innerHTML =
+          '<div class="empty">No students found.</div>'; return; }
+
+        // -- summary: how many students touched / finished Experiment 1 --
+        const exp1Touched = st.filter(s => s.lab.experiments[0].stagesDone > 0).length;
+        const exp1Done    = st.filter(s => s.lab.experiments[0].submitted).length;
+        const builtCount  = DATA.labExperiments.filter(e => e.built).length;
+        document.getElementById('labSummary').innerHTML =
+          chip(builtCount + '/' + DATA.labExperiments.length,'experiments built') +
+          chip(exp1Touched,'started Exp 1') +
+          chip(exp1Done,'submitted Exp 1') +
+          chip(st.length,'students');
+
+        // -- table: student rows, experiments as stage-dot boxes --
+        let h = '<table><thead><tr><th>#</th><th>Reg No</th><th>Name</th>' +
+                '<th>Lab Experiments — stage by stage (P1/P2 · Algorithm → Flowchart → Program)</th>' +
+                '</tr></thead><tbody>';
+        st.forEach(function (s, i) {
+          const boxes = s.lab.experiments.map(function (e) {
+            if (!e.built) {                       // placeholder for exps 2–10
+              return '<div class="exp notbuilt"><div class="title">' + esc(e.title) +
+                     '</div><div class="dots"><span style="font-size:10px;color:var(--muted)">not built yet</span></div></div>';
+            }
+            const dots = e.stages.map(function (stg) {
+              return '<span class="dot ' + (stg.done ? 'done' : '') + '" title="' +
+                     esc(stg.label) + (stg.done ? ' — done' : ' — pending') + '">' +
+                     (stg.done ? '✓' : '') + '</span>';
+            }).join('');
+            const badge = e.submitted ? '<span class="badge">RECORD ✓</span>' : '';
+            return '<div class="exp"><div class="title">' + esc(e.title) +
+                   ' <span style="color:var(--teal)">' + e.stagesDone + '/' + e.stagesTotal +
+                   '</span>' + badge + '</div><div class="dots">' + dots + '</div></div>';
+          }).join('');
+          h += '<tr>' +
+                 '<td class="reg">' + (i+1) + '</td>' +
+                 '<td class="reg">' + esc(s.rollNo) + '</td>' +
+                 '<td class="name">' + esc(s.name) + '</td>' +
+                 '<td><div class="stagewrap">' + boxes + '</div></td>' +
+               '</tr>';
+        });
+        h += '</tbody></table>';
+        document.getElementById('labTable').innerHTML = h;
+      }
+
+      // ---- 7. Small helper to build a summary chip -------------------------
+      function chip(n, label) {
+        return '<div class="stat"><div class="n">' + esc(n) +
+               '</div><div class="l">' + esc(label) + '</div></div>';
+      }
+    </script>
+  </body>
+</html>
