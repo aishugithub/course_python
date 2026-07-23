@@ -20,7 +20,7 @@ function evaluate(average, attendance) {
   else if (average >= 40) grade = "D";
   else grade = "F";
   const scholarship = pass && average >= 85 && attendance >= 75;
-  const honorRoll = scholarship && attendance === 100;
+  const honorRoll = scholarship && attendance >= 90;
   return { pass, grade, scholarship, honorRoll };
 }
 
@@ -66,8 +66,31 @@ function CapstoneBuilder() {
   const [attendance, setAttendance] = useState(92);
   const r = evaluate(average, attendance);
 
+  // Mirror exactly what the print() statements in the code above would output
+  // for the current slider values, so the console panel and the code stay in sync.
+  const output = [];
+  if (r.scholarship) {
+    output.push("Scholarship eligible!");
+    if (r.honorRoll) output.push("Wow — Honor Roll!");
+  } else {
+    output.push("Not eligible for scholarship");
+  }
+
   return (
     <div>
+      {/* Problem statement — tells students exactly what this program has to work out */}
+      <div style={{ background: C.purple + "14", border: `1px solid ${C.purple}44`, borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+        <div style={{ color: C.purple, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>📝 The problem</div>
+        <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
+          A college processes each student from just two numbers — <strong style={{ color: C.text }}>average marks</strong> and{" "}
+          <strong style={{ color: C.text }}>attendance %</strong> — and must decide: (1) did they <strong style={{ color: C.text }}>pass</strong> (average ≥ 40)?
+          (2) their <strong style={{ color: C.text }}>letter grade</strong>? (3) do they win a <strong style={{ color: C.text }}>scholarship</strong>{" "}
+          (pass + average ≥ 85 + attendance ≥ 75)? A scholarship winner is <em>then</em> checked for the top honour — the{" "}
+          <strong style={{ color: C.text }}>Honor Roll</strong> — which additionally needs attendance ≥ 90. The Honor Roll question is only
+          asked <em>if the scholarship one was already "yes"</em> — that's a <strong style={{ color: C.text }}>nested</strong> decision.
+        </div>
+      </div>
+
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
         Drag both sliders and watch all four decisions update live from the same two numbers.
       </p>
@@ -98,10 +121,21 @@ else:
 scholarship = pass_result and average >= 85 and attendance >= 75
 
 if scholarship:
-    honor_roll = attendance == 100
+    print("Scholarship eligible!")
+    honor_roll = attendance >= 90
+    if honor_roll:
+        print("Wow — Honor Roll!")
 else:
-    honor_roll = False`}
+    print("Not eligible for scholarship")`}
       </pre>
+
+      {/* Console panel — the actual text the print() calls produce for these inputs */}
+      <div style={{ background: "#000", border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: C.muted, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>▶ Output</div>
+        {output.map((line, i) => (
+          <div key={i} style={{ fontFamily: "monospace", fontSize: 13, color: C.green, lineHeight: 1.7 }}>{line}</div>
+        ))}
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {[
@@ -122,14 +156,14 @@ else:
 
 // ── Trace The Logic ───────────────────────────────────────────────────────────
 function LogicTrace() {
-  const example = { average: 92, attendance: 100 };
+  const example = { average: 92, attendance: 95 };
   const r = evaluate(example.average, example.attendance);
 
   const steps = [
     { title: "Step 1 — Pass or Fail?", code: "pass_result = average >= 40", result: `pass_result = ${r.pass}`, note: "The simplest check runs first: is 92 at least 40? Yes." },
     { title: "Step 2 — Which Grade?", code: "if average >= 90: grade = \"A\"\n...", result: `grade = "${r.grade}"`, note: "The elif chain runs top to bottom. 92 >= 90 is True, so grade is set to \"A\" immediately — the rest of the chain is skipped." },
     { title: "Step 3 — Scholarship?", code: "scholarship = pass_result and average >= 85 and attendance >= 75", result: `scholarship = ${r.scholarship}`, note: "All three conditions must be True together: passed (yes), average >= 85 (92, yes), attendance >= 75 (100, yes)." },
-    { title: "Step 4 — Honor Roll? (nested)", code: "if scholarship:\n    honor_roll = attendance == 100", result: `honor_roll = ${r.honorRoll}`, note: "This check is NESTED inside the scholarship check — it only even runs because scholarship was already True. Then it additionally requires perfect attendance." },
+    { title: "Step 4 — Honor Roll? (nested)", code: "if scholarship:\n    print(\"Scholarship eligible!\")\n    honor_roll = attendance >= 90\n    if honor_roll:\n        print(\"Wow — Honor Roll!\")", result: `honor_roll = ${r.honorRoll}`, note: "This check is NESTED inside the scholarship check — it only even runs because scholarship was already True. It additionally requires attendance of at least 90%, so this student (95%) makes it." },
   ];
 
   const [step, setStep] = useState(0);
@@ -171,7 +205,7 @@ function MatchProfile() {
   const r = evaluate(average, attendance);
 
   // Target: Grade A, but NOT on the Honor Roll — tests whether the student
-  // understands that Honor Roll needs scholarship AND perfect attendance.
+  // understands that Honor Roll needs scholarship AND attendance >= 90.
   const targetMet = r.grade === "A" && !r.honorRoll;
 
   return (
@@ -208,14 +242,14 @@ function MatchProfile() {
         border: `1.5px solid ${targetMet ? C.green : C.border}`,
         color: targetMet ? C.green : C.muted, fontWeight: 600,
       }}>
-        {targetMet ? "🎉 Challenge solved! Grade A, but Honor Roll requires perfect attendance too." : "Keep adjusting…"}
+        {targetMet ? "🎉 Challenge solved! Grade A, but Honor Roll needs attendance of at least 90% too." : "Keep adjusting…"}
       </div>
 
       {targetMet && (
         <div style={{ marginTop: 14, background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
           💡 You just proved you understand nested conditions: Honor Roll isn't just "Grade A" — it's{" "}
-          <code style={{ color: C.purple }}>scholarship and attendance == 100</code>, and scholarship itself needs
-          average &gt;= 85. Dropping attendance below 100 (while keeping average high) breaks only the innermost check.
+          <code style={{ color: C.purple }}>scholarship and attendance &gt;= 90</code>, and scholarship itself needs
+          average &gt;= 85. Dropping attendance below 90 (while keeping average high) breaks only the innermost check.
         </div>
       )}
     </div>
@@ -238,9 +272,9 @@ function Quiz({ onComplete }) {
     },
     {
       q: "A student has average = 95 and attendance = 80. What is their Honor Roll status?",
-      options: ["Yes, honor roll", "No — honor roll requires attendance == 100 exactly", "Depends on their grade", "Error, undefined"],
+      options: ["Yes, honor roll", "No — honor roll requires attendance >= 90", "Depends on their grade", "Error, undefined"],
       answer: 1,
-      explain: "Even though 95 easily qualifies for Scholarship (>=85 average, >=75 attendance), Honor Roll additionally requires attendance to be exactly 100 — 80% attendance doesn't meet that.",
+      explain: "Even though 95 easily qualifies for Scholarship (>=85 average, >=75 attendance), Honor Roll additionally requires attendance of at least 90% — 80% attendance doesn't meet that.",
     },
     {
       q: "If average = 30, what will grade and pass_result be?",
