@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<!-- ==========================================================================
+     GENERAL.HTML  —  "Course Progress" view  (?view=general)
+     --------------------------------------------------------------------------
+     Served by Dashboard.gs -> doGet() when the URL has no ?view= or view=general.
+     On load it calls getGeneralData() (Dashboard.gs), which returns BOTH
+     Foothold courses (Python + COA). A switcher at the top flips between them;
+     each course's students are listed sorted by progress (highest first) so you
+     immediately see who is nearing completion. Fully read-only — safe to share.
+=========================================================================== -->
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <style>
+      :root {
+        --bg:#0d1117; --surface:#161b22; --card:#1c232c; --border:#2b333d;
+        --text:#e6edf3; --muted:#8b98a5; --teal:#2dd4bf; --accent:#7c9fff;
+        --good:#3fb950; --warn:#d29922; --bar-bg:#21262d;
+      }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--bg); color:var(--text);
+             font-family:'Segoe UI',system-ui,sans-serif; font-size:14px; }
+      header { background:var(--surface); border-bottom:1px solid var(--border);
+               padding:14px 22px; display:flex; align-items:center; gap:14px; }
+      header .logo { width:34px; height:34px; border-radius:9px;
+        background:linear-gradient(135deg,var(--teal),var(--accent));
+        display:flex; align-items:center; justify-content:center; font-size:18px; }
+      header h1 { font-size:16px; margin:0; font-weight:600; }
+      header .sub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+      header .meta { margin-left:auto; font-size:11.5px; color:var(--muted); text-align:right; }
+
+      /* Course switcher */
+      .switch { display:flex; gap:6px; padding:14px 22px 0; }
+      .swbtn { padding:9px 18px; border-radius:9px 9px 0 0; cursor:pointer;
+        background:transparent; color:var(--muted); border:1px solid transparent;
+        border-bottom:none; font-weight:600; font-size:13px; }
+      .swbtn.active { background:var(--surface); color:var(--text); border-color:var(--border); }
+
+      .wrap { padding:18px 22px 60px; }
+      .summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+      .stat { background:var(--surface); border:1px solid var(--border);
+              border-radius:10px; padding:10px 16px; min-width:120px; }
+      .stat .n { font-size:20px; font-weight:800; color:var(--teal); }
+      .stat .l { font-size:11px; color:var(--muted); margin-top:2px; }
+
+      .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+      .search { background:var(--card); color:var(--text); border:1px solid var(--border);
+                border-radius:8px; padding:8px 12px; font-size:13px; min-width:240px; }
+      .btn { background:var(--card); color:var(--text); border:1px solid var(--border);
+             border-radius:8px; padding:8px 12px; font-size:12.5px; cursor:pointer; }
+      .btn:hover { border-color:var(--teal); color:var(--teal); }
+      .count { color:var(--muted); font-size:11.5px; }
+
+      table { border-collapse:collapse; width:100%; background:var(--surface);
+              border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+      th, td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--border);
+               font-size:12.5px; vertical-align:middle; }
+      th { background:var(--card); color:var(--muted); font-weight:600; }
+      tr:last-child td { border-bottom:none; }
+      td.reg { font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap; }
+      td.rank { color:var(--muted); text-align:right; width:34px; }
+      td.name { font-weight:600; }
+
+      .bar { background:var(--bar-bg); border-radius:6px; height:9px; width:150px;
+             overflow:hidden; display:inline-block; vertical-align:middle; }
+      .bar > span { display:block; height:100%;
+                    background:linear-gradient(90deg,var(--teal),var(--accent)); }
+      .pct { display:inline-block; width:40px; text-align:right;
+             font-variant-numeric:tabular-nums; margin-left:8px; font-weight:700; }
+
+      .mods { display:flex; gap:3px; flex-wrap:wrap; }
+      .mod { font-size:9.5px; padding:2px 5px; border-radius:4px;
+             background:var(--card); border:1px solid var(--border); color:var(--muted); }
+      .mod.full { background:var(--good); color:#04250f; border-color:transparent; font-weight:700; }
+      .mod.part { background:var(--warn); color:#2a1e00; border-color:transparent; }
+      .loading { color:var(--muted); padding:40px; text-align:center; }
+      .err { color:#ff7b72; padding:20px; }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="logo">📊</div>
+      <div>
+        <h1>Course Progress — All Students</h1>
+        <div class="sub">Foothold · sorted by progress, highest first</div>
+      </div>
+      <div class="meta" id="meta">Loading…</div>
+    </header>
+
+    <!-- Course switcher (buttons injected once data arrives) -->
+    <div class="switch" id="switch"></div>
+
+    <div class="wrap">
+      <div class="summary" id="summary"></div>
+      <div class="toolbar">
+        <input class="search" id="search" placeholder="🔍 Filter by reg no or name…" oninput="setFilter(this.value)">
+        <button class="btn" onclick="exportCsv()">⬇ Export this course (CSV)</button>
+        <span class="count" id="count"></span>
+      </div>
+      <div id="table" class="loading">Loading class data…</div>
+    </div>
+
+    <script>
+      // DATA = payload; CUR = the course object showing; FILTER = search text.
+      let DATA = null, CUR = null, FILTER = '';
+
+      function esc(v){ return String(v==null?'':v)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+      // Search filter: re-render the current course's table on each keystroke.
+      function setFilter(v){ FILTER = (v||'').trim().toLowerCase(); if(CUR) renderTable(); }
+      function filtered(students){
+        if(!FILTER) return students;
+        return students.filter(function(s){
+          return String(s.rollNo).toLowerCase().indexOf(FILTER)>=0 ||
+                 String(s.name).toLowerCase().indexOf(FILTER)>=0;
+        });
+      }
+
+      // Ask the server for both courses on load.
+      google.script.run.withSuccessHandler(onData).withFailureHandler(onErr).getGeneralData();
+
+      function onErr(e){
+        document.getElementById('meta').textContent='Error';
+        document.getElementById('table').innerHTML =
+          '<div class="err">Could not load: '+esc(e && e.message)+
+          '.<br>Check the sheet IDs and tab names in Dashboard.gs.</div>';
+      }
+
+      function onData(payload){
+        DATA = payload;
+        document.getElementById('meta').textContent = 'Generated ' + esc(payload.generatedAt);
+        // Build the switcher buttons, one per course.
+        document.getElementById('switch').innerHTML = payload.courses.map(function(c){
+          return '<div class="swbtn" id="sw_'+c.key+'" onclick="show(\''+c.key+'\')">'+
+                 esc(c.title)+' ('+c.students.length+')</div>';
+        }).join('');
+        // Show the first course by default.
+        show(payload.courses[0].key);
+      }
+
+      // Switch to a course: set CUR, draw summary chips, then the table.
+      function show(key){
+        CUR = DATA.courses.filter(function(x){return x.key===key;})[0];
+        DATA.courses.forEach(function(x){
+          document.getElementById('sw_'+x.key).classList.toggle('active', x.key===key);
+        });
+        const st = CUR.students;
+        const avg = st.length ? Math.round(st.reduce((a,s)=>a+s.pct,0)/st.length) : 0;
+        document.getElementById('summary').innerHTML =
+          chip(avg+'%','class average') + chip(st.filter(s=>s.pct===100).length,'completed') +
+          chip(st.filter(s=>s.done===0).length,'not started') +
+          chip(st.length,'students') + chip(CUR.totalUnits,'units in course');
+        renderTable();
+      }
+
+      // Draw the table for CUR, honouring the search filter.
+      function renderTable(){
+        const st = filtered(CUR.students);
+        document.getElementById('count').textContent = st.length + ' of ' + CUR.students.length + ' shown';
+        if(!CUR.students.length){ document.getElementById('table').innerHTML =
+          '<div class="loading">No students found in this course\'s Students tab.</div>'; return; }
+        let h = '<table><thead><tr><th>#</th><th>Reg No</th><th>Name</th><th>Batch</th>'+
+                '<th>Completion</th><th>Modules</th></tr></thead><tbody>';
+        st.forEach(function(s,i){
+          const mods = s.modules.map(function(m){
+            const cls = m.done===m.total ? 'full' : (m.done>0 ? 'part' : '');
+            return '<span class="mod '+cls+'" title="'+esc(m.title)+': '+m.done+'/'+m.total+'">'+esc(m.id)+'</span>';
+          }).join('');
+          h += '<tr><td class="rank">'+(i+1)+'</td><td class="reg">'+esc(s.rollNo)+'</td>'+
+               '<td class="name">'+esc(s.name)+'</td><td>'+esc(s.batch)+'</td>'+
+               '<td><span class="bar"><span style="width:'+s.pct+'%"></span></span>'+
+               '<span class="pct">'+s.pct+'%</span>'+
+               '<span style="color:var(--muted);font-size:11px;margin-left:6px">'+s.done+'/'+s.total+'</span></td>'+
+               '<td><div class="mods">'+mods+'</div></td></tr>';
+        });
+        h += '</tbody></table>';
+        document.getElementById('table').innerHTML = h;
+      }
+
+      // Export the CURRENT course's full roster (ignores the filter) to CSV.
+      function exportCsv(){
+        const header = ['Rank','RollNo','Name','Batch','Percent','UnitsDone','UnitsTotal'];
+        const rows=[header];
+        CUR.students.forEach(function(s,i){
+          rows.push([i+1, s.rollNo, s.name, s.batch, s.pct, s.done, s.total]);
+        });
+        const csv = rows.map(function(r){ return r.map(function(c){
+          c=(c==null?'':String(c)); return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(','); }).join('\n');
+        const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+        const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+        a.download = CUR.key+'_progress_'+(DATA.generatedAt||'').replace(/[^0-9A-Za-z]+/g,'_')+'.csv';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+
+      function chip(n,l){ return '<div class="stat"><div class="n">'+esc(n)+
+        '</div><div class="l">'+esc(l)+'</div></div>'; }
+    </script>
+  </body>
+</html>

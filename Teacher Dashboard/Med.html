@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<!-- ==========================================================================
+     MED.HTML  —  "MED ENGG LAB" view  (?view=med)
+     --------------------------------------------------------------------------
+     Served by Dashboard.gs -> doGet() when the URL has ?view=med. On load it
+     calls getMedData(): the 59 roster students in reg-no order with, per
+     experiment, completion status + date/time and the (auto-computed) mark.
+     Two sub-tabs:
+       • Lab Progress : per-experiment class-completion bars; a wide matrix with
+         Reg No + Name FROZEN and a tick + completion date/time in each cell;
+         a per-experiment defaulters list. Search + CSV export.
+       • Marks        : the /10 auto-marks (weighted completion − late penalty),
+         with your overrides highlighted. Search + CSV export.
+     Fully read-only. Search filters what you see; CSV export always dumps the
+     full class regardless of the current filter.
+=========================================================================== -->
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <style>
+      :root {
+        --bg:#0d1117; --surface:#161b22; --card:#1c232c; --border:#2b333d;
+        --text:#e6edf3; --muted:#8b98a5; --teal:#2dd4bf; --accent:#7c9fff;
+        --good:#3fb950; --warn:#d29922; --bad:#ff7b72; --bar-bg:#21262d;
+        --reg-w:96px; --name-w:190px;
+      }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--bg); color:var(--text);
+             font-family:'Segoe UI',system-ui,sans-serif; font-size:14px; }
+      header { background:var(--surface); border-bottom:1px solid var(--border);
+               padding:14px 22px; display:flex; align-items:center; gap:14px; }
+      header .logo { width:34px; height:34px; border-radius:9px;
+        background:linear-gradient(135deg,var(--teal),var(--accent));
+        display:flex; align-items:center; justify-content:center; font-size:18px; }
+      header h1 { font-size:16px; margin:0; font-weight:600; }
+      header .sub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+      header .meta { margin-left:auto; font-size:11.5px; color:var(--muted); text-align:right; }
+
+      .tabs { display:flex; gap:6px; padding:14px 22px 0; }
+      .tab { padding:9px 18px; border-radius:9px 9px 0 0; cursor:pointer;
+        background:transparent; color:var(--muted); border:1px solid transparent;
+        border-bottom:none; font-weight:600; font-size:13px; }
+      .tab.active { background:var(--surface); color:var(--text); border-color:var(--border); }
+      .wrap { padding:16px 22px 60px; }
+      .panel { display:none; } .panel.active { display:block; }
+
+      .summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+      .stat { background:var(--surface); border:1px solid var(--border);
+              border-radius:10px; padding:10px 16px; min-width:110px; }
+      .stat .n { font-size:20px; font-weight:800; color:var(--teal); }
+      .stat .l { font-size:11px; color:var(--muted); margin-top:2px; }
+
+      /* Toolbar: search + export */
+      .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+      .search { background:var(--card); color:var(--text); border:1px solid var(--border);
+                border-radius:8px; padding:8px 12px; font-size:13px; min-width:240px; }
+      .btn { background:var(--card); color:var(--text); border:1px solid var(--border);
+             border-radius:8px; padding:8px 12px; font-size:12.5px; cursor:pointer; }
+      .btn:hover { border-color:var(--teal); color:var(--teal); }
+      .count { color:var(--muted); font-size:11.5px; }
+
+      /* Class-completion bars (per experiment) */
+      .bars { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+      .cbar { background:var(--surface); border:1px solid var(--border); border-radius:9px;
+              padding:8px 10px; width:150px; }
+      .cbar .ct { font-size:10.5px; color:var(--muted); display:flex; justify-content:space-between; margin-bottom:5px; }
+      .cbar .ct b { color:var(--text); }
+      .cbar .track { background:var(--bar-bg); border-radius:5px; height:8px; overflow:hidden; position:relative; }
+      .cbar .fill { height:100%; background:linear-gradient(90deg,var(--good),var(--teal)); }
+      .cbar .part { position:absolute; top:0; height:100%; background:var(--warn); opacity:.5; }
+      .cbar.nb { opacity:.5; }
+
+      .scroller { overflow-x:auto; border:1px solid var(--border); border-radius:10px; }
+      table.matrix { border-collapse:separate; border-spacing:0; background:var(--surface); }
+      table.matrix th, table.matrix td {
+        border-bottom:1px solid var(--border); border-right:1px solid var(--border);
+        padding:7px 9px; font-size:12px; text-align:center; white-space:nowrap; }
+      table.matrix thead th { background:var(--card); color:var(--muted); font-weight:600; }
+      table.matrix thead tr:first-child th { position:sticky; top:0; z-index:3; }
+      table.matrix thead tr:nth-child(2) th { position:sticky; top:30px; z-index:3; }
+      table.matrix thead th.grp { background:#10232b; color:var(--teal); font-size:10.5px; font-weight:700; }
+      table.matrix .grpstart { border-left:2px solid var(--teal); }
+      table.matrix td.mk { font-weight:700; }
+      .colReg  { position:sticky; left:0; z-index:2; background:var(--surface);
+                 text-align:left; color:var(--muted); font-variant-numeric:tabular-nums; min-width:var(--reg-w); }
+      .colName { position:sticky; left:var(--reg-w); z-index:2; background:var(--surface);
+                 text-align:left; font-weight:600; min-width:var(--name-w); border-right:2px solid var(--border); }
+      thead .colReg, thead .colName { z-index:4; background:var(--card); }
+      .cell { display:flex; flex-direction:column; align-items:center; gap:2px; min-width:74px; }
+      .tick { font-weight:800; } .done .tick { color:var(--good); }
+      .part .tick { color:var(--warn); } .none .tick { color:var(--muted); }
+      .when { font-size:9px; color:var(--muted); line-height:1.2; }
+      .notbuilt { color:#4a525c; font-size:10px; }
+      td.done { background:rgba(63,185,80,0.07); }
+      .exphead { display:flex; flex-direction:column; gap:1px; min-width:74px; }
+      .exphead .n { color:var(--text); font-weight:700; }
+      .exphead .co { font-size:9px; color:var(--teal); }
+
+      .def { margin-top:20px; background:var(--surface); border:1px solid var(--border);
+             border-radius:10px; padding:14px 16px; }
+      .def h3 { margin:0 0 10px; font-size:13px; }
+      .def select { background:var(--card); color:var(--text); border:1px solid var(--border);
+                    border-radius:7px; padding:6px 10px; font-size:12.5px; }
+      .deflist { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+      .defitem { background:var(--card); border:1px solid var(--border); border-radius:6px;
+                 padding:4px 9px; font-size:11.5px; }
+      .defitem .r { color:var(--muted); font-variant-numeric:tabular-nums; margin-right:6px; }
+      .allok { color:var(--good); font-size:12.5px; margin-top:10px; }
+
+      table.marks { border-collapse:separate; border-spacing:0; background:var(--surface);
+                    border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+      table.marks th, table.marks td { border-bottom:1px solid var(--border);
+        border-right:1px solid var(--border); padding:7px 9px; font-size:12px; text-align:center; }
+      table.marks thead th { background:var(--card); color:var(--muted); }
+      table.marks .total { font-weight:800; color:var(--teal); }
+      .notice { color:var(--muted); padding:16px; background:var(--surface);
+                border:1px dashed var(--border); border-radius:10px; }
+      .loading { color:var(--muted); padding:40px; text-align:center; }
+      .err { color:var(--bad); padding:20px; }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="logo">🧪</div>
+      <div>
+        <h1>MED ENGG LAB — MED23CL202</h1>
+        <div class="sub">Python Lab e-Record · 59 students · reg-no order</div>
+      </div>
+      <div class="meta" id="meta">Loading…</div>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" id="tabProg" onclick="switchTab('prog')">Lab Progress</div>
+      <div class="tab" id="tabMarks" onclick="switchTab('marks')">Marks</div>
+    </div>
+
+    <div class="wrap">
+      <!-- LAB PROGRESS -->
+      <div class="panel active" id="panelProg">
+        <div class="summary" id="progSummary"></div>
+        <div class="bars" id="completionBars"></div>
+        <div class="toolbar">
+          <input class="search" id="searchProg" placeholder="🔍 Filter by reg no or name…"
+                 oninput="setFilter(this.value)">
+          <button class="btn" onclick="exportProgress()">⬇ Export lab progress (CSV)</button>
+          <span class="count" id="countProg"></span>
+        </div>
+        <div id="matrix" class="loading">Loading lab data…</div>
+        <div class="def" id="defBlock" style="display:none">
+          <h3>Defaulters — students who have <em>not</em> completed:
+            <select id="defSelect" onchange="renderDefaulters()"></select>
+          </h3>
+          <div class="deflist" id="defList"></div>
+        </div>
+      </div>
+
+      <!-- MARKS -->
+      <div class="panel" id="panelMarks">
+        <div class="summary" id="marksSummary"></div>
+        <div class="toolbar">
+          <input class="search" id="searchMarks" placeholder="🔍 Filter by reg no or name…"
+                 oninput="setFilter(this.value)">
+          <button class="btn" onclick="exportMarks()">⬇ Export marks (CSV)</button>
+          <span class="count" id="countMarks"></span>
+        </div>
+        <div id="marksTable" class="loading">Loading marks…</div>
+      </div>
+    </div>
+
+    <script>
+      let DATA = null;
+      let FILTER = '';                       // shared search text (both sub-tabs)
+
+      function esc(v){ return String(v==null?'':v)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+      function switchTab(w){
+        document.getElementById('tabProg').classList.toggle('active', w==='prog');
+        document.getElementById('tabMarks').classList.toggle('active', w==='marks');
+        document.getElementById('panelProg').classList.toggle('active', w==='prog');
+        document.getElementById('panelMarks').classList.toggle('active', w==='marks');
+      }
+
+      // Keep both search boxes in sync and re-render both tables.
+      function setFilter(v){
+        FILTER = (v||'').trim().toLowerCase();
+        document.getElementById('searchProg').value  = v;
+        document.getElementById('searchMarks').value = v;
+        renderMatrix(); renderMarks();
+      }
+      // The students matching the current filter (empty filter = all).
+      function filtered(){
+        if(!FILTER) return DATA.students;
+        return DATA.students.filter(function(s){
+          return String(s.rollNo).toLowerCase().indexOf(FILTER)>=0 ||
+                 String(s.name).toLowerCase().indexOf(FILTER)>=0;
+        });
+      }
+
+      google.script.run.withSuccessHandler(onData).withFailureHandler(onErr).getMedData();
+      function onErr(e){
+        document.getElementById('meta').textContent='Error';
+        document.getElementById('matrix').innerHTML =
+          '<div class="err">Could not load: '+esc(e && e.message)+'.</div>';
+      }
+      function onData(payload){
+        DATA = payload;
+        document.getElementById('meta').textContent = 'Generated ' + esc(payload.generatedAt);
+        renderSummary(); renderCompletionBars();
+        renderMatrix(); renderDefaultersControl(); renderMarks();
+      }
+
+      // ---- summary chips ---------------------------------------------------
+      function renderSummary(){
+        const st = DATA.students, exps = DATA.labExperiments;
+        const builtIdx = exps.map((e,i)=>e.built?i:-1).filter(i=>i>=0);
+        const submitted = st.filter(s => builtIdx.some(i => s.experiments[i].status==='done')).length;
+        const started   = st.filter(s => builtIdx.some(i => s.experiments[i].status!=='none')).length;
+        document.getElementById('progSummary').innerHTML =
+          chip(st.length,'students') +
+          chip(exps.filter(e=>e.built).length+'/'+exps.length,'experiments built') +
+          chip(started,'started any exp') +
+          chip(submitted,'submitted any exp');
+      }
+
+      // ---- class-completion bars, one per experiment ----------------------
+      function renderCompletionBars(){
+        const st = DATA.students, n = st.length;
+        document.getElementById('completionBars').innerHTML = DATA.labExperiments.map(function(e,i){
+          const done = st.filter(s=>s.experiments[i].status==='done').length;
+          const part = st.filter(s=>s.experiments[i].status==='partial').length;
+          const donePct = n? Math.round(done/n*100):0;
+          const partPct = n? Math.round((done+part)/n*100):0;
+          if(!e.built){
+            return '<div class="cbar nb"><div class="ct"><b>'+esc(e.short)+'</b><span>not built</span></div>'+
+                   '<div class="track"></div></div>';
+          }
+          return '<div class="cbar"><div class="ct"><b>'+esc(e.short)+'</b><span>'+done+'/'+n+' done</span></div>'+
+                 '<div class="track"><div class="part" style="width:'+partPct+'%"></div>'+
+                 '<div class="fill" style="width:'+donePct+'%"></div></div></div>';
+        }).join('');
+      }
+
+      // ---- LAB PROGRESS MATRIX (built experiments show their 6-stage split, ---
+      //      the completion date, and the mark; unbuilt = one placeholder col) --
+      function shortStage(label){
+        return String(label).replace('P1 · ','P1 ').replace('P2 · ','P2 ')
+          .replace('Algorithm','Algo').replace('Flowchart','Flow').replace('Program','Prog');
+      }
+      function renderMatrix(){
+        const st = filtered(), exps = DATA.labExperiments;
+        document.getElementById('countProg').textContent =
+          st.length + ' of ' + DATA.students.length + ' shown';
+
+        // Two header rows: experiment groups on top, sub-columns beneath.
+        let h1 = '<tr><th class="colReg" rowspan="2">Reg No</th><th class="colName" rowspan="2">Name</th>';
+        let h2 = '<tr>';
+        exps.forEach(function(e){
+          if(e.built){
+            h1 += '<th class="grp grpstart" colspan="'+(e.stages.length+2)+'" title="'+esc(e.title)+'">'+
+                  esc(e.short)+' · '+esc(e.co)+'</th>';
+            e.stages.forEach(function(s,si){
+              h2 += '<th class="'+(si===0?'grpstart':'')+'" title="'+esc(s.label)+'">'+esc(shortStage(s.label))+'</th>';
+            });
+            h2 += '<th>Done</th><th>Mark</th>';
+          } else {
+            h1 += '<th class="grp grpstart" title="'+esc(e.title)+'">'+esc(e.short)+'</th>';
+            h2 += '<th class="grpstart" style="color:#4a525c">—</th>';
+          }
+        });
+        h1 += '</tr>'; h2 += '</tr>';
+
+        let body = '';
+        st.forEach(function(s){
+          body += '<tr><td class="colReg">'+esc(s.rollNo)+'</td>'+
+                  '<td class="colName" title="'+esc(s.name)+'">'+esc(s.name)+'</td>';
+          s.experiments.forEach(function(x,i){
+            const e = exps[i];
+            if(!e.built){ body += '<td class="grpstart"><span class="notbuilt">— not built —</span></td>'; return; }
+            // 6 stage ticks
+            x.stages.forEach(function(stg,si){
+              const cls = si===0?'grpstart':'';
+              if(stg.done) body += '<td class="'+cls+'" title="'+esc(stg.label)+' · '+esc(stg.when)+'">'+
+                                   '<span style="color:var(--good);font-weight:800">✓</span></td>';
+              else body += '<td class="'+cls+'"><span style="color:var(--muted)">–</span></td>';
+            });
+            // Completion date (green on time / red late)
+            const late = x.daysLate>0;
+            body += '<td>'+ (x.whenDisplay
+              ? '<span class="when" style="'+(late?'color:var(--bad)':'color:var(--good)')+'">'+
+                esc(x.whenDisplay)+(late?' · '+x.daysLate+'d late':'')+'</span>'
+              : '<span style="color:var(--muted)">–</span>') + '</td>';
+            // Mark (override=accent✎, late=amber)
+            const isOv = (x.override!=='' && x.override!=null);
+            const mstyle = isOv ? 'color:var(--accent);font-weight:800'
+                                : (late?'color:var(--warn);font-weight:700':'font-weight:700');
+            const mshown = (x.finalMark===''?'<span style="color:var(--muted)">–</span>':esc(x.finalMark))+
+                           (isOv?' <span style="font-size:9px">✎</span>':'');
+            let mtip = 'Auto '+x.autoMark+'/10 (base '+x.base10+
+                       (late?', −'+(x.daysLate*10)+'% for '+x.daysLate+'d late':'')+')'+
+                       (isOv?' · OVERRIDE '+x.override:'');
+            body += '<td class="mk" title="'+esc(mtip)+'"><span style="'+mstyle+'">'+mshown+'</span></td>';
+          });
+          body += '</tr>';
+        });
+        document.getElementById('matrix').innerHTML =
+          '<div class="scroller"><table class="matrix"><thead>'+h1+h2+'</thead><tbody>'+body+'</tbody></table></div>';
+      }
+
+      // ---- DEFAULTERS (always over the full class, not the filter) ---------
+      function renderDefaultersControl(){
+        const exps = DATA.labExperiments;
+        document.getElementById('defSelect').innerHTML = exps.map(function(e,i){
+          return '<option value="'+i+'">'+esc(e.short)+' — '+esc(e.title)+(e.built?'':' (not built)')+'</option>';
+        }).join('');
+        let def = 0; exps.forEach((e,i)=>{ if(e.built) def=i; });
+        document.getElementById('defSelect').value = def;
+        document.getElementById('defBlock').style.display='block';
+        renderDefaulters();
+      }
+      function renderDefaulters(){
+        const i = Number(document.getElementById('defSelect').value);
+        const built = DATA.labExperiments[i].built;
+        const pending = DATA.students.filter(s => s.experiments[i].status !== 'done');
+        const list = document.getElementById('defList');
+        if(!built){ list.innerHTML =
+          '<div class="notice">This experiment is not built yet, so all '+DATA.students.length+' students are pending it.</div>'; return; }
+        if(!pending.length){ list.innerHTML='<div class="allok">🎉 Everyone has completed this experiment.</div>'; return; }
+        list.innerHTML = pending.map(function(s){
+          const part = s.experiments[i].status==='partial'
+            ? ' <span style="color:var(--warn)">('+s.experiments[i].stagesDone+'/'+s.experiments[i].stagesTotal+')</span>' : '';
+          return '<span class="defitem"><span class="r">'+esc(s.rollNo)+'</span>'+esc(s.name)+part+'</span>';
+        }).join('') + '<div style="width:100%;color:var(--muted);font-size:11px;margin-top:6px">'+
+          pending.length+' pending of '+DATA.students.length+'</div>';
+      }
+
+      // ---- MARKS (auto-computed; overrides from the sheet) ----------------
+      function renderMarks(){
+        const st = filtered(), exps = DATA.labExperiments;
+        if(!DATA.marksLinked){
+          document.getElementById('marksSummary').innerHTML='';
+          document.getElementById('countMarks').textContent='';
+          document.getElementById('marksTable').innerHTML =
+            '<div class="notice">Marks workbook not linked yet — paste its ID into '+
+            '<b>MARKS_SPREADSHEET_ID</b> in Dashboard.gs.</div>';
+          return;
+        }
+        document.getElementById('countMarks').textContent =
+          st.length + ' of ' + DATA.students.length + ' shown';
+
+        let head = '<tr><th class="colReg">Reg No</th><th class="colName">Name</th>';
+        exps.forEach(e=>{ head += '<th title="'+esc(e.title)+'">'+esc(e.short)+'</th>'; });
+        head += '<th class="total">Total</th></tr>';
+
+        let overrides=0;
+        let body='';
+        st.forEach(function(s){
+          let tot=0, cells='';
+          s.experiments.forEach(function(x){
+            if(!x.built){ cells += '<td><span style="color:#4a525c">–</span></td>'; return; }
+            const m = x.finalMark;
+            if(m!=='' && !isNaN(Number(m))) tot += Number(m);
+            const isOv = (x.override!=='' && x.override!=null);
+            if(isOv) overrides++;
+            let tip = 'Auto '+x.autoMark+'/10 (base '+x.base10;
+            if(x.daysLate>0) tip += ', −'+(x.daysLate*10)+'% for '+x.daysLate+'d late';
+            tip += ')'; if(isOv) tip += ' · OVERRIDE '+x.override;
+            if(x.whenDisplay) tip += ' · done '+x.whenDisplay;
+            const markStyle = isOv ? 'color:var(--accent);font-weight:700'
+                                   : (x.daysLate>0 ? 'color:var(--warn)' : '');
+            const glyph = isOv ? ' <span style="font-size:9px">✎</span>' : '';
+            const shown = (m===''? '<span style="color:var(--muted)">–</span>' : esc(m));
+            // Submission date/time under the mark, GREEN if on time, RED if late.
+            let whenLine='';
+            if(x.whenDisplay){
+              const late = x.daysLate>0;
+              whenLine = '<div class="when" style="'+(late?'color:var(--bad)':'color:var(--good)')+'">'+
+                         esc(x.whenDisplay)+(late? ' · '+x.daysLate+'d late' : ' · on time')+'</div>';
+            }
+            cells += '<td title="'+esc(tip)+'"><div class="cell"><span style="'+markStyle+'">'+
+                     shown+glyph+'</span>'+whenLine+'</div></td>';
+          });
+          body += '<tr><td class="colReg">'+esc(s.rollNo)+'</td><td class="colName">'+esc(s.name)+'</td>'+
+                  cells+'<td class="total">'+(Math.round(tot*10)/10)+'</td></tr>';
+        });
+        document.getElementById('marksSummary').innerHTML =
+          chip(DATA.students.length,'students') + chip(DATA.dueDatesCount,'due dates set') +
+          chip(overrides,'overrides shown') + chip('/'+ (exps.length*10),'total possible');
+        document.getElementById('marksTable').innerHTML =
+          '<div style="color:var(--muted);font-size:11px;margin-bottom:8px">Each cell: mark on top, submission date/time below — '+
+          '<span style="color:var(--good)">green = on time</span>, <span style="color:var(--bad)">red = late</span> · '+
+          '<span style="color:var(--accent)">✎ = your override</span> · hover for the full breakdown</div>'+
+          '<div class="scroller"><table class="marks"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+      }
+
+      // ---- CSV EXPORT (always the full class) -----------------------------
+      //  Builds a CSV string and triggers a download in the browser. Reads the
+      //  full DATA.students so the file is complete even when a filter is on.
+      function toCsv(rows){
+        return rows.map(function(r){
+          return r.map(function(c){
+            c = (c==null?'':String(c));
+            return /[",\n]/.test(c) ? '"'+c.replace(/"/g,'""')+'"' : c;
+          }).join(',');
+        }).join('\n');
+      }
+      function download(name, text){
+        const blob = new Blob([text], {type:'text/csv;charset=utf-8'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = name;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      function exportMarks(){
+        const exps = DATA.labExperiments;
+        const header = ['RollNo','Name'].concat(exps.map(e=>e.short)).concat(['Total']);
+        const rows = [header];
+        DATA.students.forEach(function(s){
+          let tot=0; const cols=[s.rollNo, s.name];
+          s.experiments.forEach(function(x){
+            const m = (x.built && x.finalMark!=='') ? x.finalMark : '';
+            if(m!=='' && !isNaN(Number(m))) tot += Number(m);
+            cols.push(m);
+          });
+          cols.push(Math.round(tot*10)/10);
+          rows.push(cols);
+        });
+        download('MED_marks_'+stamp()+'.csv', toCsv(rows));
+      }
+      function exportProgress(){
+        const exps = DATA.labExperiments;
+        // Two columns per experiment: status and completion date/time.
+        const header = ['RollNo','Name'];
+        exps.forEach(e=>{ header.push(e.short+' status'); header.push(e.short+' completed'); });
+        const rows=[header];
+        DATA.students.forEach(function(s){
+          const cols=[s.rollNo, s.name];
+          s.experiments.forEach(function(x){
+            if(!x.built){ cols.push('not built'); cols.push(''); return; }
+            const status = x.status==='done'?'done':(x.status==='partial'? x.stagesDone+'/'+x.stagesTotal : 'not started');
+            cols.push(status); cols.push(x.whenDisplay||'');
+          });
+          rows.push(cols);
+        });
+        download('MED_lab_progress_'+stamp()+'.csv', toCsv(rows));
+      }
+      function stamp(){ return (DATA.generatedAt||'').replace(/[^0-9A-Za-z]+/g,'_'); }
+
+      function chip(n,l){ return '<div class="stat"><div class="n">'+esc(n)+
+        '</div><div class="l">'+esc(l)+'</div></div>'; }
+    </script>
+  </body>
+</html>
