@@ -1,0 +1,12 @@
+Experiment,DueDate,Title (for your reference — ignored by the dashboard)
+1,,"Data Types, Operators & Conditional Statements"
+2,,"Loops, Collections & Functions"
+3,,"Classes, Objects & Encapsulation"
+4,,"Inheritance & Polymorphism"
+5,,"Reading & Writing Text Files"
+6,,"File Operations & CSV Records"
+7,,"Exception Handling: try / except"
+8,,"raise, finally & User-defined Exceptions"
+9,,"Data Analysis with Pandas"
+10,,"Visualization: Matplotlib & Seaborn"
+MP,,"Mini-Project — Final Assembly"

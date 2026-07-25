@@ -309,6 +309,8 @@ const COURSE_CONFIG = {
       units: [
         { unitId: "UnitLAB1", title: "Experiment 1 — Data Types, Operators & Conditionals", optional: true,
           blurb: "Two programs (BMI · temperature converter), each as algorithm → flowchart → run-it. Real Python, in your browser." },
+        { unitId: "UnitLAB2", title: "Experiment 2 — Loops, Collections & Functions", optional: true,
+          blurb: "Two programs (average heart rate · BMI-category function), each as algorithm → flowchart → run-it. The for-loop chart shows a real decision diamond." },
       ],
     },
   ],
