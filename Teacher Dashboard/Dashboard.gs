@@ -143,7 +143,7 @@ const LAB_STAGE_TEMPLATE = [
 ];
 const LAB_EXPERIMENTS = [
   { expId: 'UnitLAB1',  no: '1',  co: 'CO1',     short: 'Exp 1',  title: 'Data Types, Operators & Conditional Statements', built: true,  stages: LAB_STAGE_TEMPLATE },
-  { expId: 'UnitLAB2',  no: '2',  co: 'CO1',     short: 'Exp 2',  title: 'Loops, Collections & Functions',                 built: false, stages: [] },
+  { expId: 'UnitLAB2',  no: '2',  co: 'CO1',     short: 'Exp 2',  title: 'Loops, Collections & Functions',                 built: true,  stages: LAB_STAGE_TEMPLATE },
   { expId: 'UnitLAB3',  no: '3',  co: 'CO2',     short: 'Exp 3',  title: 'Classes, Objects & Encapsulation',               built: false, stages: [] },
   { expId: 'UnitLAB4',  no: '4',  co: 'CO2',     short: 'Exp 4',  title: 'Inheritance & Polymorphism',                     built: false, stages: [] },
   { expId: 'UnitLAB5',  no: '5',  co: 'CO3',     short: 'Exp 5',  title: 'Reading & Writing Text Files',                   built: false, stages: [] },
@@ -354,6 +354,36 @@ function experimentMark(exp, done, dueDate) {
            stagesTotal: st.stagesTotal, base10: base10, daysLate: daysLate, autoMark: autoMark };
 }
 
+//  AUTO-DETECT which experiments are live. Scan every student's progress for any
+//  "UnitLABn" or "UnitLABn@stage" row; each experiment id that appears is
+//  considered BUILT. Returns a set: { UnitLAB2:true, ... }.
+function activeExpIds(progress) {
+  const set = {};
+  Object.keys(progress).forEach(function (roll) {
+    Object.keys(progress[roll]).forEach(function (u) {
+      const base = u.split('@')[0];                        // "UnitLAB2@p1_algo" -> "UnitLAB2"
+      if (/^UnitLAB/i.test(base)) set[base] = true;
+    });
+  });
+  return set;
+}
+
+//  Resolve LAB_EXPERIMENTS against the data: an experiment is BUILT if its
+//  config says so OR any data for it exists. Built experiments with no explicit
+//  `stages` default to the standard 6-stage template, so a brand-new experiment
+//  lights up automatically the first time a student does it — no code change,
+//  no redeploy. (If a future experiment uses a different shape, give it its own
+//  `stages` array in LAB_EXPERIMENTS and it takes precedence.)
+function resolveExperiments(progress) {
+  const active = activeExpIds(progress);
+  return LAB_EXPERIMENTS.map(function (e) {
+    const built = e.built || !!active[e.expId];
+    const stages = (e.stages && e.stages.length) ? e.stages : LAB_STAGE_TEMPLATE;
+    return { expId: e.expId, no: e.no, co: e.co, short: e.short, title: e.title,
+             built: built, stages: built ? stages : [] };
+  });
+}
+
 
 // ----------------------------------------------------------------------------
 //  SECTION 7 — READ #1: getGeneralData()  (called by General.html)
@@ -414,10 +444,23 @@ function getMedData() {
   const progress  = buildProgressIndex(ss, 'course_python');
   const overrides = readMarks();        // manual overrides from the Marks tab (wide)
   const dueDates  = readDueDates();     // expId -> Date, from the DueDates tab
+  const exps      = resolveExperiments(progress);   // auto-detect which are built
+
+  //  Attach due-date info to each experiment: the formatted date, whether a due
+  //  date is set, and whether the deadline has already passed. This lets the UI
+  //  distinguish real DEFAULTERS (overdue) from students who simply have not
+  //  reached a not-yet-due experiment.
+  const nowMs = new Date().getTime();
+  exps.forEach(function (e) {
+    const due = dueDates[e.expId];
+    e.hasDue     = !!due;
+    e.due        = due ? Utilities.formatDate(due, TIMEZONE, 'dd-MMM-yy') : '';
+    e.duePassed  = due ? (nowMs > new Date(due.getFullYear(), due.getMonth(), due.getDate(), 23, 59, 59).getTime()) : false;
+  });
 
   const students = MED_ROSTER.map(function (stu) {
     const done = progress[normalizeId(stu.rollNo)] || {};        // match via normalised reg-no
-    const experiments = LAB_EXPERIMENTS.map(function (exp) {
+    const experiments = exps.map(function (exp) {
       const em = experimentMark(exp, done, dueDates[exp.expId]);  // auto mark + lateness
       const cellRaw  = overrides[stu.rollNo] ? overrides[stu.rollNo][exp.expId] : '';
       const cellNum  = (cellRaw !== '' && cellRaw != null && !isNaN(Number(cellRaw))) ? Number(cellRaw) : '';
@@ -446,7 +489,7 @@ function getMedData() {
 
   return {
     generatedAt:  Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm'),
-    labExperiments: LAB_EXPERIMENTS,
+    labExperiments: exps,               // resolved (auto-detected) built flags
     students:     students,
     marksLinked:  marksSheetConfigured(),
     dueDatesCount: Object.keys(dueDates).length,
@@ -585,13 +628,14 @@ function writeMarks() {
     const pss      = SpreadsheetApp.openById(PYTHON_SHEET_ID);
     const progress = buildProgressIndex(pss, 'course_python');
     const dueDates = readDueDates();
+    const exps     = resolveExperiments(progress);            // auto-detect built experiments
     const book     = SpreadsheetApp.openById(MARKS_SPREADSHEET_ID);
 
     //  Current visible marks + last auto baseline, keyed by roll number.
     const curByRoll  = readGridByRoll(book, [MARKS_TAB, 'Marks']);
     const autoByRoll = readGridByRoll(book, ['_AutoMarks']);
 
-    const header   = ['RollNo', 'Name'].concat(LAB_EXPERIMENTS.map(function (e) { return e.short; }));
+    const header   = ['RollNo', 'Name'].concat(exps.map(function (e) { return e.short; }));
     const marksOut = [header.slice()];
     const autoOut  = [header.slice()];
 
@@ -599,7 +643,7 @@ function writeMarks() {
       const done  = progress[normalizeId(stu.rollNo)] || {};   // match via normalised reg-no
       const mRow  = [stu.rollNo, stu.name];
       const aRow  = [stu.rollNo, stu.name];
-      LAB_EXPERIMENTS.forEach(function (exp, k) {
+      exps.forEach(function (exp, k) {
         const em = experimentMark(exp, done, dueDates[exp.expId]);
         if (!em.built) { mRow.push(''); aRow.push(''); return; }   // can't grade unbuilt
         const computed = em.autoMark;

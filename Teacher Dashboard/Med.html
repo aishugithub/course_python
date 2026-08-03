@@ -149,8 +149,9 @@
         </div>
         <div id="matrix" class="loading">Loading lab data…</div>
         <div class="def" id="defBlock" style="display:none">
-          <h3>Defaulters — students who have <em>not</em> completed:
+          <h3>Experiment:
             <select id="defSelect" onchange="renderDefaulters()"></select>
+            &nbsp;→&nbsp;<span id="defHead" style="color:var(--muted)">Status</span>
           </h3>
           <div class="deflist" id="defList"></div>
         </div>
@@ -322,18 +323,51 @@
       }
       function renderDefaulters(){
         const i = Number(document.getElementById('defSelect').value);
-        const built = DATA.labExperiments[i].built;
+        const e = DATA.labExperiments[i];
         const pending = DATA.students.filter(s => s.experiments[i].status !== 'done');
+        const head = document.getElementById('defHead');
         const list = document.getElementById('defList');
-        if(!built){ list.innerHTML =
-          '<div class="notice">This experiment is not built yet, so all '+DATA.students.length+' students are pending it.</div>'; return; }
-        if(!pending.length){ list.innerHTML='<div class="allok">🎉 Everyone has completed this experiment.</div>'; return; }
-        list.innerHTML = pending.map(function(s){
-          const part = s.experiments[i].status==='partial'
-            ? ' <span style="color:var(--warn)">('+s.experiments[i].stagesDone+'/'+s.experiments[i].stagesTotal+')</span>' : '';
-          return '<span class="defitem"><span class="r">'+esc(s.rollNo)+'</span>'+esc(s.name)+part+'</span>';
-        }).join('') + '<div style="width:100%;color:var(--muted);font-size:11px;margin-top:6px">'+
-          pending.length+' pending of '+DATA.students.length+'</div>';
+
+        if(!e.built){
+          head.innerHTML = 'Not built yet';
+          list.innerHTML = '<div class="notice">This experiment is not built yet, so all '+
+            DATA.students.length+' students are pending it.</div>';
+          return;
+        }
+        if(!pending.length){
+          head.innerHTML = 'Status';
+          list.innerHTML = '<div class="allok">🎉 Everyone has completed this experiment.</div>';
+          return;
+        }
+
+        // Decide the label from the deadline: overdue => defaulters (red);
+        // not yet due => just "yet to complete" (amber); no due date => neutral.
+        let title, note, colorVar;
+        if(!e.hasDue){
+          title = 'Yet to complete (no due date set)';
+          note  = 'No due date is set for this experiment, so no one is a defaulter yet.';
+          colorVar = 'var(--muted)';
+        } else if(!e.duePassed){
+          title = 'Yet to complete — due ' + esc(e.due) + ' (not overdue)';
+          note  = 'These students still have time until '+esc(e.due)+'. They are NOT defaulters yet.';
+          colorVar = 'var(--warn)';
+        } else {
+          title = '⚠ Defaulters — overdue since ' + esc(e.due);
+          note  = 'The deadline ('+esc(e.due)+') has passed; these students have not completed it.';
+          colorVar = 'var(--bad)';
+        }
+        head.innerHTML = title;
+        list.innerHTML =
+          '<div style="width:100%;color:var(--muted);font-size:11px;margin-bottom:8px">'+note+'</div>'+
+          pending.map(function(s){
+            const x = s.experiments[i];
+            const part = x.status==='partial'
+              ? ' <span style="color:var(--warn)">('+x.stagesDone+'/'+x.stagesTotal+')</span>' : '';
+            return '<span class="defitem" style="border-color:'+colorVar+'"><span class="r">'+
+                   esc(s.rollNo)+'</span>'+esc(s.name)+part+'</span>';
+          }).join('') +
+          '<div style="width:100%;color:var(--muted);font-size:11px;margin-top:6px">'+
+          pending.length+' of '+DATA.students.length+' not yet completed</div>';
       }
 
       // ---- MARKS (auto-computed; overrides from the sheet) ----------------
