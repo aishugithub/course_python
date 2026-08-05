@@ -840,6 +840,19 @@ function TemperStage({ data, onPass }) {
       return;
     }
     setStatus("running"); setMessage("Running your code against the tests…");
+    // The hidden tests supply the input variables themselves (different values each
+    // run). If the learner re-declares one, their line runs after ours and clobbers
+    // it, so every test silently uses the same data — giving confusing
+    // "expected / your output" mismatches. Pull the injected names out of the test's
+    // `pre` and stop early if the code reassigns any of them.
+    const injectedVars = ((TESTS[0] && TESTS[0].pre) || "")
+      .match(/^\s*(\w+)\s*=(?!=)/gm)?.map((s) => s.match(/^\s*(\w+)/)[1]) || [];
+    const clobbered = injectedVars.find((v) => new RegExp(`(^|\\n)\\s*${v}\\s*=(?!=)`).test(code));
+    if (clobbered) {
+      setStatus("failed");
+      setMessage(`Remove the line that sets  ${clobbered} = ...  from your code.\nThat value is provided automatically and changes on each hidden test — if you redefine it, your code always runs on the same data.`);
+      return;
+    }
     try {
       for (const t of TESTS) {
         // Redirect stdout, then run the pre-set variables + the student's code.
