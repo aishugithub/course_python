@@ -417,6 +417,15 @@ function TemperStage({ onPass }) {
     try { py = await getPyodide(); }
     catch { setStatus("fallback"); setMessage("Couldn't load the Python engine (slow connection?). No problem — pass the fallback puzzle below instead."); return; }
     setStatus("running"); setMessage("Running your code against the tests…");
+    // The hidden tests supply `marks` themselves (a different list each time).
+    // If the learner also writes `marks = [...]`, their line runs after ours and
+    // clobbers it, so every test silently counts over the same list — producing
+    // confusing "expected 3 / your output 2" mismatches. Catch that up front.
+    if (/(^|\n)\s*marks\s*=(?!=)/.test(code)) {
+      setStatus("failed");
+      setMessage("Remove the line that sets  marks = [...]  from your code.\nThe list is provided automatically and changes on each hidden test — if you redefine it, your code always runs on the same list.");
+      return;
+    }
     try {
       for (const t of TESTS) {
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");
