@@ -474,6 +474,15 @@ function TemperStage({ onPass }) {
       return;
     }
     setStatus("running"); setMessage("Running your code against the tests…");
+    // The hidden tests supply `nums` themselves (a different list each time). If the
+    // learner also writes `nums = [...]`, their line clobbers ours and every test
+    // runs on the same list — giving confusing expected/output mismatches. Catch it
+    // up front.
+    if (/(^|\n)\s*nums\s*=(?!=)/.test(code)) {
+      setStatus("failed");
+      setMessage("Remove the line that sets  nums = [...]  from your code.\nThe list is provided automatically and changes on each hidden test — if you redefine it, your code always runs on the same list.");
+      return;
+    }
     try {
       for (const t of TESTS) {
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");

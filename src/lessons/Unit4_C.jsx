@@ -397,6 +397,15 @@ function TemperStage({ onPass }) {
       return;
     }
     setStatus("running"); setMessage("Running your code against the tests…");
+    // The hidden tests supply marks1/marks2/marks3 themselves (different values
+    // each time). If the learner also assigns them, their line clobbers ours and
+    // every test runs on the same numbers — giving confusing expected/output
+    // mismatches. Catch that up front.
+    if (/(^|\n)\s*marks[123]\s*=(?!=)/.test(code)) {
+      setStatus("failed");
+      setMessage("Remove the lines that set  marks1 / marks2 / marks3  from your code.\nThose values are provided automatically and change on each hidden test — if you redefine them, your code always runs on the same numbers.");
+      return;
+    }
     try {
       for (const t of TESTS) {
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");
