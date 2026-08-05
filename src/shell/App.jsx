@@ -39,6 +39,10 @@ export default function App() {
   const [LessonComponent, setLessonComponent] = useState(null);
   const [loadingLesson, setLoadingLesson]     = useState(false);
   const [savingProgress, setSavingProgress]   = useState(false);
+  // When a lesson fails to open we now SHOW this instead of silently dropping
+  // the learner back on the dashboard (which used to look exactly like an
+  // access gate). Holds a human-readable reason + the raw error for debugging.
+  const [lessonError, setLessonError]         = useState(null);
 
   // One 'session_start' event per app load -- fires the moment
   // anyone lands here, guest or not, before they've made any choice.
@@ -74,20 +78,61 @@ export default function App() {
     setView('dashboard');
   }
 
+  // sessionStorage key that guards the "reload once on a stale chunk" logic
+  // below, so a genuinely broken lesson can never put us in a reload loop.
+  const CHUNK_RELOAD_KEY = 'foothold_chunk_reload';
+
   async function handleSelectUnit(unitId) {
     setLoadingLesson(true);
+    setLessonError(null);
     setActiveUnit(unitId);
     try {
       const path = `../lessons/${unitId}.jsx`;
       const loader = LESSONS[path];
       if (!loader) throw new Error('No lesson file found: ' + unitId);
       const mod = await loader();
+      // A resolved import with no default export would leave LessonComponent
+      // falsy and — before this guard — silently render the dashboard again.
+      if (!mod || !mod.default) throw new Error('Lesson has no default export: ' + unitId);
       setLessonComponent(() => mod.default);
+      // Opened cleanly, so clear any earlier "we already reloaded" marker: a
+      // future stale-chunk failure is then allowed to self-heal with a reload.
+      try { sessionStorage.removeItem(CHUNK_RELOAD_KEY); } catch { /* ignore */ }
       logEvent('lesson_open', { unitId, userId: student?.rollNo || '' });
     } catch (err) {
       console.error('Could not load lesson:', unitId, err);
+
+      // A failed *dynamic import* almost always means this browser tab is
+      // holding a STALE build: the site was redeployed, the chunk hashes
+      // changed, and the file this old tab is asking for (e.g. Unit11_1-<oldhash>.js)
+      // no longer exists on the server → 404 → import rejects. This is the
+      // real reason "logged-in can't open the newest lessons but a fresh guest
+      // tab can" — it's old-tab vs fresh-tab, not a login gate.
+      // Fix: force ONE reload to pull the fresh index.html + chunk map. The
+      // sessionStorage guard means if it fails a second time we stop and show
+      // the error rather than looping forever.
+      const msg = String((err && err.message) || err);
+      const isChunkError = /dynamically imported module|Failed to fetch|module script failed|error loading dynamically|No lesson file found/i.test(msg);
+      let alreadyReloaded = false;
+      try { alreadyReloaded = !!sessionStorage.getItem(CHUNK_RELOAD_KEY); } catch { /* ignore */ }
+
+      if (isChunkError && !alreadyReloaded) {
+        try { sessionStorage.setItem(CHUNK_RELOAD_KEY, unitId); } catch { /* ignore */ }
+        window.location.reload(); // hard-reloads with the current deployed assets
+        return;                    // component unmounts on reload; stop here
+      }
+
+      // Not a stale-chunk case, or the reload already happened once and it still
+      // fails: surface a real message + a retry, never a silent bounce.
       setLessonComponent(null);
       setActiveUnit(null);
+      setLessonError({
+        reason: isChunkError
+          ? 'This lesson couldn’t be loaded. Your browser may be caching an old version — please refresh with Ctrl+F5 (Cmd+Shift+R on Mac) and try again.'
+          : 'Something went wrong opening this lesson. Please try again.',
+        detail: msg,
+        unitId,
+      });
     }
     setLoadingLesson(false);
   }
@@ -126,7 +171,33 @@ export default function App() {
     setCompletedUnits(prev => [...new Set([...prev, stageId])]);
   }
 
-  function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); }
+  function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); setLessonError(null); }
+
+  // A visible failure screen for when a lesson can't be opened. This replaces
+  // the old silent "just show the dashboard again" behaviour that looked like a
+  // locked lesson. It offers a hard reload (fixes the stale-cache case) and a
+  // way back, and prints the raw error so problems are diagnosable in future.
+  if (lessonError) {
+    return (
+      <div style={{ minHeight: '100vh', background: DARK.bgDeep, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: FONT, gap: 16, padding: 24, textAlign: 'center' }}>
+        <div style={{ fontSize: 40 }}>⚠️</div>
+        <div style={{ color: DARK.ink, fontSize: 18, fontWeight: 700, maxWidth: 460 }}>Couldn’t open this lesson</div>
+        <div style={{ color: DARK.inkSoft, fontSize: 14.5, maxWidth: 460, lineHeight: 1.6 }}>{lessonError.reason}</div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+          <button onClick={() => window.location.reload()} style={{ background: DARK.amber, border: 'none', color: '#111A2E', borderRadius: 8, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+            Refresh &amp; retry
+          </button>
+          <button onClick={handleBackToDashboard} style={{ background: 'transparent', border: `1px solid ${DARK.border}`, color: DARK.ink, borderRadius: 8, padding: '10px 18px', fontSize: 14, cursor: 'pointer', fontFamily: FONT }}>
+            Back to Dashboard
+          </button>
+        </div>
+        {/* Small, muted technical detail — invisible-ish to learners, gold to us. */}
+        <div style={{ color: DARK.inkMuted, fontSize: 11, marginTop: 10, fontFamily: 'monospace', maxWidth: 460, wordBreak: 'break-word' }}>
+          {lessonError.unitId}: {lessonError.detail}
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'landing') {
     return <Landing onExploreGuest={handleExploreGuest} onGoToLogin={handleGoToLogin} />;
