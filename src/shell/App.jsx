@@ -137,7 +137,14 @@ export default function App() {
     setLoadingLesson(false);
   }
 
-  async function handleUnitComplete() {
+  // `payload` (added 2026-09-14): optional extra data a lesson's Quiz can hand
+  // back through onUnitComplete -- e.g. UnitFT (the far-transfer assessment)
+  // calls onUnitComplete({ score, total, tag }). Every existing lesson file
+  // calls onUnitComplete() with no arguments and is completely unaffected:
+  // payload is undefined, detail stays '', logEvent behaves exactly as before.
+  // This is the shell-level hook that lets a lesson's own quiz score reach
+  // the Events sheet -- no other lesson file needs to change to use it later.
+  async function handleUnitComplete(payload) {
     if (!activeUnit) return;
     if (student) {
       // Signed-in: persist to Sheets. This can be slow (free Apps Script
@@ -150,7 +157,11 @@ export default function App() {
       // Guest: instant, local, no network round-trip.
       saveGuestProgress(COURSE_CONFIG.courseId, activeUnit);
     }
-    logEvent('lesson_complete', { unitId: activeUnit, userId: student?.rollNo || '' });
+    logEvent('lesson_complete', {
+      unitId: activeUnit,
+      userId: student?.rollNo || '',
+      detail: payload ? JSON.stringify(payload) : '',
+    });
     setCompletedUnits(prev => [...new Set([...prev, activeUnit])]);
     setActiveUnit(null); setLessonComponent(null);
   }
@@ -161,13 +172,21 @@ export default function App() {
   // The Dashboard filters these out of counts via the "@" marker.
   // Deliberately not awaited: stage progress is also held in state, and
   // a slow save must never stall the game feel of the Crucible.
-  function handleStageComplete(stageId) {
+  // `payload` (added 2026-09-14, same reasoning as handleUnitComplete above):
+  // optional { hintsUsed, attempts, ... } a Crucible unit could pass in future
+  // without any change here or to Code.gs. No existing Crucible file passes
+  // one today, so this is a no-op until a Crucible unit opts in.
+  function handleStageComplete(stageId, payload) {
     if (student) {
       saveProgress(student.rollNo, COURSE_CONFIG.courseId, stageId);
     } else {
       saveGuestProgress(COURSE_CONFIG.courseId, stageId);
     }
-    logEvent('challenge_stage_complete', { unitId: stageId, userId: student?.rollNo || '' });
+    logEvent('challenge_stage_complete', {
+      unitId: stageId,
+      userId: student?.rollNo || '',
+      detail: payload ? JSON.stringify(payload) : '',
+    });
     setCompletedUnits(prev => [...new Set([...prev, stageId])]);
   }
 

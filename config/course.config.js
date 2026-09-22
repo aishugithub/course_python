@@ -250,11 +250,11 @@ const COURSE_CONFIG = {
           blurb: "Give objects skills — and guards that keep their data honest." },
         { unitId: "Unit10_4", title: "Inheritance",
           blurb: "Write the parent once; children get it all free — then override what they must." },
-        { unitId: "Unit10_6", title: "Polymorphism & Abstraction",
+        { unitId: "Unit10_5", title: "Polymorphism & Abstraction",
           blurb: "One method name, many behaviours. The trick that makes big software flexible." },
-        { unitId: "Unit10_7", title: "User-Defined Exceptions",
+        { unitId: "Unit10_6", title: "User-Defined Exceptions",
           blurb: "Errors with your name on them: raise InvalidMarkError, not a mystery." },
-        { unitId: "Unit10_5", title: "Capstone: Marks Manager 3.0",
+        { unitId: "Unit10_7", title: "Capstone: Marks Manager 3.0",
           blurb: "Two classes, one app — the marks manager reaches its final form." },
         { unitId: "Unit10_C", title: "The Crucible", optional: true,
           blurb: "Objects will misbehave. Show them who's the class here." },
@@ -292,6 +292,26 @@ const COURSE_CONFIG = {
           blurb: "Statistical beauty in one line: distributions, correlations, heatmaps." },
         { unitId: "Unit13_3", title: "Interactive Charts with Plotly",
           blurb: "Charts you can zoom, hover and play with. Data viz that talks back." },
+      ],
+    },
+    {
+      // ── FAR-TRANSFER ASSESSMENT — added 2026-09-14 ──
+      // A single optional:true unit (excluded from the completion % exactly
+      // like the Crucible/Lab units) presenting ONE brand-new synthesis
+      // problem that recombines loops, conditionals, dictionaries and
+      // functions in a scenario never used as a worked example elsewhere in
+      // the course. This is the direct evidence source for the paper's
+      // computational-thinking transfer claim: its quiz score is sent as a
+      // JSON payload through onUnitComplete -> App.jsx -> analytics.js's new
+      // `detail` param -> Code.gs's new Events sheet "Detail" column, so the
+      // score is recoverable per-student, not just a completion timestamp.
+      moduleId:    "FT",
+      moduleTitle: "The Final Ascent",
+      icon:        "",
+      blurb: "One last problem. Nothing here was practiced directly — this is where everything you learned has to work together on its own.",
+      units: [
+        { unitId: "UnitFT", title: "The Final Ascent — A Synthesis Challenge", optional: true,
+          blurb: "A library late-fee calculator you've never seen before. Trace it, break it, then prove you can reason about all of it at once." },
       ],
     },
     {
