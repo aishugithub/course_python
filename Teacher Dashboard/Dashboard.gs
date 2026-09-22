@@ -157,6 +157,118 @@ const LAB_EXPERIMENTS = [
 
 
 // ----------------------------------------------------------------------------
+//  SECTION 3b — MINI-PROJECT CRUCIBLE  (UnitLAB2_5)  — a DIFFERENT shape
+//  ----------------------------------------------------------------------------
+//  WHY THIS IS SEPARATE FROM THE 10 EXPERIMENTS ABOVE.
+//  The 10 experiments all share the same 2-programs × 3-stages shape (the
+//  LAB_STAGE_TEMPLATE: p1_algo…p2_prog). The "Crucible" checkpoint that sits
+//  AFTER Exp 1 & 2 does NOT: the student picks ONE of four independent
+//  mini-project TRACKS and then climbs four SEQUENTIALLY-GATED LEVELS —
+//        Spark → Flame → Forge → Temper
+//  — before "claiming" (submitting) the whole checkpoint.
+//
+//  HOW THE LESSON LOGS IT (must match src/lessons/UnitLAB2_5.jsx exactly):
+//    • each level cleared →  onStageComplete("UnitLAB2_5@<TRACK>_<level>")
+//         TRACK ∈ {A,B,C,D}   level ∈ {spark,flame,forge,temper}
+//         e.g.  "UnitLAB2_5@A_spark", "UnitLAB2_5@B_flame"
+//    • whole checkpoint claimed → onUnitComplete() → plain "UnitLAB2_5" row.
+//
+//  WHY THE MAIN DASHBOARD MISSED IT (the bug we are fixing).
+//  resolveExperiments() only maps ids that are LISTED in LAB_EXPERIMENTS, and
+//  "UnitLAB2_5" is not one of them — so the auto-detect silently dropped it.
+//  Even if it were listed, the 6-stage template (p1_algo…) does not match the
+//  crucible's stage ids (A_spark…), so its progress could never be parsed.
+//  We therefore model the crucible on its OWN terms here and report a LEVEL
+//  DISTRIBUTION: how many of the 59 students have reached each rung.
+// ----------------------------------------------------------------------------
+const CRUCIBLE = {
+  expId: 'UnitLAB2_5',                       // the pseudo-unit base id (note the "_5")
+  short: 'Crucible',
+  title: 'Mini-Project Crucible (built on Exp 1 & 2)',
+  //  The four selectable mini-project tracks. A student is expected to pick ONE.
+  //  `key` is the letter that appears in the id ("UnitLAB2_5@<key>_<level>").
+  tracks: [
+    { key: 'A', icon: '🅰', title: 'Patient Vitals Monitor' },
+    { key: 'B', icon: '🅱', title: 'Pharmacy Stock Manager' },
+    { key: 'C', icon: '🅲', title: 'Clinic Appointment Book' },
+    { key: 'D', icon: '🅳', title: 'Health-Camp Screening Analyzer' },
+  ],
+  //  The four gated levels INSIDE any track, listed in climb order. The array
+  //  index (+1) is the "rung" number we rank students by: spark=1 … temper=4.
+  levels: [
+    { id: 'spark',  label: 'Spark',  icon: '✨' },   // predict-output / trace MCQs
+    { id: 'flame',  label: 'Flame',  icon: '🔥' },   // bug hunt (find line + fix)
+    { id: 'forge',  label: 'Forge',  icon: '⚒️' },   // reorder the Exp-1 program (Parsons)
+    { id: 'temper', label: 'Temper', icon: '🗡️' },   // write the Exp-2 function in real Python
+  ],
+};
+
+//  Compute ONE student's Crucible standing from their {unitId: when} map.
+//  ----------------------------------------------------------------------------
+//  The levels are sequential WITHIN a track, but a curious student MAY dip into
+//  more than one track. The single most meaningful number for "how far has this
+//  student climbed?" is therefore the FURTHEST rung reached across ANY track —
+//  plus the track that furthest rung belongs to (their effective chosen track).
+//  We also keep the furthest rung PER track (perTrack) in case you ever want to
+//  see who spread themselves across tracks.
+//  Returns:
+//    started    – have they touched the crucible at all?
+//    claimed    – did they submit/claim the whole checkpoint? (plain id present)
+//    rung       – 0..4 : 0 = untouched, 1..4 = furthest level cleared
+//    levelLabel – the ladder bucket: 'Not started' | 'Spark'…'Temper' | 'Submitted'
+//    track      – the letter of their furthest track ('' if none yet)
+//    when       – readable timestamp of that furthest step (or the claim)
+//    perTrack   – { A:2, C:4, … } furthest rung reached in each track touched
+function crucibleStatusFor(done) {
+  //  Map each level id to its rung number once (spark→1, flame→2, forge→3, temper→4).
+  const rungOf = {};
+  CRUCIBLE.levels.forEach(function (lv, i) { rungOf[lv.id] = i + 1; });
+
+  //  Did they CLAIM the whole checkpoint? onUnitComplete() writes the plain id.
+  const claimed     = !!done[CRUCIBLE.expId];
+  const claimedWhen = done[CRUCIBLE.expId] || '';
+
+  //  Walk every "UnitLAB2_5@<TRACK>_<level>" row this student owns, tracking the
+  //  furthest rung overall and the furthest rung within each track.
+  const prefix   = CRUCIBLE.expId + '@';       // "UnitLAB2_5@"
+  let bestRung = 0, bestTrack = '', bestWhen = '';
+  const perTrack = {};                          // trackKey -> furthest rung there
+  Object.keys(done).forEach(function (u) {
+    if (u.indexOf(prefix) !== 0) return;        // not a crucible stage row → skip
+    const tag = u.substring(prefix.length);     // "A_spark"
+    const us  = tag.indexOf('_');               // split at the FIRST underscore
+    if (us < 0) return;                         // malformed → ignore defensively
+    const trackKey = tag.substring(0, us);      // "A"
+    const levelId  = tag.substring(us + 1);     // "spark"
+    const rung     = rungOf[levelId];           // 1..4
+    if (!rung) return;                          // unknown level id → ignore
+    if (!perTrack[trackKey] || rung > perTrack[trackKey]) perTrack[trackKey] = rung;
+    if (rung > bestRung) { bestRung = rung; bestTrack = trackKey; bestWhen = done[u]; }
+  });
+
+  //  Claiming implies all four levels of the chosen track were cleared, so treat
+  //  a claim as the top rung even if (defensively) a stage row were missing.
+  const rung = claimed ? CRUCIBLE.levels.length : bestRung;
+
+  //  Bucket the student onto the 6-rung ladder used by the distribution.
+  let levelLabel;
+  if (claimed)          levelLabel = 'Submitted';
+  else if (rung === 0)  levelLabel = 'Not started';
+  else                  levelLabel = CRUCIBLE.levels[rung - 1].label;   // Spark…Temper
+
+  return {
+    started:    (rung > 0) || claimed,
+    claimed:    claimed,
+    rung:       rung,
+    levelLabel: levelLabel,
+    track:      bestTrack,
+    when:       fmtWhen(claimed ? claimedWhen : bestWhen),
+    perTrack:   perTrack,
+  };
+}
+
+
+// ----------------------------------------------------------------------------
 //  SECTION 4 — MED CLASS ROSTER (the whitelist we track to completion)
 //  We drive the MED views from THIS list (not the Students tab) so a student who
 //  has not logged in yet still appears — and correctly shows as a defaulter.
@@ -487,12 +599,53 @@ function getMedData() {
     return String(a.rollNo).localeCompare(String(b.rollNo), undefined, { numeric: true });
   });
 
+  //  ---- MINI-PROJECT CRUCIBLE (UnitLAB2_5): per-student level + distribution --
+  //  The crucible is NOT one of the 6-stage experiments, so we compute it on its
+  //  own terms here (see SECTION 3b). We build:
+  //    • crucibleStudents  – one row per roster student: their furthest LEVEL and
+  //                          their chosen TRACK, in reg-no order.
+  //    • distribution      – the headline the professor asked for: how many of the
+  //                          59 are at each rung of the ladder.
+  //    • trackDistribution – how the class spread across the four tracks.
+  //  The ladder order is fixed left→right so the UI can render it as a funnel:
+  //  Not started → Spark → Flame → Forge → Temper → Submitted.
+  const crucibleLadder = ['Not started']
+    .concat(CRUCIBLE.levels.map(function (l) { return l.label; }))   // Spark…Temper
+    .concat(['Submitted']);
+  const distribution = {};                       // ladder label -> student count
+  crucibleLadder.forEach(function (l) { distribution[l] = 0; });
+  const trackDistribution = { none: 0 };         // track key (or 'none') -> count
+  CRUCIBLE.tracks.forEach(function (t) { trackDistribution[t.key] = 0; });
+
+  const crucibleStudents = MED_ROSTER.map(function (stu) {
+    const done = progress[normalizeId(stu.rollNo)] || {};
+    const cs   = crucibleStatusFor(done);                       // furthest level + track
+    distribution[cs.levelLabel]      = (distribution[cs.levelLabel]      || 0) + 1;
+    trackDistribution[cs.track || 'none'] = (trackDistribution[cs.track || 'none'] || 0) + 1;
+    return { rollNo: stu.rollNo, name: stu.name, signedUp: !!progress[normalizeId(stu.rollNo)],
+             levelLabel: cs.levelLabel, rung: cs.rung, claimed: cs.claimed,
+             track: cs.track, when: cs.when };
+  }).sort(function (a, b) {
+    return String(a.rollNo).localeCompare(String(b.rollNo), undefined, { numeric: true });
+  });
+
   return {
     generatedAt:  Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm'),
     labExperiments: exps,               // resolved (auto-detected) built flags
     students:     students,
     marksLinked:  marksSheetConfigured(),
     dueDatesCount: Object.keys(dueDates).length,
+    //  Everything the new "Mini-Project" sub-tab in Med.html needs.
+    crucible: {
+      title:   CRUCIBLE.title,
+      expId:   CRUCIBLE.expId,
+      tracks:  CRUCIBLE.tracks,                  // [{key,icon,title}]
+      levels:  CRUCIBLE.levels,                  // [{id,label,icon}]
+      ladder:  crucibleLadder,                   // ordered bucket labels (the funnel)
+      distribution:      distribution,           // {label: count}
+      trackDistribution: trackDistribution,      // {trackKey|'none': count}
+      students:          crucibleStudents,       // per-student level + track
+    },
   };
 }
 

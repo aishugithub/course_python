@@ -48,13 +48,37 @@ function routeAction(body) {
 // in; UserId is filled in only once someone is signed in. Creates
 // the Events tab itself on first call, so no manual sheet setup
 // is required beyond redeploying this script.
+//
+// 2026-09-14 addition: a 7th column, "Detail", for richer per-event
+// data (right now: the far-transfer unit's quiz score/total, sent as a
+// small JSON string by analytics.js -- see the "detail" param there).
+// This is intentionally additive and backward-compatible:
+//   - An existing Events sheet (created before this change) has only
+//     6 header columns. We add the "Detail" header once, in place,
+//     without touching a single existing row, so every export/analysis
+//     already done against columns A-F keeps working unchanged.
+//   - body.detail is optional. Every event logged by the app today
+//     (session_start, lesson_open, lesson_complete, challenge_stage_complete,
+//     signup) simply omits it and gets an empty 7th cell, exactly as
+//     before this change existed.
+//   - This is intentionally a generic free-text/JSON column rather than
+//     dedicated Score/Hints/Duration columns, so future instrumentation
+//     (Crucible hint-tier counts, section dwell time, etc.) can start
+//     sending detail on existing event types without ANOTHER schema
+//     change or another redeploy of this file.
 // ------------------------------------------------------------
 function handleLogEvent(body) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Events');
   if (!sheet) {
     sheet = ss.insertSheet('Events');
-    sheet.appendRow(['Timestamp', 'AnonId', 'UserId', 'EventType', 'CourseId', 'UnitId']);
+    sheet.appendRow(['Timestamp', 'AnonId', 'UserId', 'EventType', 'CourseId', 'UnitId', 'Detail']);
+  } else {
+    const lastCol = Math.max(sheet.getLastColumn(), 7);
+    const header = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    if (header[6] !== 'Detail') {
+      sheet.getRange(1, 7).setValue('Detail');
+    }
   }
   sheet.appendRow([
     new Date().toISOString(),
@@ -63,6 +87,7 @@ function handleLogEvent(body) {
     body.eventType || '',
     body.courseId || '',
     body.unitId || '',
+    body.detail || '',
   ]);
   return { success: true };
 }

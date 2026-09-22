@@ -33,14 +33,25 @@ function getAnonId() {
 }
 
 // eventType: 'session_start' | 'lesson_open' | 'lesson_complete' | 'signup'
-export function logEvent(eventType, { unitId = '', userId = '' } = {}) {
+//
+// `detail` (added 2026-09-14): optional free-text/JSON extra payload for an
+// event, stored in the Events sheet's 7th column (see Code.gs handleLogEvent).
+// Every existing call site omits it and behaves exactly as before -- this is
+// additive, not a breaking change. Right now the only caller that passes it
+// is App.jsx's handleUnitComplete, when a lesson's onUnitComplete supplies a
+// payload (currently just UnitFT, the far-transfer assessment, passing
+// { score, total, tag }). Kept as a generic string (not named score/total
+// fields) so future instrumentation -- Crucible hint-tier counts, per-section
+// dwell time -- can reuse this same param without another analytics.js edit.
+export function logEvent(eventType, { unitId = '', userId = '', detail = '' } = {}) {
   try {
     const url = `${GAS_URL}?action=logEvent`
       + `&anonId=${encodeURIComponent(getAnonId())}`
       + `&userId=${encodeURIComponent(userId)}`
       + `&eventType=${encodeURIComponent(eventType)}`
       + `&courseId=${encodeURIComponent(COURSE_CONFIG.courseId)}`
-      + `&unitId=${encodeURIComponent(unitId)}`;
+      + `&unitId=${encodeURIComponent(unitId)}`
+      + `&detail=${encodeURIComponent(detail)}`;
     // No await, no .then() the caller waits on -- fire and forget.
     fetch(url).catch(() => {});
   } catch {

@@ -71,6 +71,23 @@
       .cbar .part { position:absolute; top:0; height:100%; background:var(--warn); opacity:.5; }
       .cbar.nb { opacity:.5; }
 
+      /* Mini-Project level ladder (the "funnel": one card per rung) */
+      .ladder { display:flex; gap:8px; flex-wrap:wrap; align-items:stretch; }
+      .rung { background:var(--surface); border:1px solid var(--border); border-radius:10px;
+              padding:12px 14px; min-width:120px; flex:1 1 120px; text-align:center; position:relative; }
+      .rung .ico { font-size:20px; }
+      .rung .lab { font-size:11.5px; color:var(--muted); margin-top:3px; font-weight:600; }
+      .rung .n   { font-size:26px; font-weight:800; color:var(--teal); margin-top:4px; line-height:1; }
+      .rung .pct { font-size:10.5px; color:var(--muted); margin-top:3px; }
+      .rung .mini{ height:6px; border-radius:4px; background:var(--bar-bg); margin-top:8px; overflow:hidden; }
+      .rung .mini > span { display:block; height:100%;
+              background:linear-gradient(90deg,var(--good),var(--teal)); }
+      .rung.zero { opacity:.55; }
+      .rung.start .n { color:var(--muted); }         /* "Not started" is neutral, not teal */
+      .rung.submit .n { color:var(--good); }         /* "Submitted" is the win state */
+      .rung .arrow { position:absolute; right:-11px; top:50%; transform:translateY(-50%);
+              color:var(--border); font-size:16px; z-index:1; }
+
       .scroller { overflow-x:auto; border:1px solid var(--border); border-radius:10px; }
       table.matrix { border-collapse:separate; border-spacing:0; background:var(--surface); }
       table.matrix th, table.matrix td {
@@ -134,6 +151,7 @@
     <div class="tabs">
       <div class="tab active" id="tabProg" onclick="switchTab('prog')">Lab Progress</div>
       <div class="tab" id="tabMarks" onclick="switchTab('marks')">Marks</div>
+      <div class="tab" id="tabCrucible" onclick="switchTab('crucible')">Mini-Project</div>
     </div>
 
     <div class="wrap">
@@ -168,6 +186,26 @@
         </div>
         <div id="marksTable" class="loading">Loading marks…</div>
       </div>
+
+      <!-- MINI-PROJECT CRUCIBLE -->
+      <!-- The checkpoint after Exp 1 & 2. Unlike the 10 experiments it is a
+           4-level climb (Spark→Flame→Forge→Temper) inside ONE chosen track, so
+           it gets its own view: a level-ladder "funnel", a per-track headcount,
+           and a per-student table of level + track. -->
+      <div class="panel" id="panelCrucible">
+        <div class="summary" id="crucSummary"></div>
+        <h3 style="font-size:13px;margin:6px 0 10px">How many students are at each level</h3>
+        <div class="ladder" id="crucLadder"></div>
+        <h3 style="font-size:13px;margin:22px 0 10px">Which track they chose</h3>
+        <div class="bars" id="crucTracks"></div>
+        <div class="toolbar" style="margin-top:18px">
+          <input class="search" id="searchCruc" placeholder="🔍 Filter by reg no or name…"
+                 oninput="setFilter(this.value)">
+          <button class="btn" onclick="exportCrucible()">⬇ Export mini-project (CSV)</button>
+          <span class="count" id="countCruc"></span>
+        </div>
+        <div id="crucTable" class="loading">Loading mini-project data…</div>
+      </div>
     </div>
 
     <script>
@@ -177,28 +215,34 @@
       function esc(v){ return String(v==null?'':v)
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+      // Three sub-tabs: 'prog' | 'marks' | 'crucible'. Toggle each tab button and
+      // its matching panel by key (data-driven so adding a 4th tab is trivial).
       function switchTab(w){
-        document.getElementById('tabProg').classList.toggle('active', w==='prog');
-        document.getElementById('tabMarks').classList.toggle('active', w==='marks');
-        document.getElementById('panelProg').classList.toggle('active', w==='prog');
-        document.getElementById('panelMarks').classList.toggle('active', w==='marks');
+        const map = { prog:'Prog', marks:'Marks', crucible:'Crucible' };
+        Object.keys(map).forEach(function(k){
+          document.getElementById('tab'+map[k]).classList.toggle('active', w===k);
+          document.getElementById('panel'+map[k]).classList.toggle('active', w===k);
+        });
       }
 
-      // Keep both search boxes in sync and re-render both tables.
+      // Keep all search boxes in sync and re-render every table.
       function setFilter(v){
         FILTER = (v||'').trim().toLowerCase();
         document.getElementById('searchProg').value  = v;
         document.getElementById('searchMarks').value = v;
-        renderMatrix(); renderMarks();
+        const sc = document.getElementById('searchCruc'); if(sc) sc.value = v;
+        renderMatrix(); renderMarks(); renderCrucible();
       }
-      // The students matching the current filter (empty filter = all).
-      function filtered(){
-        if(!FILTER) return DATA.students;
-        return DATA.students.filter(function(s){
+      // Filter a list of {rollNo,name} by the current search text (empty = all).
+      function filterList(list){
+        if(!FILTER) return list;
+        return list.filter(function(s){
           return String(s.rollNo).toLowerCase().indexOf(FILTER)>=0 ||
                  String(s.name).toLowerCase().indexOf(FILTER)>=0;
         });
       }
+      // The roster students matching the current filter (used by prog + marks).
+      function filtered(){ return filterList(DATA.students); }
 
       google.script.run.withSuccessHandler(onData).withFailureHandler(onErr).getMedData();
       function onErr(e){
@@ -211,6 +255,7 @@
         document.getElementById('meta').textContent = 'Generated ' + esc(payload.generatedAt);
         renderSummary(); renderCompletionBars();
         renderMatrix(); renderDefaultersControl(); renderMarks();
+        renderCrucible();
       }
 
       // ---- summary chips ---------------------------------------------------
@@ -429,6 +474,91 @@
           '<div class="scroller"><table class="marks"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
       }
 
+      // ---- MINI-PROJECT CRUCIBLE (UnitLAB2_5) -----------------------------
+      //  Renders three things from DATA.crucible:
+      //   1) summary chips (started / submitted / not started),
+      //   2) the LEVEL LADDER funnel — one card per rung with a headcount (this
+      //      is the "how many are at which level" answer the professor wanted),
+      //   3) a per-track headcount, and
+      //   4) a per-student table (reg no · name · track · level), filterable.
+      function renderCrucible(){
+        const c = DATA.crucible;
+        // Defensive: if an older Dashboard.gs (without crucible) is deployed.
+        if(!c){
+          document.getElementById('crucSummary').innerHTML='';
+          document.getElementById('crucLadder').innerHTML='';
+          document.getElementById('crucTracks').innerHTML='';
+          document.getElementById('crucTable').innerHTML =
+            '<div class="notice">Mini-Project data not available — deploy the updated '+
+            '<b>Dashboard.gs</b> (it must return a <b>crucible</b> block from getMedData).</div>';
+          return;
+        }
+        const total = c.students.length;                         // 59
+        const started   = c.students.filter(s=>s.rung>0 || s.claimed).length;
+        const submitted = c.students.filter(s=>s.claimed).length;
+        const notStarted= total - started;
+
+        // 1) SUMMARY CHIPS
+        document.getElementById('crucSummary').innerHTML =
+          chip(total,'students') + chip(started,'started the crucible') +
+          chip(submitted,'submitted (claimed)') + chip(notStarted,'not started');
+
+        // Icon lookup for each ladder bucket (Spark…Temper come from levels[]).
+        const iconFor = { 'Not started':'⚪', 'Submitted':'🏅' };
+        c.levels.forEach(function(l){ iconFor[l.label] = l.icon; });
+
+        // 2) LEVEL LADDER FUNNEL — one card per ordered ladder bucket.
+        document.getElementById('crucLadder').innerHTML = c.ladder.map(function(label,i){
+          const n   = c.distribution[label] || 0;
+          const pct = total ? Math.round(n/total*100) : 0;
+          const cls = (label==='Not started'?'start ':'') + (label==='Submitted'?'submit ':'') + (n===0?'zero':'');
+          const arrow = (i < c.ladder.length-1) ? '<span class="arrow">›</span>' : '';
+          return '<div class="rung '+cls+'">'+
+                   '<div class="ico">'+esc(iconFor[label]||'•')+'</div>'+
+                   '<div class="lab">'+esc(label)+'</div>'+
+                   '<div class="n">'+n+'</div>'+
+                   '<div class="pct">'+pct+'% of class</div>'+
+                   '<div class="mini"><span style="width:'+pct+'%"></span></div>'+
+                 arrow+'</div>';
+        }).join('');
+
+        // 3) PER-TRACK HEADCOUNT (which mini-project each student picked).
+        document.getElementById('crucTracks').innerHTML = c.tracks.map(function(t){
+          const n = (c.trackDistribution[t.key]||0);
+          const pct = total ? Math.round(n/total*100) : 0;
+          return '<div class="cbar"><div class="ct"><b>'+esc(t.icon)+' '+esc(t.title)+'</b>'+
+                 '<span>'+n+'</span></div><div class="track"><div class="fill" style="width:'+pct+'%"></div></div></div>';
+        }).join('') +
+        '<div class="cbar"><div class="ct"><b>— none yet</b><span>'+(c.trackDistribution.none||0)+
+        '</span></div><div class="track"></div></div>';
+
+        // 4) PER-STUDENT TABLE (filtered by the shared search box).
+        const rows = filterList(c.students);
+        document.getElementById('countCruc').textContent = rows.length + ' of ' + total + ' shown';
+        // Human label for a track letter, e.g. "A" -> "🅰 Patient Vitals Monitor".
+        const trackLabel = {};
+        c.tracks.forEach(function(t){ trackLabel[t.key] = t.icon+' '+t.title; });
+
+        let head = '<tr><th class="colReg">Reg No</th><th class="colName">Name</th>'+
+                   '<th>Track chosen</th><th>Level reached</th><th>When</th></tr>';
+        let body = rows.map(function(s){
+          // Colour the level: grey if not started, green if submitted, teal mid-climb.
+          const col = s.claimed ? 'var(--good)' : (s.rung>0 ? 'var(--teal)' : 'var(--muted)');
+          const lvl = '<span style="color:'+col+';font-weight:700">'+esc(s.levelLabel)+'</span>'+
+                      (s.rung>0 && !s.claimed ? ' <span style="color:var(--muted);font-size:10px">('+s.rung+'/4)</span>' : '');
+          return '<tr><td class="colReg">'+esc(s.rollNo)+'</td>'+
+                 '<td class="colName" title="'+esc(s.name)+'">'+esc(s.name)+'</td>'+
+                 '<td>'+esc(s.track ? (trackLabel[s.track]||s.track) : '—')+'</td>'+
+                 '<td>'+lvl+'</td>'+
+                 '<td><span class="when">'+esc(s.when||'')+'</span></td></tr>';
+        }).join('');
+        document.getElementById('crucTable').innerHTML =
+          '<div style="color:var(--muted);font-size:11px;margin-bottom:8px">'+
+          'Level = the furthest rung a student has cleared in their chosen track '+
+          '(<b>Spark→Flame→Forge→Temper</b>); <b>Submitted</b> = they claimed the checkpoint.</div>'+
+          '<div class="scroller"><table class="marks"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+      }
+
       // ---- CSV EXPORT (always the full class) -----------------------------
       //  Builds a CSV string and triggers a download in the browser. Reads the
       //  full DATA.students so the file is complete even when a filter is on.
@@ -478,6 +608,21 @@
           rows.push(cols);
         });
         download('MED_lab_progress_'+stamp()+'.csv', toCsv(rows));
+      }
+      // Mini-project export: one row per student with their track + level, plus a
+      // trailing block of the level-distribution counts for quick reference.
+      function exportCrucible(){
+        const c = DATA.crucible; if(!c) return;
+        const trackLabel = {}; c.tracks.forEach(function(t){ trackLabel[t.key]=t.title; });
+        const rows = [['RollNo','Name','Track','Level','Rung(0-4)','Submitted','When']];
+        c.students.forEach(function(s){
+          rows.push([s.rollNo, s.name, (s.track?trackLabel[s.track]||s.track:''),
+                     s.levelLabel, s.rung, (s.claimed?'yes':''), s.when||'']);
+        });
+        rows.push([]);                                   // blank spacer row
+        rows.push(['Level distribution']);
+        c.ladder.forEach(function(l){ rows.push([l, c.distribution[l]||0]); });
+        download('MED_miniproject_'+stamp()+'.csv', toCsv(rows));
       }
       function stamp(){ return (DATA.generatedAt||'').replace(/[^0-9A-Za-z]+/g,'_'); }
 
