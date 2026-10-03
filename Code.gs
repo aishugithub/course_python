@@ -37,6 +37,7 @@ function routeAction(body) {
     case 'saveProgress': return handleSaveProgress(body);
     case 'getProgress':  return handleGetProgress(body);
     case 'logEvent':     return handleLogEvent(body);
+    case 'feedback':     return handleFeedback(body);
     default:             return { success: false, message: 'Unknown action' };
   }
 }
@@ -88,6 +89,51 @@ function handleLogEvent(body) {
     body.courseId || '',
     body.unitId || '',
     body.detail || '',
+  ]);
+  return { success: true };
+}
+
+// ------------------------------------------------------------
+// End-of-course feedback + testimonial (from the UnitFB unit).
+// One row per submission in its own "Feedback" sheet, created on
+// first call so no manual sheet setup is needed beyond redeploying
+// this script. The seven Likert answers arrive as body.ratings (a
+// JSON array from the POST body, already parsed by doPost); each
+// gets its own column L1..L7 so the sheet is analysis-ready. This
+// is separate from the Events sheet on purpose: feedback is
+// structured survey data, not a fire-and-forget usage event.
+// ------------------------------------------------------------
+function handleFeedback(body) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Feedback');
+  if (!sheet) {
+    sheet = ss.insertSheet('Feedback');
+    sheet.appendRow([
+      'Timestamp', 'CourseId', 'UserId', 'Name', 'PriorExp', 'PriorLangs',
+      'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7',
+      'Compare', 'MostLeast', 'Change', 'Testimonial', 'Consent',
+    ]);
+  }
+  // ratings may arrive as a real array (JSON POST) or, defensively, as a
+  // comma string; normalise to 7 cells either way.
+  let r = body.ratings;
+  if (typeof r === 'string') { try { r = JSON.parse(r); } catch { r = String(r).split(','); } }
+  if (!Array.isArray(r)) r = [];
+  const cell = (i) => (r[i] === undefined || r[i] === null ? '' : r[i]);
+
+  sheet.appendRow([
+    new Date().toISOString(),
+    body.courseId || '',
+    body.userId || '',
+    body.name || '',
+    body.priorExp || '',
+    body.priorLangs || '',
+    cell(0), cell(1), cell(2), cell(3), cell(4), cell(5), cell(6),
+    body.compare || '',
+    body.mostLeast || '',
+    body.change || '',
+    body.testimonial || '',
+    body.consent ? 'yes' : 'no',
   ]);
   return { success: true };
 }

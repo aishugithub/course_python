@@ -38,7 +38,7 @@ function FootholdMark({ size = 34 }) {
   );
 }
 
-export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin, onSignOff }) {
+export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin, onSignOff, certStatus, onOpenCertificate, labCertStatus, onOpenLabCertificate }) {
   // Optional units (Crucibles) are bonus: excluded from the % so skipping
   // challenges never blocks 100%. completedUnits may also hold stage
   // pseudo-ids like "Unit4_C@spark"; counting only required ids filters those.
@@ -189,6 +189,103 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
             </div>
           </div>
         </div>
+
+        {/* ── Certificate banner ──
+            Shows the path to the certificate: for guests, a nudge to sign in
+            (the certificate is issued from server progress, so it needs an
+            account); for signed-in learners, either a live progress line
+            (Crucibles + feedback) or, once eligible, the download button.
+            certStatus comes from App.jsx (certificateStatus over completedUnits);
+            the Certificate view itself re-checks against the Sheet before issuing. */}
+        {certStatus && (
+          <div style={{
+            background: certStatus.eligible ? 'rgba(231,161,62,0.12)' : D.surface,
+            border: `1px solid ${certStatus.eligible ? D.amber : D.border}`,
+            borderRadius: 12, padding: '16px 20px', marginBottom: 26,
+            display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+          }}>
+            <div style={{ fontSize: 26 }}>🎓</div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Course Certificate</div>
+              {isGuest ? (
+                <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                  Sign in to earn a verifiable certificate — it’s issued from your saved progress.
+                </div>
+              ) : certStatus.eligible ? (
+                <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                  Unlocked! All {certStatus.cruciblesTotal} Crucibles cleared and feedback submitted. 🔥
+                </div>
+              ) : (
+                <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                  🔥 Crucibles {certStatus.cruciblesDone}/{certStatus.cruciblesTotal} · 📝 Feedback {certStatus.feedbackDone ? '✓' : 'pending'} — finish both to unlock.
+                </div>
+              )}
+            </div>
+            {isGuest ? (
+              <button onClick={onRequestLogin} style={{ background: 'transparent', border: `1px solid ${D.border}`, color: D.ink, borderRadius: 8, padding: '9px 16px', fontSize: 13.5, cursor: 'pointer', fontFamily: FONT }}>
+                Sign in
+              </button>
+            ) : (
+              <button onClick={onOpenCertificate} disabled={!certStatus.eligible} style={{
+                background: certStatus.eligible ? D.amber : D.border,
+                color: certStatus.eligible ? '#111A2E' : D.inkMuted,
+                border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 700,
+                cursor: certStatus.eligible ? 'pointer' : 'not-allowed', fontFamily: FONT,
+              }}>
+                {certStatus.eligible ? '⬇ Get certificate' : 'Locked'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Lab certificate banner (SEPARATE from the course certificate) ──
+            Only for the MED23CL202 Python Lab track. Blue-accented to set it apart
+            from the amber course certificate above. For guests: a sign-in nudge
+            (it's issued from server progress). For signed-in learners: a live line
+            (track + crucibles cleared) or, once eligible, the download button.
+            labCertStatus comes from App.jsx (labCertificateStatus over completedUnits);
+            LabCertificate re-checks against the Sheet before issuing. */}
+        {labCertStatus && (
+          <div style={{
+            background: labCertStatus.eligible ? 'rgba(88,166,255,0.12)' : D.surface,
+            border: `1px solid ${labCertStatus.eligible ? D.blue : D.border}`,
+            borderRadius: 12, padding: '16px 20px', marginBottom: 26,
+            display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+          }}>
+            <div style={{ fontSize: 26 }}>🧪</div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Python Lab Certificate · MED23CL202</div>
+              {isGuest ? (
+                <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                  Sign in with your roll number to earn the lab certificate — it’s issued from your saved lab record.
+                </div>
+              ) : labCertStatus.eligible ? (
+                <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                  Unlocked! Your {labCertStatus.trackName} track is complete across all {labCertStatus.cruciblesTotal} lab crucibles. 🧪
+                </div>
+              ) : (
+                <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                  🔥 Lab crucibles on your track {labCertStatus.cruciblesDone}/{labCertStatus.cruciblesTotal}
+                  {labCertStatus.trackName ? ` · ${labCertStatus.trackName}` : ''} — finish your track in all five to unlock.
+                </div>
+              )}
+            </div>
+            {isGuest ? (
+              <button onClick={onRequestLogin} style={{ background: 'transparent', border: `1px solid ${D.border}`, color: D.ink, borderRadius: 8, padding: '9px 16px', fontSize: 13.5, cursor: 'pointer', fontFamily: FONT }}>
+                Sign in
+              </button>
+            ) : (
+              <button onClick={onOpenLabCertificate} disabled={!labCertStatus.eligible} style={{
+                background: labCertStatus.eligible ? D.blue : D.border,
+                color: labCertStatus.eligible ? '#071018' : D.inkMuted,
+                border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 700,
+                cursor: labCertStatus.eligible ? 'pointer' : 'not-allowed', fontFamily: FONT,
+              }}>
+                {labCertStatus.eligible ? '⬇ Get lab certificate' : 'Locked'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ── The accordion ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

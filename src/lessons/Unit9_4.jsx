@@ -492,7 +492,10 @@ function Quiz({ onComplete }) {
             exceptions, raise your own, and read/write files and CSV.<br /><br />
             <strong style={{ color: C.accent }}>Next: Module 10 — Object-Oriented Programming.</strong> Your
             "student" is currently a name in one dict and a mark in another. What if a student could be ONE
-            thing that carries its own name, marks, and grade logic together? That's an object.
+            thing that carries its own name, marks, and grade logic together? That's an object.<br /><br />
+            <span style={{ color: C.teal }}>And your exceptions come along:</span> once you know classes, Unit 10.6
+            lets you forge errors with your own names — <code style={{ color: C.teal }}>raise InvalidMarkError</code>{" "}
+            instead of a generic ValueError.
           </div>
         </div>
       </div>
