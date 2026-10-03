@@ -252,8 +252,8 @@ const COURSE_CONFIG = {
           blurb: "Write the parent once; children get it all free — then override what they must." },
         { unitId: "Unit10_5", title: "Polymorphism & Abstraction",
           blurb: "One method name, many behaviours. The trick that makes big software flexible." },
-        { unitId: "Unit10_6", title: "User-Defined Exceptions",
-          blurb: "Errors with your name on them: raise InvalidMarkError, not a mystery." },
+        { unitId: "Unit10_6", title: "User-Defined Exceptions (Exceptions × Classes)",
+          blurb: "Module 9's exceptions meet Module 10's classes: raise InvalidMarkError, not a mystery." },
         { unitId: "Unit10_7", title: "Capstone: Marks Manager 3.0",
           blurb: "Two classes, one app — the marks manager reaches its final form." },
         { unitId: "Unit10_C", title: "The Crucible", optional: true,
@@ -315,6 +315,37 @@ const COURSE_CONFIG = {
       ],
     },
     {
+      // ── APPLIED MINI-PROJECTS — "Build for Your Branch" ──
+      // Optional post-trunk track units (excluded from the completion % like the
+      // Crucible/FT/FB units). Same scaffolded capstone spine, re-skinned per
+      // engineering branch; a learner builds the ONE for their domain. Added one
+      // unit at a time. Filenames: UnitMP_<TRACK>.jsx.
+      moduleId:    "MP",
+      moduleTitle: "Applied Mini-Projects — Build for Your Branch",
+      icon:        "",
+      blurb: "Everything you learned, aimed at your world. Pick your branch and build one real program end to end.",
+      units: [
+        { unitId: "UnitMP_GEN", title: "General — Personal Expense Tracker", optional: true,
+          blurb: "The app everyone needs: log spending, group by category, bust your budget alarm, and remember it all. The whole trunk, snapped together." },
+      ],
+    },
+    {
+      // ── FINISH LINE — end-of-course feedback + certificate gate ──
+      // One optional unit (excluded from the completion % like the Crucible/FT
+      // units). Submitting it records "UnitFB" in the Progress sheet, which —
+      // together with all ten Crucibles — is what unlocks the course certificate
+      // (see src/shell/completion.js + Certificate.jsx). The feedback answers
+      // themselves go to a separate "Feedback" sheet via api.js submitFeedback.
+      moduleId:    "FB",
+      moduleTitle: "Finish Line — Feedback & Certificate",
+      icon:        "",
+      blurb: "You've climbed the whole thing. Tell us how it went — and unlock your certificate.",
+      units: [
+        { unitId: "UnitFB", title: "Your Verdict — Feedback, Review & Testimonial", optional: true,
+          blurb: "Two minutes of honesty: how Foothold compared, what helped, what didn't — then claim your certificate." },
+      ],
+    },
+    {
       // ── PYTHON LAB (MED23CL202) — the e-observation record ──
       // Separate supplementary track. Every experiment unit is optional:true
       // so it is excluded from the Python course % — the lab is its own thing,
@@ -337,8 +368,26 @@ const COURSE_CONFIG = {
           blurb: "Two programs (Patient class · validating setter), each as algorithm → flowchart → run-it. Model medical entities and guard their private data." },
         { unitId: "UnitLAB4", title: "Experiment 4 — Inheritance & Polymorphism", optional: true,
           blurb: "Two programs (Nurse inherits Staff · staff role() overriding), each as algorithm → flowchart → run-it. The same call, many forms." },
+        { unitId: "UnitLAB4_5", title: "Checkpoint — Mini-Project Crucible (Exp 3 & 4)", optional: true,
+          blurb: "Objects & inheritance, forged through your track: predict, debug, rebuild the class, then write the real subclass that overrides a method. The OOP core of your capstone." },
         { unitId: "UnitLAB5", title: "Experiment 5 — Reading & Writing Text Files", optional: true,
           blurb: "Two programs (write patient records · read them back), each as algorithm → flowchart → run-it. Patient data that survives on disk." },
+        { unitId: "UnitLAB6", title: "Experiment 6 — File Operations & CSV Records", optional: true,
+          blurb: "Two programs (append a record · read a CSV), each as algorithm → flowchart → run-it. Patient data that grows and lives in proper tables." },
+        { unitId: "UnitLAB6_5", title: "Checkpoint — Mini-Project Crucible (Exp 5 & 6)", optional: true,
+          blurb: "Files & records, forged through your track: save your data to disk, then read it back and tally what matters. Your project finally remembers." },
+        { unitId: "UnitLAB7", title: "Experiment 7 — Exception Handling: try / except", optional: true,
+          blurb: "Two programs (safe temperature input · BMI with two except blocks), each as algorithm → flowchart → run-it. Catch the crash before it catches you." },
+        { unitId: "UnitLAB8", title: "Experiment 8 — raise, finally & User-defined Exceptions", optional: true,
+          blurb: "Two programs (raise your own ValueError · a custom exception class), each as algorithm → flowchart → run-it. Errors that carry your project's name." },
+        { unitId: "UnitLAB8_5", title: "Checkpoint — Mini-Project Crucible (Exp 7 & 8)", optional: true,
+          blurb: "Errors & exceptions, forged through your track: guard every input and raise your own error when the data is impossible. Your project stops crashing." },
+        { unitId: "UnitLAB9", title: "Experiment 9 — Data Analysis with Pandas", optional: true,
+          blurb: "Two programs (build a DataFrame · load & filter a CSV), each as algorithm → flowchart → self-check. A spreadsheet living inside Python." },
+        { unitId: "UnitLAB10", title: "Experiment 10 — Visualization: Matplotlib & Seaborn", optional: true,
+          blurb: "Two programs (a labelled line chart · a Seaborn histogram), each as algorithm → flowchart → self-check. One chart turns your numbers into a dashboard." },
+        { unitId: "UnitLAB10_5", title: "Checkpoint — Mini-Project Crucible (Exp 9 & 10)", optional: true,
+          blurb: "Analysis & charts, forged through your track: filter and summarise your records into numbers worth plotting. The last brick of your capstone." },
       ],
     },
   ],

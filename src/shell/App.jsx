@@ -2,9 +2,13 @@ import { useState, useEffect, Suspense } from 'react';
 import Landing from './Landing.jsx';
 import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
-import { getProgress, saveProgress } from './api.js';
+import Certificate from './Certificate.jsx';
+import LabCertificate from './LabCertificate.jsx';
+import { getProgress, saveProgress, submitFeedback } from './api.js';
 import { getGuestProgress, saveGuestProgress } from './guestProgress.js';
 import { logEvent } from './analytics.js';
+import { certificateStatus } from './completion.js';
+import { labCertificateStatus } from './labCompletion.js';
 import COURSE_CONFIG from '../../config/course.config.js';
 import { DARK, FONT } from './brand.js';
 
@@ -190,6 +194,26 @@ export default function App() {
     setCompletedUnits(prev => [...new Set([...prev, stageId])]);
   }
 
+  // End-of-course feedback from UnitFB. The lesson calls this prop with its
+  // answers; we stamp on courseId + who submitted, then hand off to api.js
+  // (which POSTs to the Feedback sheet). Kept here so lesson files never import
+  // the shell's api.js directly -- same boundary as onUnitComplete/onStageComplete.
+  function handleSubmitFeedback(answers) {
+    return submitFeedback({
+      ...answers,
+      courseId: COURSE_CONFIG.courseId,
+      userId: student?.rollNo || '',
+    });
+  }
+
+  // Certificate is its own view, opened from the Dashboard banner. The
+  // Certificate component re-verifies eligibility against the Sheet itself.
+  function handleOpenCertificate() { setView('certificate'); }
+
+  // The LAB certificate is its own view too, opened from the Dashboard's separate
+  // lab-certificate banner. LabCertificate re-verifies the lab track against the Sheet.
+  function handleOpenLabCertificate() { setView('labCertificate'); }
+
   function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); setLessonError(null); }
 
   // A visible failure screen for when a lesson can't be opened. This replaces
@@ -224,6 +248,14 @@ export default function App() {
 
   if (view === 'login') {
     return <Login onLogin={handleLoginSuccess} onBack={handleExploreGuest} />;
+  }
+
+  if (view === 'certificate') {
+    return <Certificate student={student} onBack={() => setView('dashboard')} />;
+  }
+
+  if (view === 'labCertificate') {
+    return <LabCertificate student={student} onBack={() => setView('dashboard')} />;
   }
 
   if (loadingLesson) return <LoadingScreen message="Loading lesson…" />;
@@ -271,6 +303,7 @@ export default function App() {
             onUnitComplete={handleUnitComplete}
             challengeProgress={completedUnits}
             onStageComplete={handleStageComplete}
+            onSubmitFeedback={handleSubmitFeedback}
           />
         </Suspense>
       </div>
@@ -284,6 +317,10 @@ export default function App() {
       onSelectUnit={handleSelectUnit}
       onRequestLogin={handleGoToLogin}
       onSignOff={handleSignOff}
+      certStatus={certificateStatus(completedUnits)}
+      onOpenCertificate={handleOpenCertificate}
+      labCertStatus={labCertificateStatus(completedUnits)}
+      onOpenLabCertificate={handleOpenLabCertificate}
     />
   );
 }

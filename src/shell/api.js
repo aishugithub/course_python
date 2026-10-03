@@ -9,11 +9,11 @@ import GAS_URL from '../../config/gas.config.js';
 // the app stuck (e.g. frozen on the "Saving progress…" screen). This wrapper
 // aborts any request that runs past `ms`, turning an indefinite hang into a
 // normal, catchable network error that each function below already handles.
-async function fetchWithTimeout(url, ms = 15000) {
+async function fetchWithTimeout(url, ms = 15000, opts = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    return await fetch(url, { signal: controller.signal });
+    return await fetch(url, { ...opts, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -64,5 +64,24 @@ export async function getProgress(rollNo, courseId) {
   } catch (err) {
     console.error('getProgress failed:', err);
     return [];
+  }
+}
+
+// End-of-course feedback + testimonial (from the UnitFB lesson). Sent as a POST
+// so long open-ended answers aren't capped by URL length. The body is a plain
+// JSON string with no custom Content-Type header, which keeps it a "simple"
+// request and avoids a CORS preflight the Apps Script endpoint wouldn't answer.
+// `payload` already carries action/courseId/userId (assembled in App.jsx).
+export async function submitFeedback(payload) {
+  try {
+    const res  = await fetchWithTimeout(GAS_URL, 15000, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'feedback', ...payload }),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error('submitFeedback failed:', err);
+    return { success: false };
   }
 }
