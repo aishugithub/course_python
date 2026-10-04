@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!-- ==========================================================================
+     LABPROGRESS.HTML  —  e-Lab Record progress portal  (?view=lab)
+     --------------------------------------------------------------------------
+     Served by Dashboard.gs -> doGet() when the URL has ?view=lab. On load it
+     calls getLabProgressData(): the roster students with, per student, which
+     of the 10 experiments and 5 mini-project crucibles are done, whether the
+     feedback is in, and certificate eligibility (same rule as the course app).
+     No marks. Read-only. Search + status filter + sort; CSV export always
+     dumps the whole class regardless of the filter.
+=========================================================================== -->
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      :root {
+        --bg:#0d1117; --surface:#161b22; --card:#1c232c; --border:#2b333d;
+        --text:#e6edf3; --muted:#8b98a5; --teal:#2dd4bf; --accent:#7c9fff;
+        --good:#3fb950; --warn:#d29922; --bad:#ff7b72; --bar-bg:#21262d;
+      }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--bg); color:var(--text);
+             font-family:'Segoe UI',system-ui,sans-serif; font-size:14px; }
+      header { background:var(--surface); border-bottom:1px solid var(--border);
+               padding:14px 22px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+      header .logo { width:34px; height:34px; border-radius:9px;
+        background:linear-gradient(135deg,var(--teal),var(--accent));
+        display:flex; align-items:center; justify-content:center; font-size:18px; }
+      header h1 { font-size:16px; margin:0; font-weight:600; }
+      header .sub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+      header .meta { margin-left:auto; font-size:11.5px; color:var(--muted); text-align:right; }
+      .wrap { padding:16px 22px 60px; }
+
+      .summary { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+      .stat { background:var(--surface); border:1px solid var(--border);
+              border-radius:10px; padding:10px 16px; min-width:130px; }
+      .stat .n { font-size:22px; font-weight:800; color:var(--teal); }
+      .stat .n.good { color:var(--good); } .stat .n.bad { color:var(--bad); }
+      .stat .l { font-size:11.5px; color:var(--muted); margin-top:2px; }
+
+      .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+      .search, select { background:var(--card); color:var(--text); border:1px solid var(--border);
+                        border-radius:8px; padding:8px 12px; font-size:13px; }
+      .search { min-width:240px; }
+      .btn { background:var(--card); color:var(--text); border:1px solid var(--border);
+             border-radius:8px; padding:8px 12px; font-size:12.5px; cursor:pointer; }
+      .btn:hover { border-color:var(--teal); color:var(--teal); }
+      .count { font-size:12px; color:var(--muted); margin-left:auto; }
+
+      .tablewrap { overflow-x:auto; border:1px solid var(--border); border-radius:10px; }
+      table { border-collapse:collapse; width:100%; min-width:980px; }
+      th, td { padding:9px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:middle; }
+      th { background:var(--surface); font-size:11.5px; color:var(--muted); font-weight:600;
+           letter-spacing:.04em; text-transform:uppercase; position:sticky; top:0; }
+      tr:hover td { background:#131a22; }
+      td.reg { font-family:Consolas,monospace; font-size:12.5px; color:var(--muted); white-space:nowrap; }
+      td.name { font-weight:600; white-space:nowrap; }
+      .chips { display:flex; gap:3px; align-items:center; flex-wrap:nowrap; }
+      .chip { min-width:24px; height:22px; border-radius:5px; font-size:10.5px; font-weight:700;
+              display:inline-flex; align-items:center; justify-content:center; padding:0 4px;
+              background:var(--bar-bg); color:#59636e; border:1px solid var(--border); }
+      .chip.done { background:rgba(63,185,80,.18); color:var(--good); border-color:rgba(63,185,80,.5); }
+      .chip.started { background:rgba(210,153,34,.15); color:var(--warn); border-color:rgba(210,153,34,.45); }
+      .frac { font-weight:700; margin-left:8px; white-space:nowrap; }
+      .bar { height:6px; background:var(--bar-bg); border-radius:4px; overflow:hidden; width:90px; }
+      .bar > div { height:100%; background:linear-gradient(90deg,var(--accent),var(--teal)); }
+      .pct { font-size:12px; color:var(--muted); margin-top:3px; }
+      .pill { border-radius:999px; padding:3px 10px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+      .pill.ok { background:rgba(63,185,80,.18); color:var(--good); }
+      .pill.prog { background:rgba(124,159,255,.15); color:var(--accent); }
+      .pill.part { background:rgba(45,212,191,.15); color:var(--teal); }
+      .pill.none { background:rgba(255,123,114,.14); color:var(--bad); }
+      .fb { font-weight:700; } .fb.yes { color:var(--good); } .fb.no { color:var(--muted); }
+      .when { font-size:12px; color:var(--muted); white-space:nowrap; }
+      .legend { font-size:12px; color:var(--muted); margin:10px 2px 0; display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+      .err, .loading { padding:40px; text-align:center; color:var(--muted); }
+      .err { color:var(--bad); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">🧪</div>
+      <div>
+        <h1>e-Lab Record — Progress</h1>
+        <div class="sub">MED23CL202 · Python Programming Laboratory · 10 experiments + 5 mini projects + feedback</div>
+      </div>
+      <div class="meta" id="meta">Loading…</div>
+    </header>
+
+    <div class="wrap">
+      <div class="summary" id="summary"></div>
+
+      <div class="toolbar">
+        <input class="search" id="q" placeholder="Search name or reg no…" oninput="render()">
+        <select id="status" onchange="render()">
+          <option value="all">All students</option>
+          <option value="eligible">Certificate ready</option>
+          <option value="participation">Participation (60%+)</option>
+          <option value="progress">In progress</option>
+          <option value="none">Not started</option>
+        </select>
+        <select id="sort" onchange="render()">
+          <option value="reg">Sort: Reg no</option>
+          <option value="high">Sort: Most progress first</option>
+          <option value="low">Sort: Least progress first</option>
+        </select>
+        <button class="btn" onclick="exportCsv()">⬇ Export CSV</button>
+        <span class="count" id="count"></span>
+      </div>
+
+      <div class="tablewrap" id="table"><div class="loading">Loading the class…</div></div>
+      <div class="legend">
+        <span><span class="chip done">✓</span> done</span>
+        <span><span class="chip started">·</span> started</span>
+        <span><span class="chip">·</span> not started</span>
+        <span>Completion certificate = all 10 experiments + all 5 mini projects + feedback. Participation = feedback + at least 60% of the 15 items (students see it only once you open it).</span>
+      </div>
+    </div>
+
+    <script>
+      let DATA = null;
+      const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+      google.script.run.withSuccessHandler(onData).withFailureHandler(onErr).getLabProgressData();
+
+      function onErr(e) {
+        document.getElementById('meta').textContent = 'Error';
+        document.getElementById('table').innerHTML = '<div class="err">Could not load: ' + esc(e && e.message) + '.</div>';
+      }
+
+      function statusOf(s) {
+        if (s.eligible) return 'eligible';
+        if (s.participation) return 'participation';
+        const touched = s.exps.concat(s.mps).some((x) => x !== 'none') || s.feedback;
+        return touched ? 'progress' : 'none';
+      }
+
+      function onData(d) {
+        DATA = d;
+        document.getElementById('meta').innerHTML = esc(d.students.length) + ' students<br>Updated ' + esc(d.generatedAt);
+        const st = d.students;
+        const n = (f) => st.filter(f).length;
+        const tiles = [
+          [n((s) => s.eligible), 'Certificate ready', 'good'],
+          [n((s) => s.participation), 'Participation (' + d.participationMinPct + '%+)', ''],
+          [n((s) => s.expDone === d.expTotal), 'All 10 experiments', ''],
+          [n((s) => s.mpDone === d.mpTotal), 'All 5 mini projects', ''],
+          [n((s) => s.feedback), 'Feedback submitted', ''],
+          [n((s) => statusOf(s) === 'progress'), 'In progress', ''],
+          [n((s) => statusOf(s) === 'none'), 'Not started', 'bad'],
+        ];
+        document.getElementById('summary').innerHTML = tiles.map((t) =>
+          '<div class="stat"><div class="n ' + t[2] + '">' + t[0] + '</div><div class="l">' + esc(t[1]) + '</div></div>').join('');
+        render();
+      }
+
+      function chips(states, labels) {
+        return states.map((x, i) => '<span class="chip ' + (x === 'none' ? '' : x) + '" title="' + esc(labels[i]) + ': ' +
+          (x === 'done' ? 'done' : x === 'started' ? 'started' : 'not started') + '">' + esc(labels[i].replace('Exp ', '')) + '</span>').join('');
+      }
+
+      function render() {
+        if (!DATA) return;
+        const q = document.getElementById('q').value.trim().toLowerCase();
+        const want = document.getElementById('status').value;
+        const sort = document.getElementById('sort').value;
+        let rows = DATA.students.filter((s) =>
+          (!q || s.name.toLowerCase().includes(q) || s.rollNo.toLowerCase().includes(q)) &&
+          (want === 'all' || statusOf(s) === want));
+        const byReg = (a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true });
+        if (sort === 'high') rows.sort((a, b) => b.pct - a.pct || byReg(a, b));
+        else if (sort === 'low') rows.sort((a, b) => a.pct - b.pct || byReg(a, b));
+        else rows.sort(byReg);
+
+        const expLabels = DATA.students.length ? DATA.students[0].exps.map((_, i) => 'Exp ' + (i + 1)) : [];
+        const mpLabels = DATA.miniProjects.map((m) => m.label);
+        const pillText = { eligible: 'Certificate ready', participation: 'Participation (' + DATA.participationMinPct + '%+)', progress: 'In progress', none: 'Not started' };
+        const pillCls = { eligible: 'ok', participation: 'part', progress: 'prog', none: 'none' };
+
+        document.getElementById('count').textContent = 'Showing ' + rows.length + ' of ' + DATA.students.length;
+        if (!rows.length) { document.getElementById('table').innerHTML = '<div class="loading">No students match.</div>'; return; }
+
+        document.getElementById('table').innerHTML =
+          '<table><thead><tr><th>Reg no</th><th>Name</th><th>Experiments</th><th>Mini projects</th>' +
+          '<th>Feedback</th><th>Overall</th><th>Status</th><th>Last active</th></tr></thead><tbody>' +
+          rows.map((s) => {
+            const status = statusOf(s);
+            return '<tr>' +
+              '<td class="reg">' + esc(s.rollNo) + '</td>' +
+              '<td class="name">' + esc(s.name) + '</td>' +
+              '<td><div class="chips">' + chips(s.exps, expLabels) + '<span class="frac">' + s.expDone + '/' + DATA.expTotal + '</span></div></td>' +
+              '<td><div class="chips">' + chips(s.mps, mpLabels) + '<span class="frac">' + s.mpDone + '/' + DATA.mpTotal + '</span></div></td>' +
+              '<td class="fb ' + (s.feedback ? 'yes' : 'no') + '">' + (s.feedback ? '✓' : '—') + '</td>' +
+              '<td><div class="bar"><div style="width:' + s.pct + '%"></div></div><div class="pct">' + s.pct + '%</div></td>' +
+              '<td><span class="pill ' + pillCls[status] + '">' + pillText[status] + '</span></td>' +
+              '<td class="when">' + esc(s.lastActive || '—') + '</td>' +
+              '</tr>';
+          }).join('') + '</tbody></table>';
+      }
+
+      function exportCsv() {
+        if (!DATA) return;
+        const head = ['Reg no', 'Name']
+          .concat(DATA.students[0].exps.map((_, i) => 'Exp ' + (i + 1)))
+          .concat(DATA.miniProjects.map((m) => m.label + ' (' + m.covers + ')'))
+          .concat(['Experiments done', 'Mini projects done', 'Feedback', 'Overall %', 'Certificate', 'Last active']);
+        const cell = (x) => x === 'done' ? 'Done' : x === 'started' ? 'Started' : '';
+        const lines = [head].concat(DATA.students.slice().sort((a, b) => a.rollNo.localeCompare(b.rollNo, undefined, { numeric: true })).map((s) =>
+          [s.rollNo, s.name].concat(s.exps.map(cell)).concat(s.mps.map(cell))
+            .concat([s.expDone, s.mpDone, s.feedback ? 'Yes' : 'No', s.pct, s.eligible ? 'Completion' : s.participation ? 'Participation' : 'None', s.lastActive])));
+        const csv = lines.map((r) => r.map((v) => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+        a.download = 'elab_progress_' + DATA.generatedAt.replace(/[^0-9A-Za-z]+/g, '_') + '.csv';
+        a.click();
+      }
+    </script>
+  </body>
+</html>

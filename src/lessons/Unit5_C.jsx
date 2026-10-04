@@ -22,6 +22,21 @@ const STAGES = [
 const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
 
 // ── Hint box: reveals one nudge at a time, never the answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -123,7 +138,8 @@ function SparkStage({ onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -198,20 +214,21 @@ function FlameStage({ onPass }) {
     },
     {
       intro: "A grading program: 80+ should earn \"Distinction\" — but a score of 85 prints \"Pass\". No crash, just a WRONG answer. Click the line that causes it.",
-      lines: ["score = 85", "if score >= 60:", '    grade = "Pass"', "elif score >= 80:", '    grade = "Distinction"', "else:", '    grade = "Fail"', "print(grade)"],
-      buggyLine: 1,
+      lines: ["score = 85", "if score < 60:", '    grade = "Fail"', "elif score >= 60:", '    grade = "Pass"', "else:", '    grade = "Distinction"', "print(grade)"],
+      buggyLine: 3,
       lineHints: {
         0: "score = 85 is exactly what we want to test with.",
-        3: "This condition is correct — the problem is it never gets a CHANCE to run. Why not?",
-        4: "Innocent. Something above it steals the show first.",
-        5: "else is fine.",
-        6: "Innocent.",
+        1: "85 < 60 is False, so this branch is skipped — correctly.",
+        2: "Never runs for 85.",
+        4: "This runs — but only because the condition above let 85 in.",
+        5: "else is fine — it's where Distinction should come from.",
+        6: "Innocent. It never gets a chance to run.",
         7: "The print just reports whatever grade holds.",
       },
-      fixes: ["if score >= 80:  (check the HIGHER band first, then elif score >= 60)", "if score > 60:", 'if score == "Pass":'],
+      fixes: ["elif score < 80:", "elif score > 60:", "elif score >= 80:"],
       fixAnswer: 0,
-      fixHints: ["An elif chain stops at the FIRST True condition — 85 >= 60 is True, so Python never looks further.", "Order matters: test the narrowest / highest band first, then work downwards."],
-      why: "Logic bug, not a crash: 85 >= 60 is True, so the chain stops there. Always order elif bands from highest to lowest.",
+      fixHints: ["An elif chain stops at the FIRST True condition — 85 >= 60 is True, so Python never reaches else.", "The Pass band needs an upper limit too: 60 up to (but not including) 80."],
+      why: "Logic bug, not a crash: 85 >= 60 is True, so the chain stops at Pass. Each band needs its limits — with elif score < 80, 85 falls through to else and earns Distinction.",
     },
   ];
   const [cur, setCur] = useState(0);
@@ -273,7 +290,8 @@ function FlameStage({ onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -682,7 +700,7 @@ export default function Unit5_C({ student, onUnitComplete, challengeProgress = [
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
         <div style={{ background: C.orange + "10", border: `1px solid ${C.orange}33`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-          ⚔️ <strong style={{ color: C.orange }}>Bonus challenge — completely optional.</strong> Your lesson
+          ⚔️ <strong style={{ color: C.orange }}>Optional — counts toward the course certificate.</strong> Your lesson
           progress is already safe. But stages unlock one by one, hints replace answers, and only the
           worthy earn the badge. Ready?
         </div>

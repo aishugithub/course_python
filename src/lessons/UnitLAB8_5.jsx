@@ -91,7 +91,7 @@ const TRACKS = [
           lines: ["try:", "    temp = float(\"hot\")", "except ZeroDivisionError:", "    print(\"not a number\")"],
           buggyLine: 2,
           lineHints: { 0: "try: is fine.", 1: "This line is what raises the error.", 3: "The message is fine but it never runs — the error wasn't caught." },
-          fixes: ["except ValueError:", "except KeyError:", "except:"],
+          fixes: ["except ValueError:", "except IndexError:", "except TypeError:"],
           fixAnswer: 0,
           fixHints: ["float() on bad text raises ValueError, not ZeroDivisionError.", "The except type must match the error that is actually raised."],
           why: "float() on non-numeric text raises ValueError; catching ZeroDivisionError lets it slip through and crash. Catch ValueError.",
@@ -146,7 +146,7 @@ const TRACKS = [
     spark: {
       questions: [
         { kind: "mcq", code: "try:\n    x = int(\"ten\")\nexcept ValueError:\n    print(\"caught\")", options: ["caught", "crashes with ValueError", "x", "Error"], answer: 0, hints: ["The risky line is inside try; when it raises, Python jumps to the matching except.", "The except type matches the error raised, so the handler runs."], why: "The conversion raises ValueError, which the except catches, so it prints \"caught\" instead of crashing." },
-        { kind: "mcq", code: "try:\n    5 / 0\nexcept ValueError:\n    print(\"ValueError\")\nexcept ZeroDivisionError:\n    print(\"ZeroDivisionError\")", options: ["ValueError", "ZeroDivisionError", "nothing", "Error"], answer: 1, hints: ["Which specific error does this line raise?", "Python runs the first except whose type matches that error."], why: "Dividing by zero raises ZeroDivisionError. Python runs the first matching except block." },
+        { kind: "mcq", code: "try:\n    5 / 0\nexcept ValueError:\n    print(\"ValueError\")\nexcept ZeroDivisionError:\n    print(\"ZeroDivisionError\")", options: ["ValueError", "ZeroDivisionError", "nothing", "ValueError, then ZeroDivisionError"], answer: 1, hints: ["Which specific error does this line raise?", "Python runs the first except whose type matches that error."], why: "Dividing by zero raises ZeroDivisionError. Python runs the first matching except block." },
         { kind: "trace", code: "vals = [\"5\", \"-\", \"20\"]\nok = 0\nfor v in vals:\n    try:\n        int(v)\n        ok = ok + 1\n    except ValueError:\n        pass\nprint(ok)", expect: "2", prompt: "Trace the loop: how many values convert without raising? Type the number.", hints: ["Each value is tried inside try; a bad one raises ValueError and is skipped by pass.", "Count only the values that convert cleanly."], why: "Two values convert cleanly; the bad one raises ValueError and is skipped, so ok ends at 2." },
       ],
     },
@@ -167,7 +167,7 @@ const TRACKS = [
           lines: ["try:", "    qty = int(\"many\")", "except ZeroDivisionError:", "    print(\"not a number\")"],
           buggyLine: 2,
           lineHints: { 0: "try: is fine.", 1: "This line is what raises the error.", 3: "The message is fine but it never runs — the error wasn't caught." },
-          fixes: ["except ValueError:", "except KeyError:", "except:"],
+          fixes: ["except ValueError:", "except IndexError:", "except TypeError:"],
           fixAnswer: 0,
           fixHints: ["int() on bad text raises ValueError, not ZeroDivisionError.", "The except type must match the error that is actually raised."],
           why: "int() on non-numeric text raises ValueError; catching ZeroDivisionError lets it slip through and crash. Catch ValueError.",
@@ -229,7 +229,7 @@ const TRACKS = [
     flame: {
       bugs: [
         {
-          intro: "This should safely parse a hour — but Python won't even START it (SyntaxError). Click the buggy line.",
+          intro: "This should safely parse an hour — but Python won't even START it (SyntaxError). Click the buggy line.",
           lines: ["try:", "    hour = int(\"20\")", "except ValueError", "    print(\"bad hour\")"],
           buggyLine: 2,
           lineHints: { 0: "try: is fine.", 1: "The conversion line is fine.", 3: "The handler body never runs — Python stopped on the except header." },
@@ -240,10 +240,10 @@ const TRACKS = [
         },
         {
           intro: "Parsing a bad hour should print a friendly message — but this program CRASHES instead. No syntax error; the wrong exception is caught. Click the faulty line.",
-          lines: ["try:", "    hour = int(\"many\")", "except ZeroDivisionError:", "    print(\"not a number\")"],
+          lines: ["try:", "    hour = int(\"noon\")", "except ZeroDivisionError:", "    print(\"not a number\")"],
           buggyLine: 2,
           lineHints: { 0: "try: is fine.", 1: "This line is what raises the error.", 3: "The message is fine but it never runs — the error wasn't caught." },
-          fixes: ["except ValueError:", "except KeyError:", "except:"],
+          fixes: ["except ValueError:", "except IndexError:", "except TypeError:"],
           fixAnswer: 0,
           fixHints: ["int() on bad text raises ValueError, not ZeroDivisionError.", "The except type must match the error that is actually raised."],
           why: "int() on non-numeric text raises ValueError; catching ZeroDivisionError lets it slip through and crash. Catch ValueError.",
@@ -251,7 +251,7 @@ const TRACKS = [
       ],
     },
     forge: {
-      intro: "Rebuild the Experiment-7 program that safely parses a hour with try/except. Use ↑↓ to order the scrambled lines.",
+      intro: "Rebuild the Experiment-7 program that safely parses an hour with try/except. Use ↑↓ to order the scrambled lines.",
       target: [
         { code: "raw = \"20\"", defines: "t0", needs: [] },
         { code: "try:", defines: "t1", needs: ["t0"] },
@@ -271,7 +271,7 @@ const TRACKS = [
       success: "Read, try, report success, catch the failure — the safe hour parser is assembled. ⚒️",
     },
     temper: {
-      task: "A hour value v is pre-set. Write check(v) that RAISES ValueError(\"bad hour\") when v is below 0 or above 23, otherwise returns v. Call it inside try and print \"OK\" and the value if it is valid, or \"ERR\" and the message if it raises.",
+      task: "An hour value v is pre-set. Write check(v) that RAISES ValueError(\"bad hour\") when v is below 0 or above 23, otherwise returns v. Call it inside try and print \"OK\" and the value if it is valid, or \"ERR\" and the message if it raises.",
       varNote: "v = 10 (re-run with a hidden value)",
       tests: [
         { pre: "v = 10", expect: "OK 10", label: "a valid value returns" },
@@ -298,7 +298,7 @@ const TRACKS = [
     spark: {
       questions: [
         { kind: "mcq", code: "try:\n    x = float(\"abc\")\nexcept ValueError:\n    print(\"caught\")", options: ["caught", "crashes with ValueError", "x", "Error"], answer: 0, hints: ["The risky line is inside try; when it raises, Python jumps to the matching except.", "The except type matches the error raised, so the handler runs."], why: "The conversion raises ValueError, which the except catches, so it prints \"caught\" instead of crashing." },
-        { kind: "mcq", code: "try:\n    10 / 0\nexcept ValueError:\n    print(\"ValueError\")\nexcept ZeroDivisionError:\n    print(\"ZeroDivisionError\")", options: ["ValueError", "ZeroDivisionError", "nothing", "Error"], answer: 1, hints: ["Which specific error does this line raise?", "Python runs the first except whose type matches that error."], why: "Dividing by zero raises ZeroDivisionError. Python runs the first matching except block." },
+        { kind: "mcq", code: "try:\n    10 / 0\nexcept ValueError:\n    print(\"ValueError\")\nexcept ZeroDivisionError:\n    print(\"ZeroDivisionError\")", options: ["ValueError", "ZeroDivisionError", "nothing", "ValueError, then ZeroDivisionError"], answer: 1, hints: ["Which specific error does this line raise?", "Python runs the first except whose type matches that error."], why: "Dividing by zero raises ZeroDivisionError. Python runs the first matching except block." },
         { kind: "trace", code: "vals = [\"22.0\", \"n/a\", \"24.9\"]\nok = 0\nfor v in vals:\n    try:\n        float(v)\n        ok = ok + 1\n    except ValueError:\n        pass\nprint(ok)", expect: "2", prompt: "Trace the loop: how many values convert without raising? Type the number.", hints: ["Each value is tried inside try; a bad one raises ValueError and is skipped by pass.", "Count only the values that convert cleanly."], why: "Two values convert cleanly; the bad one raises ValueError and is skipped, so ok ends at 2." },
       ],
     },
@@ -319,7 +319,7 @@ const TRACKS = [
           lines: ["try:", "    bmi = float(\"hot\")", "except ZeroDivisionError:", "    print(\"not a number\")"],
           buggyLine: 2,
           lineHints: { 0: "try: is fine.", 1: "This line is what raises the error.", 3: "The message is fine but it never runs — the error wasn't caught." },
-          fixes: ["except ValueError:", "except KeyError:", "except:"],
+          fixes: ["except ValueError:", "except IndexError:", "except TypeError:"],
           fixAnswer: 0,
           fixHints: ["float() on bad text raises ValueError, not ZeroDivisionError.", "The except type must match the error that is actually raised."],
           why: "float() on non-numeric text raises ValueError; catching ZeroDivisionError lets it slip through and crash. Catch ValueError.",
@@ -370,6 +370,21 @@ const TRACKS = [
 ];
 
 // ── Hint box: reveals one nudge at a time, never the whole answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -428,7 +443,7 @@ function SparkStage({ data, onPass }) {
   return (
     <div>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Warm-up on YOUR project's objects: read each snippet <em>as Python would</em>. Two are multiple choice —
+        Warm-up on YOUR project's data: read each snippet <em>as Python would</em>. Two are multiple choice —
         the third has no options: trace the loop in your head and TYPE the answer. Wrong tries just light hints. ✨
       </p>
 
@@ -446,7 +461,8 @@ function SparkStage({ data, onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -567,7 +583,8 @@ function FlameStage({ data, onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -748,7 +765,10 @@ function TemperStage({ data, onPass }) {
       for (const t of TESTS) {
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");
         try {
-          py.runPython(t.pre + "\n" + code);
+          // A fresh namespace per test, so names left over from an earlier run
+          // (or another lesson) can never make incomplete code pass.
+          const ns = py.globals.get("dict")();
+          try { py.runPython(t.pre + "\n" + code, { globals: ns }); } finally { ns.destroy(); }
         } catch (e) {
           const lines = String(e.message || e).trim().split("\n");
           setStatus("error");
@@ -968,7 +988,7 @@ function TrackDonePanel({ track, claimed, onClaim }) {
             background: `linear-gradient(135deg, ${C.orange}, ${C.red})`,
             color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
           }}>🏅 Submit checkpoint to my record</button>
-          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>You can still return and try the other tracks afterwards — they're optional.</div>
+          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>One track per crucible is all you need — you can still come back and try the others.</div>
         </div>
       ) : (
         <div style={{ marginTop: 18, color: C.green, fontWeight: 700, fontSize: 14 }}>✓ Checkpoint recorded. Explore the other tracks any time, or close this.</div>
@@ -1034,7 +1054,7 @@ export default function UnitLAB8_5({ student, onUnitComplete, challengeProgress 
           <div style={{ fontSize: 12, color: C.orange, letterSpacing: 1, fontWeight: 700 }}>PYTHON LAB › CHECKPOINT · EXP 7 & 8</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Mini-Project Crucible — Errors & Exceptions</div>
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "optional"}</div>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "required"}</div>
       </div>
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>

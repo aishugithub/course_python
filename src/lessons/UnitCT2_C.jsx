@@ -22,6 +22,21 @@ const STAGES = [
 
 const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
 
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -65,7 +80,7 @@ function SparkStage({ onPass }) {
       claims: [
         "Binary search needs the list to be sorted.",
         "Binary search halves the remaining range each step.",
-        "Binary search also works correctly on an unsorted list.",
+        "Binary search works on unsorted lists too.",
       ],
       lieIndex: 2,
       hints: ["What does binary search assume when it discards a whole half?", "If the data isn't ordered, 'the target must be in the right half' is no longer true."],
@@ -116,7 +131,8 @@ function SparkStage({ onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -133,7 +149,8 @@ function SparkStage({ onPass }) {
 
             {q.kind === "lie" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {q.claims.map((cl, oi) => {
+                {optionOrder(q.claims.length, q.code).map((oi) => {
+                  const cl = q.claims[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.lieIndex) { bg = C.red + "18"; border = C.red; col = C.red; }
                   else if (isSolved) { bg = C.green + "10"; border = C.green + "55"; col = C.muted; }
@@ -191,7 +208,7 @@ function FlameStage({ onPass }) {
         4: "Updating biggest is correct.",
         5: "The print is fine — the seed value is the problem.",
       },
-      fixes: ["biggest = data[0]  (seed with a real element)", "biggest = -100", "change > to <"],
+      fixes: ["biggest = data[0]", "biggest = 0.0", "biggest = len(data)"],
       fixAnswer: 0,
       fixHints: ["Seeding at 0 assumes some value beats 0 — but every mark here is below 0.", "Start from an actual member of the list, data[0], and it's always beatable-or-correct."],
       why: "biggest = 0 is never beaten by negative numbers, so 0 is falsely reported. Seed with data[0] and the scan works for any values.",
@@ -205,7 +222,7 @@ function FlameStage({ onPass }) {
         2: "By the time this runs, data[0] has already been overwritten — the damage was done above.",
         3: "The print just shows the wrecked list.",
       },
-      fixes: ["Save data[0] in a temp FIRST, then do the two assignments", "Delete the print line", "Use a for loop"],
+      fixes: ["Save data[0] in a temp variable first", "Swap the order of the two assignments", "Write data[1] = data[0] on both lines"],
       fixAnswer: 0,
       fixHints: ["data[0] = data[1] destroys the old 5 before line 3 can rescue it.", "temp = data[0] first preserves 5; then data[0] = data[1]; data[1] = temp."],
       why: "Overwriting data[0] loses the 5, so both slots end up 2. A swap needs a temp to hold the first value before it's clobbered.",
@@ -263,7 +280,8 @@ function FlameStage({ onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -615,7 +633,7 @@ export default function UnitCT2_C({ student, onUnitComplete, challengeProgress =
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
         <div style={{ background: C.orange + "10", border: `1px solid ${C.orange}33`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-          ⚔️ <strong style={{ color: C.orange }}>Bonus challenge — completely optional.</strong> Your lesson
+          ⚔️ <strong style={{ color: C.orange }}>Optional — counts toward the course certificate.</strong> Your lesson
           progress is already safe. But stages unlock one by one, hints replace answers, and only the worthy
           earn the badge. Forge your algorithms-on-data skills. Ready?
         </div>

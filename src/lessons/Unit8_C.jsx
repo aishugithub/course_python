@@ -22,6 +22,21 @@ const STAGES = [
 const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
 
 // ── Hint box: reveals one nudge at a time, never the answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -65,7 +80,7 @@ function SparkStage({ onPass }) {
       claims: [
         "show() prints 10 — a function can READ a global variable.",
         "Adding count = count + 1 inside show() would make it crash.",
-        "A variable created inside show() would still exist after show() returns.",
+        "A variable made inside show() lives on after it returns.",
       ],
       lieIndex: 2,
       hints: ["Think of Unit 8.3's frames: what happens to a frame when its function returns?", "Locals live in the function's frame — and the frame is destroyed at return."],
@@ -129,7 +144,8 @@ function SparkStage({ onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -146,7 +162,8 @@ function SparkStage({ onPass }) {
 
             {q.kind === "lie" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {q.claims.map((cl, oi) => {
+                {optionOrder(q.claims.length, q.code).map((oi) => {
+                  const cl = q.claims[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.lieIndex) { bg = C.red + "18"; border = C.red; col = C.red; }
                   else if (isSolved) { bg = C.green + "10"; border = C.green + "55"; col = C.muted; }
@@ -217,7 +234,7 @@ function FlameStage({ onPass }) {
         3: "The call is correct — the problem is what the function hands BACK.",
         4: "This is where it crashes — but the cause is inside the function. What does a hold?",
       },
-      fixes: ["    return length * width", "    print(result)", "a = result"],
+      fixes: ["    return length * width", "    print(result)", "    return length + width"],
       fixAnswer: 0,
       fixHints: ["The function computes result… and then lets it die with the frame. Nothing comes back.", "A function without return hands back None — and None + 1 explodes. Send the value OUT."],
       why: "area computes result but never returns it, so a = None and None + 1 → TypeError. return length * width sends the value back to the caller.",
@@ -233,7 +250,7 @@ function FlameStage({ onPass }) {
         3: "The accumulation itself is correct.",
         6: "The call is fine — it faithfully prints whatever comes back.",
       },
-      fixes: ["    return total  (dedented one level — AFTER the loop finishes)", "        return m", "    break"],
+      fixes: ["    return total", "        return m", "        continue"],
       fixAnswer: 0,
       fixHints: ["return doesn't just exit the loop — it exits the WHOLE function, instantly.", "Where the return sits decides WHEN it fires. Indented inside the loop, it fires on the very first pass. It belongs after the loop."],
       why: "Indentation bug: return inside the loop body fires on pass one (total = 10) and kills the function. Dedent it so it runs after the loop completes all passes.",
@@ -299,7 +316,8 @@ function FlameStage({ onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -697,7 +715,7 @@ export default function Unit8_C({ student, onUnitComplete, challengeProgress = [
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
         <div style={{ background: C.orange + "10", border: `1px solid ${C.orange}33`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-          ⚔️ <strong style={{ color: C.orange }}>Bonus challenge — completely optional.</strong> Your lesson
+          ⚔️ <strong style={{ color: C.orange }}>Optional — counts toward the course certificate.</strong> Your lesson
           progress is already safe. But stages unlock one by one, hints replace answers, and only the
           worthy earn the badge. This is the final crucible of the foundation. Ready?
         </div>

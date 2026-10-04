@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import COURSE_CONFIG from '../../config/course.config.js';
 import { DARK as D, FONT, MONO } from './brand.js';
+import { labUnitDone } from './labCompletion.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Foothold Dashboard — ACCORDION EDITION, DARK BRAND
@@ -26,6 +27,27 @@ import { DARK as D, FONT, MONO } from './brand.js';
 const MODULE_COLORS = [D.amber, D.blue, D.bronze];
 const FIRE_BG = 'rgba(231,161,62,0.10)'; // warm amber wash behind Crucible rows
 
+// Modules marked `hidden: true` in course.config.js stay out of the dashboard
+// (and out of the course %) without being deleted.
+const MODULES = COURSE_CONFIG.modules.filter(m => !m.hidden);
+
+// Module chip: the config's `label` if given, else "MODULE 4" / "MODULE 6.5".
+const moduleLabel = (mod) => mod.label || mod.moduleId.replace(/^M(?=\d)/, 'MODULE ');
+
+// Chip + icon for one unit row. e-Lab Record units are mandatory lab work
+// (experiments and mini-project crucibles); other optional units are Crucibles
+// or the extras named by their `tag`.
+function unitKind(mod, unit) {
+  if (mod.labRecord) {
+    return /_5$/.test(unit.unitId)
+      ? { chip: 'MINI PROJECT', icon: '🔥', fire: true }
+      : { chip: 'EXPERIMENT ' + unit.unitId.replace('UnitLAB', ''), icon: '🧪', fire: false };
+  }
+  if (!unit.optional) return { chip: unit.unitId.replace('Unit', '').replace('_', '.'), icon: '▶️', fire: false };
+  if (/_C$/.test(unit.unitId)) return { chip: 'CRUCIBLE · OPTIONAL', icon: '🔥', fire: true };
+  return { chip: unit.tag || 'EXTRA', icon: '⭐', fire: false };
+}
+
 // Brand mark: three climbing steps. On dark, the two lower steps go light and
 // the summit step keeps the amber — same colourway as the Landing hero.
 function FootholdMark({ size = 34 }) {
@@ -43,7 +65,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
   // challenges never blocks 100%. completedUnits may also hold stage
   // pseudo-ids like "Unit4_C@spark"; counting only required ids filters those.
   const requiredIds = new Set(
-    COURSE_CONFIG.modules.flatMap(m => m.units.filter(u => !u.optional).map(u => u.unitId))
+    MODULES.flatMap(m => m.units.filter(u => !u.optional).map(u => u.unitId))
   );
   const totalUnits = requiredIds.size;
   const doneSet = new Set(completedUnits);
@@ -55,7 +77,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
   // Drives the auto-expanded module and the START HERE chip.
   let nextUnitId = null, nextModuleId = null;
   outer:
-  for (const mod of COURSE_CONFIG.modules) {
+  for (const mod of MODULES) {
     for (const unit of mod.units) {
       if (!unit.optional && !doneSet.has(unit.unitId)) {
         nextUnitId = unit.unitId; nextModuleId = mod.moduleId;
@@ -80,7 +102,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
     try {
       const saved = localStorage.getItem(LAST_MODULE_KEY);
       // Guard against a stale id left over from an older course config.
-      return COURSE_CONFIG.modules.some(m => m.moduleId === saved) ? saved : null;
+      return MODULES.some(m => m.moduleId === saved) ? saved : null;
     } catch {
       return null; // private-browsing / storage disabled — fall through silently
     }
@@ -91,7 +113,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
   //   2. the module holding their next incomplete unit (fresh session)
   //   3. the very first module (brand-new or fully-finished learner)
   const initialOpenModule =
-    readLastModule() || nextModuleId || COURSE_CONFIG.modules[0].moduleId;
+    readLastModule() || nextModuleId || MODULES[0].moduleId;
 
   // Accordion state: a Set of open moduleIds.
   const [openModules, setOpenModules] = useState(() => new Set([initialOpenModule]));
@@ -206,7 +228,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
           }}>
             <div style={{ fontSize: 26 }}>🎓</div>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Course Certificate</div>
+              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Course Certificate <span style={{ color: D.inkMuted, fontWeight: 400, fontSize: 13 }}>· optional</span></div>
               {isGuest ? (
                 <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
                   Sign in to earn a verifiable certificate — it’s issued from your saved progress.
@@ -247,26 +269,29 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
             LabCertificate re-checks against the Sheet before issuing. */}
         {labCertStatus && (
           <div style={{
-            background: labCertStatus.eligible ? 'rgba(88,166,255,0.12)' : D.surface,
-            border: `1px solid ${labCertStatus.eligible ? D.blue : D.border}`,
+            background: labCertStatus.certificate ? 'rgba(88,166,255,0.12)' : D.surface,
+            border: `1px solid ${labCertStatus.certificate ? D.blue : D.border}`,
             borderRadius: 12, padding: '16px 20px', marginBottom: 26,
             display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
           }}>
             <div style={{ fontSize: 26 }}>🧪</div>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Python Lab Certificate · MED23CL202</div>
+              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>e-Lab Certificate · MED23CL202</div>
               {isGuest ? (
                 <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
-                  Sign in with your roll number to earn the lab certificate — it’s issued from your saved lab record.
+                  Sign in with your roll number to earn the lab certificate — it’s issued from your saved e-Lab Record.
                 </div>
               ) : labCertStatus.eligible ? (
                 <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
-                  Unlocked! Your {labCertStatus.trackName} track is complete across all {labCertStatus.cruciblesTotal} lab crucibles. 🧪
+                  Unlocked! All {labCertStatus.experimentsTotal} experiments, all {labCertStatus.cruciblesTotal} mini-project crucibles and your feedback are done. 🧪
+                </div>
+              ) : labCertStatus.certificate === 'participation' ? (
+                <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                  Your Certificate of Participation is ready — {labCertStatus.itemsDone} of {labCertStatus.itemsTotal} items done.
                 </div>
               ) : (
                 <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
-                  🔥 Lab crucibles on your track {labCertStatus.cruciblesDone}/{labCertStatus.cruciblesTotal}
-                  {labCertStatus.trackName ? ` · ${labCertStatus.trackName}` : ''} — finish your track in all five to unlock.
+                  🧪 Experiments {labCertStatus.experimentsDone}/{labCertStatus.experimentsTotal} · 🔥 Mini-project crucibles {labCertStatus.cruciblesDone}/{labCertStatus.cruciblesTotal} · 📝 Feedback {labCertStatus.feedbackDone ? '✓' : 'pending'} — finish all of them to unlock.
                 </div>
               )}
             </div>
@@ -275,13 +300,13 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                 Sign in
               </button>
             ) : (
-              <button onClick={onOpenLabCertificate} disabled={!labCertStatus.eligible} style={{
-                background: labCertStatus.eligible ? D.blue : D.border,
-                color: labCertStatus.eligible ? '#071018' : D.inkMuted,
+              <button onClick={onOpenLabCertificate} disabled={!labCertStatus.certificate} style={{
+                background: labCertStatus.certificate ? D.blue : D.border,
+                color: labCertStatus.certificate ? '#071018' : D.inkMuted,
                 border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 700,
-                cursor: labCertStatus.eligible ? 'pointer' : 'not-allowed', fontFamily: FONT,
+                cursor: labCertStatus.certificate ? 'pointer' : 'not-allowed', fontFamily: FONT,
               }}>
-                {labCertStatus.eligible ? '⬇ Get lab certificate' : 'Locked'}
+                {labCertStatus.certificate ? '⬇ Get lab certificate' : 'Locked'}
               </button>
             )}
           </div>
@@ -289,10 +314,12 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
 
         {/* ── The accordion ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {COURSE_CONFIG.modules.map((mod, mIdx) => {
-            const accent = MODULE_COLORS[mIdx % MODULE_COLORS.length];
-            const required = mod.units.filter(u => !u.optional);
-            const modDone = required.filter(u => doneSet.has(u.unitId)).length;
+          {MODULES.map((mod, mIdx) => {
+            const accent = mod.labRecord ? D.blue : MODULE_COLORS[mIdx % MODULE_COLORS.length];
+            // In the e-Lab Record every unit is required lab work.
+            const required = mod.labRecord ? mod.units : mod.units.filter(u => !u.optional);
+            const isDone = (u) => (mod.labRecord ? labUnitDone(u.unitId, doneSet) : doneSet.has(u.unitId));
+            const modDone = required.filter(isDone).length;
             const modComplete = required.length > 0 && modDone === required.length;
             const isOpen = openModules.has(mod.moduleId);
             const isNextModule = mod.moduleId === nextModuleId;
@@ -313,7 +340,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                       <span style={{ color: accent, fontFamily: MONO, fontSize: 11, letterSpacing: '0.08em', fontWeight: 700 }}>
-                        {mod.moduleId.replace('M', 'MODULE ')}
+                        {moduleLabel(mod)}
                       </span>
                       <span style={{ color: D.ink, fontSize: 15.5, fontWeight: 700 }}>{mod.moduleTitle}</span>
                       {isNextModule && !modComplete && (
@@ -337,8 +364,8 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                   <div className="fh-units-inner">
                     <div style={{ borderTop: `1px solid ${D.border}`, padding: '6px 0' }}>
                       {mod.units.map(unit => {
-                        const done = doneSet.has(unit.unitId);
-                        const isBonus = !!unit.optional;
+                        const done = isDone(unit);
+                        const kind = unitKind(mod, unit);
                         const isNext = unit.unitId === nextUnitId;
                         return (
                           <div key={unit.unitId} className="fh-unit"
@@ -346,19 +373,19 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                             style={{
                               display: 'flex', alignItems: 'flex-start', gap: 12,
                               padding: '10px 18px 10px 46px',
-                              background: isBonus ? FIRE_BG : 'transparent',
+                              background: kind.fire ? FIRE_BG : 'transparent',
                               borderLeftColor: isNext ? D.amber : 'transparent',
                             }}>
                             <span style={{ fontSize: 15, lineHeight: '20px', flexShrink: 0 }}>
-                              {done ? '✅' : isBonus ? '🔥' : '▶️'}
+                              {done ? '✅' : kind.icon}
                             </span>
                             <div style={{ minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                                <span style={{ color: isBonus ? D.amber : done ? D.green : D.ink, fontSize: 14, fontWeight: 600 }}>
+                                <span style={{ color: done ? D.green : kind.fire ? D.amber : D.ink, fontSize: 14, fontWeight: 600 }}>
                                   {unit.title}
                                 </span>
-                                <span style={{ color: isBonus ? D.bronze : D.inkMuted, fontFamily: MONO, fontSize: 10.5 }}>
-                                  {isBonus ? 'BONUS · CHALLENGE' : unit.unitId.replace('Unit', '').replace('_', '.')}
+                                <span style={{ color: kind.fire ? D.bronze : mod.labRecord ? D.blue : D.inkMuted, fontFamily: MONO, fontSize: 10.5 }}>
+                                  {kind.chip}
                                 </span>
                                 {isNext && (
                                   <span style={{ color: '#111A2E', background: D.amber, fontFamily: MONO, fontSize: 10, fontWeight: 700, borderRadius: 999, padding: '2px 8px' }}>

@@ -14,7 +14,7 @@
 //  cell it refreshes with the calculation. This runs as you, on a time trigger
 //  — it is NOT reachable from the shared URLs.
 //
-//  TWO SEPARATE VIEWS, TWO URLs (routed by doGet from this ONE project)
+//  THREE VIEWS, THREE URLs (routed by doGet from this ONE project)
 //    • .../exec?view=general  -> General.html
 //         Course completion for EVERY student, with a switcher between your two
 //         Foothold courses (Python and COA). Each list is sorted by progress
@@ -24,11 +24,15 @@
 //         (1) Lab progress — a wide matrix of the 11 experiments, each cell a
 //         completion tick + date/time, plus per-experiment defaulters;
 //         (2) Marks — the /10 you award, read from the separate marks sheet.
+//    • .../exec?view=lab      -> LabProgress.html
+//         The e-Lab Record progress portal: per student, experiments done /10,
+//         mini projects done /5, feedback, certificate eligibility. No marks.
 //
 //  HOW THE PIECES FIT TOGETHER
-//    • doGet(e) reads ?view= and serves General.html or Med.html.
-//    • General.html calls getGeneralData(); Med.html calls getMedData().
-//    • Both are pure reads — there is no write path anywhere in this file.
+//    • doGet(e) reads ?view= and serves General.html, Med.html or LabProgress.html.
+//    • General.html calls getGeneralData(); Med.html calls getMedData();
+//      LabProgress.html calls getLabProgressData().
+//    • All three are pure reads (writeMarks, Section 10, is the only writer).
 //
 //  THE DATA MODEL WE READ (identical Foothold template in every course sheet)
 //  Tab `Progress` : RollNo | CourseId | UnitId | CompletedAt
@@ -342,9 +346,16 @@ const MED_ROSTER = [
 // ----------------------------------------------------------------------------
 function doGet(e) {
   const view = (e && e.parameter && e.parameter.view || 'general').toString().toLowerCase();
-  const isMed = (view === 'med');
-  return HtmlService.createHtmlOutputFromFile(isMed ? 'Med' : 'General')
-    .setTitle(isMed ? 'MED ENGG LAB — Progress & Marks' : 'Foothold — Course Progress')
+  //  ?view=lab  -> LabProgress.html (the e-Lab Record progress portal, Section 13)
+  //  ?view=med  -> Med.html (the older progress + marks portal)
+  //  anything else -> General.html
+  const pages = {
+    lab: { file: 'LabProgress', title: 'MED23CL202 — e-Lab Record Progress' },
+    med: { file: 'Med',         title: 'MED ENGG LAB — Progress & Marks' },
+  };
+  const page = pages[view] || { file: 'General', title: 'Foothold — Course Progress' };
+  return HtmlService.createHtmlOutputFromFile(page.file)
+    .setTitle(page.title)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -884,4 +895,98 @@ function diagnoseLab() {
   Logger.log('Raw identifiers in sheet (first 8): ' + Object.keys(progRolls).slice(0, 8).join(' | '));
   Logger.log('Still-unmatched roster reg-nos (likely personal emails — add to ROLL_ALIASES): ' +
              (missing.length ? missing.join(', ') : 'none 🎉'));
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 13 — READ #3: getLabProgressData()  (called by LabProgress.html)
+//  ----------------------------------------------------------------------------
+//  The e-Lab Record progress portal (?view=lab). For every roster student:
+//  how many of the 10 experiments and 5 mini-project crucibles are done, and
+//  whether the feedback is in. No marks. The rule is the SAME as the course
+//  app's src/shell/labCompletion.js, so "eligible" here means exactly what the
+//  student's certificate gate means:
+//    • experiment done  = record submitted ("UnitLAB3") OR all 6 stages present
+//    • mini project done = claimed ("UnitLAB4_5") OR any track's temper stage
+//                          ("UnitLAB4_5@B_temper") — tracks may be mixed
+//    • feedback done    = "UnitFB" present
+//    • eligible         = 10/10 experiments + 5/5 mini projects + feedback
+//    • participation    = not eligible, but feedback in and at least
+//                         ELAB_PARTICIPATION_MIN_PCT % of the 15 items done
+//                         (shown to YOU here always; students only see it once
+//                         the app's labCertificate.participationOpen is true)
+//  If you change the rule in the app, change it here too.
+// ----------------------------------------------------------------------------
+const ELAB_EXPERIMENTS = ['UnitLAB1', 'UnitLAB2', 'UnitLAB3', 'UnitLAB4', 'UnitLAB5',
+                          'UnitLAB6', 'UnitLAB7', 'UnitLAB8', 'UnitLAB9', 'UnitLAB10'];
+const ELAB_MINI_PROJECTS = [
+  { id: 'UnitLAB2_5',  label: 'MP1', covers: 'Exp 1 & 2' },
+  { id: 'UnitLAB4_5',  label: 'MP2', covers: 'Exp 3 & 4' },
+  { id: 'UnitLAB6_5',  label: 'MP3', covers: 'Exp 5 & 6' },
+  { id: 'UnitLAB8_5',  label: 'MP4', covers: 'Exp 7 & 8' },
+  { id: 'UnitLAB10_5', label: 'MP5', covers: 'Exp 9 & 10' },
+];
+const ELAB_FEEDBACK = 'UnitFB';
+const ELAB_EXP_STAGES = ['p1_algo', 'p1_flow', 'p1_prog', 'p2_algo', 'p2_flow', 'p2_prog'];
+const ELAB_TRACKS = ['A', 'B', 'C', 'D'];
+const ELAB_PARTICIPATION_MIN_PCT = 60;   // must match participationMinPct in course.config.js
+
+//  'done' | 'started' | 'none' for one experiment.
+function elabExperimentState(id, done) {
+  if (done[id]) return 'done';
+  const n = ELAB_EXP_STAGES.filter(function (s) { return done[id + '@' + s]; }).length;
+  if (n === ELAB_EXP_STAGES.length) return 'done';
+  return n ? 'started' : 'none';
+}
+
+//  'done' | 'started' | 'none' for one mini-project crucible.
+function elabMiniProjectState(id, done) {
+  if (done[id]) return 'done';
+  if (ELAB_TRACKS.some(function (L) { return done[id + '@' + L + '_temper']; })) return 'done';
+  const prefix = id + '@';
+  return Object.keys(done).some(function (u) { return u.indexOf(prefix) === 0; }) ? 'started' : 'none';
+}
+
+function getLabProgressData() {
+  const ss = SpreadsheetApp.openById(PYTHON_SHEET_ID);
+  const progress = buildProgressIndex(ss, 'course_python');
+
+  const students = MED_ROSTER.map(function (s) {
+    const done = progress[s.rollNo] || {};
+    const exps = ELAB_EXPERIMENTS.map(function (id) { return elabExperimentState(id, done); });
+    const mps  = ELAB_MINI_PROJECTS.map(function (m) { return elabMiniProjectState(m.id, done); });
+    const expDone = exps.filter(function (x) { return x === 'done'; }).length;
+    const mpDone  = mps.filter(function (x) { return x === 'done'; }).length;
+    const feedback = !!done[ELAB_FEEDBACK];
+    const itemsTotal = ELAB_EXPERIMENTS.length + ELAB_MINI_PROJECTS.length;
+    const eligible = expDone === ELAB_EXPERIMENTS.length && mpDone === ELAB_MINI_PROJECTS.length && feedback;
+
+    //  Latest timestamp on any lab or feedback row = "last active".
+    let last = '';
+    Object.keys(done).forEach(function (u) {
+      if (!/^UnitLAB|^UnitFB$/.test(u)) return;
+      const t = done[u];
+      const ms = (t instanceof Date) ? t.getTime() : new Date(t).getTime();
+      if (!isNaN(ms) && (!last || ms > last)) last = ms;
+    });
+
+    return {
+      rollNo: s.rollNo, name: s.name,
+      exps: exps, mps: mps,
+      expDone: expDone, mpDone: mpDone, feedback: feedback,
+      pct: Math.round(((expDone + mpDone) / itemsTotal) * 100),
+      eligible: eligible,
+      participation: !eligible && feedback && (expDone + mpDone) * 100 >= ELAB_PARTICIPATION_MIN_PCT * itemsTotal,
+      lastActive: last ? Utilities.formatDate(new Date(last), TIMEZONE, 'dd-MMM-yy HH:mm') : '',
+    };
+  });
+
+  return {
+    generatedAt: Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm'),
+    expTotal: ELAB_EXPERIMENTS.length,
+    mpTotal: ELAB_MINI_PROJECTS.length,
+    participationMinPct: ELAB_PARTICIPATION_MIN_PCT,
+    miniProjects: ELAB_MINI_PROJECTS,
+    students: students,
+  };
 }
