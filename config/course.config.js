@@ -7,6 +7,13 @@
 //  `blurb` — one catchy line per module and per unit, shown by the
 //            accordion Dashboard to pull learners into clicking.
 //            Blurbs are optional: a unit without one still renders.
+//  `label` — optional module chip text on the Dashboard (default:
+//            "MODULE <n>" from the moduleId).
+//  `hidden`— optional: true keeps a module out of the Dashboard (and
+//            out of the course %) without deleting it.
+//  `labRecord` — marks the e-Lab Record module: its units are all
+//            mandatory lab work, counted on their own (not in the course %).
+//  `tag`   — optional chip text for an optional unit.
 // ============================================================
 
 const COURSE_CONFIG = {
@@ -15,6 +22,16 @@ const COURSE_CONFIG = {
   courseTitle: "Python Programming",
   subtitle:    "From zero to Pythonista",
   batch:       "2025",
+
+  // e-Lab certificate (MED23CL202). Full completion (10 experiments + 5 mini
+  // projects + feedback) always unlocks the Certificate of Completion. Students
+  // who finish at least `participationMinPct` % of the 15 items (+ feedback) get
+  // a Certificate of Participation — but ONLY once `participationOpen` is true.
+  // Keep it false until the cut-off date; while false, students never see it.
+  labCertificate: {
+    participationOpen:   false,
+    participationMinPct: 60,
+  },
 
   hook: {
     line1: "You don't read Foothold. You click it, break it, and fix it.",
@@ -305,12 +322,16 @@ const COURSE_CONFIG = {
       // JSON payload through onUnitComplete -> App.jsx -> analytics.js's new
       // `detail` param -> Code.gs's new Events sheet "Detail" column, so the
       // score is recoverable per-student, not just a completion timestamp.
+      // Hidden for the MED23CL202 batch (not part of their lab requirement).
+      // Remove `hidden` to bring the synthesis challenge back.
       moduleId:    "FT",
+      hidden:      true,
+      label:       "FINAL ASCENT",
       moduleTitle: "The Final Ascent",
       icon:        "",
       blurb: "One last problem. Nothing here was practiced directly — this is where everything you learned has to work together on its own.",
       units: [
-        { unitId: "UnitFT", title: "The Final Ascent — A Synthesis Challenge", optional: true,
+        { unitId: "UnitFT", title: "The Final Ascent — A Synthesis Challenge", optional: true, tag: "OPTIONAL",
           blurb: "A library late-fee calculator you've never seen before. Trace it, break it, then prove you can reason about all of it at once." },
       ],
     },
@@ -320,7 +341,11 @@ const COURSE_CONFIG = {
       // Crucible/FT/FB units). Same scaffolded capstone spine, re-skinned per
       // engineering branch; a learner builds the ONE for their domain. Added one
       // unit at a time. Filenames: UnitMP_<TRACK>.jsx.
+      // Hidden for the MED23CL202 batch: their mini-project is the track inside
+      // the e-Lab Record. Remove `hidden` to bring this back for other branches.
       moduleId:    "MP",
+      hidden:      true,
+      label:       "MINI PROJECT",
       moduleTitle: "Applied Mini-Projects — Build for Your Branch",
       icon:        "",
       blurb: "Everything you learned, aimed at your world. Pick your branch and build one real program end to end.",
@@ -337,11 +362,12 @@ const COURSE_CONFIG = {
       // (see src/shell/completion.js + Certificate.jsx). The feedback answers
       // themselves go to a separate "Feedback" sheet via api.js submitFeedback.
       moduleId:    "FB",
+      label:       "FINISH LINE",
       moduleTitle: "Finish Line — Feedback & Certificate",
       icon:        "",
-      blurb: "You've climbed the whole thing. Tell us how it went — and unlock your certificate.",
+      blurb: "You've climbed the whole thing. Tell us how it went — required for your e-Lab certificate.",
       units: [
-        { unitId: "UnitFB", title: "Your Verdict — Feedback, Review & Testimonial", optional: true,
+        { unitId: "UnitFB", title: "Your Verdict — Feedback, Review & Testimonial", optional: true, tag: "REQUIRED · E-LAB CERTIFICATE",
           blurb: "Two minutes of honesty: how Foothold compared, what helped, what didn't — then claim your certificate." },
       ],
     },
@@ -354,39 +380,41 @@ const COURSE_CONFIG = {
       // against a signed-in student's roll number via the existing
       // onStageComplete plumbing, exactly like the Crucible.
       moduleId:    "LAB",
-      moduleTitle: "Python Lab — e-Record (MED23CL202)",
+      label:       "E-LAB RECORD",
+      labRecord:   true,
+      moduleTitle: "e-Lab Record — Python Lab (MED23CL202)",
       icon:        "",
-      blurb: "Your lab observation notebook, online. Each experiment: sequence the algorithm, assemble the flowchart, run the program — recorded against your roll number.",
+      blurb: "Your lab record, online — all ten experiments and five mini-project crucibles are required. Every stage is saved against your roll number; finish them all to unlock your lab certificate.",
       units: [
         { unitId: "UnitLAB1", title: "Experiment 1 — Data Types, Operators & Conditionals", optional: true,
           blurb: "Two programs (BMI · temperature converter), each as algorithm → flowchart → run-it. Real Python, in your browser." },
         { unitId: "UnitLAB2", title: "Experiment 2 — Loops, Collections & Functions", optional: true,
           blurb: "Two programs (average heart rate · BMI-category function), each as algorithm → flowchart → run-it. The for-loop chart shows a real decision diamond." },
-        { unitId: "UnitLAB2_5", title: "Checkpoint — Mini-Project Crucible (Exp 1 & 2)", optional: true,
+        { unitId: "UnitLAB2_5", title: "Mini Project — Crucible 1 (Exp 1 & 2)", optional: true,
           blurb: "Pick ONE mini-project track and crack it: predict output, hunt bugs, rebuild the code, then write the real Python at its heart. Your Exp 1 & 2, forged into a working brick of your capstone." },
         { unitId: "UnitLAB3", title: "Experiment 3 — Classes, Objects & Encapsulation", optional: true,
           blurb: "Two programs (Patient class · validating setter), each as algorithm → flowchart → run-it. Model medical entities and guard their private data." },
         { unitId: "UnitLAB4", title: "Experiment 4 — Inheritance & Polymorphism", optional: true,
           blurb: "Two programs (Nurse inherits Staff · staff role() overriding), each as algorithm → flowchart → run-it. The same call, many forms." },
-        { unitId: "UnitLAB4_5", title: "Checkpoint — Mini-Project Crucible (Exp 3 & 4)", optional: true,
+        { unitId: "UnitLAB4_5", title: "Mini Project — Crucible 2 (Exp 3 & 4)", optional: true,
           blurb: "Objects & inheritance, forged through your track: predict, debug, rebuild the class, then write the real subclass that overrides a method. The OOP core of your capstone." },
         { unitId: "UnitLAB5", title: "Experiment 5 — Reading & Writing Text Files", optional: true,
           blurb: "Two programs (write patient records · read them back), each as algorithm → flowchart → run-it. Patient data that survives on disk." },
         { unitId: "UnitLAB6", title: "Experiment 6 — File Operations & CSV Records", optional: true,
           blurb: "Two programs (append a record · read a CSV), each as algorithm → flowchart → run-it. Patient data that grows and lives in proper tables." },
-        { unitId: "UnitLAB6_5", title: "Checkpoint — Mini-Project Crucible (Exp 5 & 6)", optional: true,
+        { unitId: "UnitLAB6_5", title: "Mini Project — Crucible 3 (Exp 5 & 6)", optional: true,
           blurb: "Files & records, forged through your track: save your data to disk, then read it back and tally what matters. Your project finally remembers." },
         { unitId: "UnitLAB7", title: "Experiment 7 — Exception Handling: try / except", optional: true,
           blurb: "Two programs (safe temperature input · BMI with two except blocks), each as algorithm → flowchart → run-it. Catch the crash before it catches you." },
         { unitId: "UnitLAB8", title: "Experiment 8 — raise, finally & User-defined Exceptions", optional: true,
           blurb: "Two programs (raise your own ValueError · a custom exception class), each as algorithm → flowchart → run-it. Errors that carry your project's name." },
-        { unitId: "UnitLAB8_5", title: "Checkpoint — Mini-Project Crucible (Exp 7 & 8)", optional: true,
+        { unitId: "UnitLAB8_5", title: "Mini Project — Crucible 4 (Exp 7 & 8)", optional: true,
           blurb: "Errors & exceptions, forged through your track: guard every input and raise your own error when the data is impossible. Your project stops crashing." },
         { unitId: "UnitLAB9", title: "Experiment 9 — Data Analysis with Pandas", optional: true,
           blurb: "Two programs (build a DataFrame · load & filter a CSV), each as algorithm → flowchart → self-check. A spreadsheet living inside Python." },
         { unitId: "UnitLAB10", title: "Experiment 10 — Visualization: Matplotlib & Seaborn", optional: true,
           blurb: "Two programs (a labelled line chart · a Seaborn histogram), each as algorithm → flowchart → self-check. One chart turns your numbers into a dashboard." },
-        { unitId: "UnitLAB10_5", title: "Checkpoint — Mini-Project Crucible (Exp 9 & 10)", optional: true,
+        { unitId: "UnitLAB10_5", title: "Mini Project — Crucible 5 (Exp 9 & 10)", optional: true,
           blurb: "Analysis & charts, forged through your track: filter and summarise your records into numbers worth plotting. The last brick of your capstone." },
       ],
     },

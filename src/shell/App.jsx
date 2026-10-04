@@ -166,8 +166,18 @@ export default function App() {
       userId: student?.rollNo || '',
       detail: payload ? JSON.stringify(payload) : '',
     });
-    setCompletedUnits(prev => [...new Set([...prev, activeUnit])]);
+    const after = [...new Set([...completedUnits, activeUnit])];
+    setCompletedUnits(after);
     setActiveUnit(null); setLessonComponent(null);
+    // e-Lab Record: when this submission completes the last requirement (all ten
+    // experiments + all five mini-project crucibles + the feedback) — or the final
+    // crucible is submitted with everything done — go straight to the e-Lab certificate.
+    if (student && (activeUnit.startsWith('UnitLAB') || activeUnit === 'UnitFB')) {
+      const wasEligible = labCertificateStatus(completedUnits).eligible;
+      if (labCertificateStatus(after).eligible && (!wasEligible || activeUnit === 'UnitLAB10_5')) {
+        setView('labCertificate');
+      }
+    }
   }
 
   // Crucible (challenge unit) stage completions. Stages persist as
@@ -212,7 +222,8 @@ export default function App() {
 
   // The LAB certificate is its own view too, opened from the Dashboard's separate
   // lab-certificate banner. LabCertificate re-verifies the lab track against the Sheet.
-  function handleOpenLabCertificate() { setView('labCertificate'); }
+  // Also reachable from inside the final mini-project crucible, so close any open lesson first.
+  function handleOpenLabCertificate() { setActiveUnit(null); setLessonComponent(null); setView('labCertificate'); }
 
   function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); setLessonError(null); }
 
@@ -304,6 +315,8 @@ export default function App() {
             challengeProgress={completedUnits}
             onStageComplete={handleStageComplete}
             onSubmitFeedback={handleSubmitFeedback}
+            labCertStatus={labCertificateStatus(completedUnits)}
+            onOpenLabCertificate={handleOpenLabCertificate}
           />
         </Suspense>
       </div>

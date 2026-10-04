@@ -88,9 +88,9 @@ const TRACKS = [
         },
         {
           intro: "This should save every temperature reading to vitals.txt — but only the LAST one ends up in the file. No crash, just lost data. Click the faulty line.",
-          lines: ["for r in records:", "    with open(\"vitals.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
-          buggyLine: 1,
-          lineHints: { 0: "Looping over the records is fine.", 2: "Writing one record is fine — the problem is the mode on the line above." },
+          lines: ["records = [\"36.5\", \"39.0\", \"38.2\"]", "for r in records:", "    with open(\"vitals.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
+          buggyLine: 2,
+          lineHints: { 0: "The list of records is fine.", 1: "Looping over the records is fine.", 3: "Writing one record is fine — the problem is the mode on the line above." },
           fixes: ["    with open(\"vitals.txt\", \"a\") as f:", "    with open(\"vitals.txt\", \"r\") as f:", "    with open(\"vitals.txt\", \"x\") as f:"],
           fixAnswer: 0,
           fixHints: ["Opening in \"w\" ERASES the file — and it happens on every pass of the loop.", "Use \"a\" (append) so each record is added, not overwritten."],
@@ -160,9 +160,9 @@ const TRACKS = [
         },
         {
           intro: "This should save every stock line to stock.txt — but only the LAST one ends up in the file. No crash, just lost data. Click the faulty line.",
-          lines: ["for r in records:", "    with open(\"stock.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
-          buggyLine: 1,
-          lineHints: { 0: "Looping over the records is fine.", 2: "Writing one record is fine — the problem is the mode on the line above." },
+          lines: ["records = [\"12\", \"5\", \"20\"]", "for r in records:", "    with open(\"stock.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
+          buggyLine: 2,
+          lineHints: { 0: "The list of records is fine.", 1: "Looping over the records is fine.", 3: "Writing one record is fine — the problem is the mode on the line above." },
           fixes: ["    with open(\"stock.txt\", \"a\") as f:", "    with open(\"stock.txt\", \"r\") as f:", "    with open(\"stock.txt\", \"x\") as f:"],
           fixAnswer: 0,
           fixHints: ["Opening in \"w\" ERASES the file — and it happens on every pass of the loop.", "Use \"a\" (append) so each record is added, not overwritten."],
@@ -232,9 +232,9 @@ const TRACKS = [
         },
         {
           intro: "This should save every slot line to day.txt — but only the LAST one ends up in the file. No crash, just lost data. Click the faulty line.",
-          lines: ["for r in records:", "    with open(\"day.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
-          buggyLine: 1,
-          lineHints: { 0: "Looping over the records is fine.", 2: "Writing one record is fine — the problem is the mode on the line above." },
+          lines: ["records = [\"BOOKED\", \"FREE\", \"FREE\"]", "for r in records:", "    with open(\"day.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
+          buggyLine: 2,
+          lineHints: { 0: "The list of records is fine.", 1: "Looping over the records is fine.", 3: "Writing one record is fine — the problem is the mode on the line above." },
           fixes: ["    with open(\"day.txt\", \"a\") as f:", "    with open(\"day.txt\", \"r\") as f:", "    with open(\"day.txt\", \"x\") as f:"],
           fixAnswer: 0,
           fixHints: ["Opening in \"w\" ERASES the file — and it happens on every pass of the loop.", "Use \"a\" (append) so each record is added, not overwritten."],
@@ -304,9 +304,9 @@ const TRACKS = [
         },
         {
           intro: "This should save every screening record to camp.txt — but only the LAST one ends up in the file. No crash, just lost data. Click the faulty line.",
-          lines: ["for r in records:", "    with open(\"camp.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
-          buggyLine: 1,
-          lineHints: { 0: "Looping over the records is fine.", 2: "Writing one record is fine — the problem is the mode on the line above." },
+          lines: ["records = [\"22.0\", \"27.5\", \"24.9\"]", "for r in records:", "    with open(\"camp.txt\", \"w\") as f:", "        f.write(r + \"\\n\")"],
+          buggyLine: 2,
+          lineHints: { 0: "The list of records is fine.", 1: "Looping over the records is fine.", 3: "Writing one record is fine — the problem is the mode on the line above." },
           fixes: ["    with open(\"camp.txt\", \"a\") as f:", "    with open(\"camp.txt\", \"r\") as f:", "    with open(\"camp.txt\", \"x\") as f:"],
           fixAnswer: 0,
           fixHints: ["Opening in \"w\" ERASES the file — and it happens on every pass of the loop.", "Use \"a\" (append) so each record is added, not overwritten."],
@@ -354,6 +354,21 @@ const TRACKS = [
 ];
 
 // ── Hint box: reveals one nudge at a time, never the whole answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -412,7 +427,7 @@ function SparkStage({ data, onPass }) {
   return (
     <div>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Warm-up on YOUR project's objects: read each snippet <em>as Python would</em>. Two are multiple choice —
+        Warm-up on YOUR project's data: read each snippet <em>as Python would</em>. Two are multiple choice —
         the third has no options: trace the loop in your head and TYPE the answer. Wrong tries just light hints. ✨
       </p>
 
@@ -430,7 +445,8 @@ function SparkStage({ data, onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -551,7 +567,8 @@ function FlameStage({ data, onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -732,7 +749,10 @@ function TemperStage({ data, onPass }) {
       for (const t of TESTS) {
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");
         try {
-          py.runPython(t.pre + "\n" + code);
+          // A fresh namespace per test, so names left over from an earlier run
+          // (or another lesson) can never make incomplete code pass.
+          const ns = py.globals.get("dict")();
+          try { py.runPython(t.pre + "\n" + code, { globals: ns }); } finally { ns.destroy(); }
         } catch (e) {
           const lines = String(e.message || e).trim().split("\n");
           setStatus("error");
@@ -952,7 +972,7 @@ function TrackDonePanel({ track, claimed, onClaim }) {
             background: `linear-gradient(135deg, ${C.orange}, ${C.red})`,
             color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
           }}>🏅 Submit checkpoint to my record</button>
-          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>You can still return and try the other tracks afterwards — they're optional.</div>
+          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>One track per crucible is all you need — you can still come back and try the others.</div>
         </div>
       ) : (
         <div style={{ marginTop: 18, color: C.green, fontWeight: 700, fontSize: 14 }}>✓ Checkpoint recorded. Explore the other tracks any time, or close this.</div>
@@ -1018,7 +1038,7 @@ export default function UnitLAB6_5({ student, onUnitComplete, challengeProgress 
           <div style={{ fontSize: 12, color: C.orange, letterSpacing: 1, fontWeight: 700 }}>PYTHON LAB › CHECKPOINT · EXP 5 & 6</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Mini-Project Crucible — Files & Records</div>
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "optional"}</div>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "required"}</div>
       </div>
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>

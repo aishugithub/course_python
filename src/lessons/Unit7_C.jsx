@@ -22,6 +22,21 @@ const STAGES = [
 const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
 
 // ── Hint box: reveals one nudge at a time, never the answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -65,7 +80,7 @@ function SparkStage({ onPass }) {
       claims: [
         "point[0] gives 3 — tuples are indexed just like lists.",
         "point[0] = 10 would crash — tuples can't be changed after creation.",
-        'student["marks"] = 90 would also crash — dictionaries can\'t be changed either.',
+        'student["marks"] = 90 would crash too — dicts are fixed.',
       ],
       lieIndex: 2,
       hints: ["One of the two containers here is frozen; the other is very much alive.", "Which container did the Marks Manager UPDATE freely in Unit 7.4?"],
@@ -129,7 +144,8 @@ function SparkStage({ onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -146,7 +162,8 @@ function SparkStage({ onPass }) {
 
             {q.kind === "lie" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {q.claims.map((cl, oi) => {
+                {optionOrder(q.claims.length, q.code).map((oi) => {
+                  const cl = q.claims[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.lieIndex) { bg = C.red + "18"; border = C.red; col = C.red; }
                   else if (isSolved) { bg = C.green + "10"; border = C.green + "55"; col = C.muted; }
@@ -227,7 +244,7 @@ function FlameStage({ onPass }) {
         0: "Creating the string is fine.",
         2: "The print never runs — the crash happens above it.",
       },
-      fixes: ['name = "R" + name[1:]', 'name[0] == "R"', "name.first = \"R\""],
+      fixes: ['name = "R" + name[1:]', 'name = "R" + name[0:]', "name.first = \"R\""],
       fixAnswer: 0,
       fixHints: ["Strings are IMMUTABLE — you can never edit one in place, only build a new one.", "Take the capital letter, glue on a slice of everything from index 1 onwards, and store the RESULT."],
       why: "Strings can't be edited in place (immutable!). The fix builds a NEW string — \"R\" + name[1:] → \"Ravi\" — and rebinds the locker to it.",
@@ -292,7 +309,8 @@ function FlameStage({ onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -698,7 +716,7 @@ export default function Unit7_C({ student, onUnitComplete, challengeProgress = [
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
         <div style={{ background: C.orange + "10", border: `1px solid ${C.orange}33`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-          ⚔️ <strong style={{ color: C.orange }}>Bonus challenge — completely optional.</strong> Your lesson
+          ⚔️ <strong style={{ color: C.orange }}>Optional — counts toward the course certificate.</strong> Your lesson
           progress is already safe. But stages unlock one by one, hints replace answers, and only the
           worthy earn the badge. Ready?
         </div>

@@ -81,7 +81,7 @@ const TRACKS = [
         {
           kind: "mcq",
           code: "class Reading:\n    def label(self):\n        return \"reading\"\nclass TempReading(Reading):\n    def label(self):\n        return \"temperature\"\nr = TempReading()\nprint(r.label())",
-          options: ["temperature", "reading", "Error", "nothing"],
+          options: ["temperature", "reading", "reading temperature", "Error"],
           answer: 0,
           hints: ["TempReading inherits from Reading but defines its OWN label().", "When a child redefines a method, the child's version wins — that's overriding."],
           why: "TempReading overrides label(), so the child's version runs and prints \"temperature\" — the parent's is shadowed.",
@@ -113,7 +113,7 @@ const TRACKS = [
           lines: ["class Reading:", "    def status(self):", "        return \"NORMAL\"", "class TempReading(Reading):", "    def temp_status(self):", "        return \"FEVER\"", "r = TempReading()", "print(r.status())"],
           buggyLine: 4,
           lineHints: { 0: "The base class is fine.", 1: "The base status() method is fine.", 2: "Returns NORMAL — fine.", 3: "The inheritance header is correct.", 5: "The body is right, but it lives in a method nobody calls.", 6: "Creating the object is fine.", 7: "This calls status(), not temp_status()." },
-          fixes: ["def status(self):  (match the base method's name to override it)", "def status():", "def temp_status(self, status):"],
+          fixes: ["def status(self):", "def status():", "def temp_status(self, status):"],
           fixAnswer: 0,
           fixHints: ["To OVERRIDE a method, the child must use the SAME name as the parent.", "status() is called, but the child defined temp_status() — a different name — so the parent's NORMAL runs instead."],
           why: "Overriding needs the same method name. Named temp_status(), it never overrides status(), so the inherited NORMAL runs. Rename it to status().",
@@ -191,7 +191,7 @@ const TRACKS = [
         {
           kind: "mcq",
           code: "class Item:\n    def __init__(self, name):\n        self.name = name\nclass Medicine(Item):\n    def tag(self):\n        return \"MED-\" + self.name\nm = Medicine(\"aspirin\")\nprint(m.tag())",
-          options: ["MED-aspirin", "aspirin", "MED-", "Error"],
+          options: ["MED-aspirin", "aspirin", "MED-", "MED-self.name"],
           answer: 0,
           hints: ["Medicine has no __init__ of its own, so it inherits Item's.", "self.name was set by the inherited __init__; tag() just prepends \"MED-\"."],
           why: "Medicine inherits Item's __init__, so self.name = \"aspirin\"; tag() returns \"MED-\" + self.name = \"MED-aspirin\".",
@@ -298,7 +298,7 @@ const TRACKS = [
         {
           kind: "mcq",
           code: "class Appointment:\n    def __init__(self, time):\n        self.time = time\nclass OPDAppointment(Appointment):\n    def describe(self):\n        return \"OPD at \" + self.time\na = OPDAppointment(\"10:00\")\nprint(a.describe())",
-          options: ["OPD at 10:00", "10:00", "OPD at ", "Error"],
+          options: ["OPD at 10:00", "10:00", "OPD at ", "OPD at self.time"],
           answer: 0,
           hints: ["OPDAppointment has no __init__, so it inherits Appointment's.", "self.time came from the inherited __init__; describe() just builds a string with it."],
           why: "OPDAppointment inherits Appointment's __init__, so self.time = \"10:00\"; describe() returns \"OPD at \" + self.time.",
@@ -427,7 +427,7 @@ const TRACKS = [
           lines: ["class Visitor:", "    def __init__(self, weight, height):", "        self.weight = weight", "        self.height = height", "    def bmi(self):", "        return weight / (self.height ** 2)", "v = Visitor(60, 1.7)", "print(v.bmi())"],
           buggyLine: 5,
           lineHints: { 0: "The class header is fine.", 1: "__init__ is fine.", 2: "Storing self.weight — fine.", 3: "Storing self.height — fine.", 4: "The method header is fine.", 6: "Creating the object is fine.", 7: "The call fails inside the method, on the line above." },
-          fixes: ["return self.weight / (self.height ** 2)", "return self.weight / (height ** 2)", "return weight / (height ** 2)"],
+          fixes: ["return self.weight / (self.height ** 2)", "return self.weight / (height ** 2)", "return self.weight // (self.height ** 2)"],
           fixAnswer: 0,
           fixHints: ["Inside a method, the object's data lives on self — bare weight is not defined there.", "You wrote self.height correctly; do the same for weight."],
           why: "weight is not a local variable inside bmi(); the object's value is self.weight. Bare weight raises NameError — use self.weight.",
@@ -497,6 +497,21 @@ const TRACKS = [
 ];
 
 // ── Hint box: reveals one nudge at a time, never the whole answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -573,7 +588,8 @@ function SparkStage({ data, onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -694,7 +710,8 @@ function FlameStage({ data, onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -875,7 +892,10 @@ function TemperStage({ data, onPass }) {
       for (const t of TESTS) {
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");
         try {
-          py.runPython(t.pre + "\n" + code);
+          // A fresh namespace per test, so names left over from an earlier run
+          // (or another lesson) can never make incomplete code pass.
+          const ns = py.globals.get("dict")();
+          try { py.runPython(t.pre + "\n" + code, { globals: ns }); } finally { ns.destroy(); }
         } catch (e) {
           const lines = String(e.message || e).trim().split("\n");
           setStatus("error");
@@ -1095,7 +1115,7 @@ function TrackDonePanel({ track, claimed, onClaim }) {
             background: `linear-gradient(135deg, ${C.orange}, ${C.red})`,
             color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
           }}>🏅 Submit checkpoint to my record</button>
-          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>You can still return and try the other tracks afterwards — they're optional.</div>
+          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>One track per crucible is all you need — you can still come back and try the others.</div>
         </div>
       ) : (
         <div style={{ marginTop: 18, color: C.green, fontWeight: 700, fontSize: 14 }}>✓ Checkpoint recorded. Explore the other tracks any time, or close this.</div>
@@ -1161,7 +1181,7 @@ export default function UnitLAB4_5({ student, onUnitComplete, challengeProgress 
           <div style={{ fontSize: 12, color: C.orange, letterSpacing: 1, fontWeight: 700 }}>PYTHON LAB › CHECKPOINT · EXP 3 & 4</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Mini-Project Crucible — Objects & Inheritance</div>
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "optional"}</div>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "required"}</div>
       </div>
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>

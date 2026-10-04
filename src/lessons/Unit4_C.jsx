@@ -23,6 +23,21 @@ const STAGES = [
 const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
 
 // ── Hint box: reveals one nudge at a time, never the answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -101,7 +116,8 @@ function SparkStage({ onPass }) {
             </div>
             <pre style={{ ...mono, background: C.surface, borderRadius: 8, padding: 12, border: `1px solid ${C.border}`, marginBottom: 10 }}>{q.code}</pre>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {q.options.map((opt, oi) => {
+              {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -142,7 +158,7 @@ function FlameStage({ onPass }) {
         1: "That's where Python CRASHES — but the cause is one line earlier. What type of value is sitting in age?",
         2: "This line is innocent — by the time we get here, the damage is already done above.",
       },
-      fixes: ['age = int(input("Your age? "))', 'next_year = age + "1"', "print(age) + 1"],
+      fixes: ['age = int(input("Your age? "))', 'next_year = age + "1"', 'age = str(input("Your age? "))'],
       fixAnswer: 0,
       fixHints: ["input() ALWAYS hands back text, even if you type digits.", "You need the locker to hold a NUMBER before adding 1 — Unit 4.3's converter does exactly that."],
       why: "input() returns a string, so age + 1 tries text + number → TypeError. int(...) converts at the door.",
@@ -221,7 +237,8 @@ function FlameStage({ onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -621,7 +638,7 @@ export default function Unit4_C({ student, onUnitComplete, challengeProgress = [
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
         <div style={{ background: C.orange + "10", border: `1px solid ${C.orange}33`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-          ⚔️ <strong style={{ color: C.orange }}>Bonus challenge — completely optional.</strong> Your lesson
+          ⚔️ <strong style={{ color: C.orange }}>Optional — counts toward the course certificate.</strong> Your lesson
           progress is already safe. But stages unlock one by one, hints replace answers, and only the
           worthy earn the badge. Ready?
         </div>

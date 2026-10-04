@@ -72,3 +72,14 @@ auto-calculated marks. It writes nothing, so the links are safe to share.
 In `Dashboard.gs`, in `LAB_EXPERIMENTS`, set that experiment's `built: true` and
 give it a `stages` array (copy `LAB_STAGE_TEMPLATE`). Everything else updates
 automatically — matrix column, completion bar, defaulters, and marks.
+
+## e-Lab Record progress portal (`?view=lab`)
+A progress-only page: per student, experiments done /10, mini projects done /5,
+feedback, and whether they are ready for the e-Lab certificate. No marks.
+1. In the Apps Script project, add an HTML file named **`LabProgress`** and paste
+   in `LabProgress.html`. Paste the updated `Dashboard.gs` over the old one.
+2. **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy.**
+   The web-app URL stays the same.
+3. Open `…/exec?view=lab`. The old MED page (`?view=med`) still works.
+The certificate rule here matches the course app's `src/shell/labCompletion.js`;
+if you change one, change the other (Section 13 of `Dashboard.gs`).

@@ -177,7 +177,8 @@ export default function UnitFB({ student, onUnitComplete, onSubmitFeedback }) {
         <div>
           <h3 style={{ color: C.text, marginBottom: 6 }}>One last step</h3>
           <p style={{ color: C.muted, fontSize: 13, marginBottom: 18, lineHeight: 1.7 }}>
-            Submitting your feedback is the final foothold — it unlocks your course certificate.
+            Submitting your feedback is the final foothold — it is required for your e-Lab certificate
+            (with all ten experiments and five mini-project crucibles), and it also counts toward the course certificate.
           </p>
           <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 18 }}>
             <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: C.accent }} />
@@ -202,8 +203,8 @@ export default function UnitFB({ student, onUnitComplete, onSubmitFeedback }) {
           <div style={{ padding: 20, borderRadius: 12, background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`, border: `1px solid ${C.accent}55` }}>
             <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Course Complete!</div>
             <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-              If you've also cleared all ten Crucibles, your <b style={{ color: C.accent }}>certificate</b> is now
-              waiting on the Dashboard. Tap Finish to head back and download it.
+              If your e-Lab Record is complete (all ten experiments and five mini-project crucibles), your
+              <b style={{ color: C.accent }}> e-Lab certificate</b> opens when you tap Finish — it is also on the Dashboard.
             </div>
           </div>
           {/* Like the Crucible badge: never auto-fire onUnitComplete (it unloads

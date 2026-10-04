@@ -55,7 +55,7 @@ function Card({ children, style }) {
 }
 
 export default function Landing({ onExploreGuest, onGoToLogin }) {
-  const totalUnits = COURSE_CONFIG.modules.reduce((acc, m) => acc + m.units.length, 0);
+  const totalUnits = COURSE_CONFIG.modules.filter(m => !m.hidden).reduce((acc, m) => acc + m.units.length, 0);
 
   // Shared button styles. On dark, the solid AMBER button is the loudest thing
   // on the page, so it becomes the primary action (the "fire"); the outlined

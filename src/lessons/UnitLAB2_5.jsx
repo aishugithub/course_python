@@ -111,13 +111,13 @@ const TRACKS = [
         },
         {
           intro: "A pulse of 110 should print 'High' — but this prints 'Normal'. No crash, just a WRONG answer. Click the line that causes it.",
-          lines: ["pulse = 110", "if pulse >= 60:", "    status = \"Normal\"", "elif pulse > 100:", "    status = \"High\"", "else:", "    status = \"Low\"", "print(status)"],
-          buggyLine: 1,
-          lineHints: { 0: "pulse = 110 is exactly the value we're testing.", 3: "This condition is correct, but it never gets a chance to run.", 4: "Innocent — the branch above steals the show.", 5: "else is fine.", 6: "Innocent.", 7: "The print just reports whatever status holds." },
-          fixes: ["if pulse > 100:  (check the HIGHER band first, then elif pulse >= 60)", "if pulse > 60:", "if pulse == \"High\":"],
+          lines: ["pulse = 110", "if pulse < 60:", "    status = \"Low\"", "elif pulse >= 60:", "    status = \"Normal\"", "else:", "    status = \"High\"", "print(status)"],
+          buggyLine: 3,
+          lineHints: { 0: "pulse = 110 is exactly the value we're testing.", 1: "110 < 60 is False, so this branch is skipped — correctly.", 2: "This line never runs for 110.", 4: "This line runs, but only because the condition above let 110 in.", 5: "else is fine — it's where 'High' should come from.", 6: "Innocent — it never gets a chance to run.", 7: "The print just reports whatever status holds." },
+          fixes: ["elif pulse <= 100:", "elif pulse > 60:", "elif pulse >= 100:"],
           fixAnswer: 0,
-          fixHints: ["An elif chain stops at the FIRST True condition — 110 >= 60 is True, so it never looks further.", "Order the bands from highest to lowest: test > 100 first."],
-          why: "Logic bug, not a crash: 110 >= 60 is True, so the chain stops at 'Normal'. Order elif bands from highest to lowest.",
+          fixHints: ["An elif chain stops at the FIRST True condition — 110 >= 60 is True, so it never reaches else.", "'Normal' needs an upper limit too: 60 to 100 only."],
+          why: "Logic bug, not a crash: 110 >= 60 is True, so the chain stops at 'Normal'. The Normal band needs its upper limit, pulse <= 100, so 110 falls through to else and prints 'High'.",
         },
       ],
     },
@@ -172,7 +172,7 @@ const TRACKS = [
         {
           kind: "mcq",
           code: "stock = 5\nlevel = 10\nif stock < level:\n    print(\"REORDER\")\nelse:\n    print(\"OK\")",
-          options: ["REORDER", "OK", "5", "Error"],
+          options: ["REORDER", "OK", "REORDER, then OK", "Error"],
           answer: 0,
           hints: ["Is 5 < 10?", "If the condition is True, the if branch runs, not the else."],
           why: "5 < 10 is True, so the if branch prints \"REORDER\".",
@@ -271,7 +271,7 @@ const TRACKS = [
         {
           kind: "mcq",
           code: "hour = 13\nif hour == 13:\n    print(\"LUNCH BREAK\")\nelif 9 <= hour <= 16:\n    print(\"OPEN\")\nelse:\n    print(\"CLOSED\")",
-          options: ["LUNCH BREAK", "OPEN", "CLOSED", "Error"],
+          options: ["LUNCH BREAK", "OPEN", "CLOSED", "LUNCH BREAK, then OPEN"],
           answer: 0,
           hints: ["The first branch is checked first: is hour == 13?", "If it matches, the elif never runs."],
           why: "hour == 13 is True, so \"LUNCH BREAK\" prints — the first matching branch wins.",
@@ -308,13 +308,13 @@ const TRACKS = [
         },
         {
           intro: "At 20:00 the clinic is CLOSED — but this prints OPEN. No crash, just wrong. Click the faulty line.",
-          lines: ["hour = 20", "if hour >= 9:", "    print(\"OPEN\")", "elif hour == 13:", "    print(\"LUNCH BREAK\")", "else:", "    print(\"CLOSED\")"],
-          buggyLine: 1,
-          lineHints: { 0: "hour = 20 is the value we're testing.", 2: "The print just reports the branch taken.", 3: "This branch is fine but never reached.", 4: "Innocent.", 5: "else is fine.", 6: "Innocent." },
-          fixes: ["if 9 <= hour <= 16:  (bound BOTH ends of the open hours)", "if hour > 9:", "if hour == \"OPEN\":"],
+          lines: ["hour = 20", "if hour == 13:", "    print(\"LUNCH BREAK\")", "elif hour >= 9:", "    print(\"OPEN\")", "else:", "    print(\"CLOSED\")"],
+          buggyLine: 3,
+          lineHints: { 0: "hour = 20 is the value we're testing.", 1: "Lunch is checked first — correct, and 20 isn't 13.", 2: "Never runs for 20.", 4: "The print just reports the branch taken.", 5: "else is fine — it's where CLOSED should come from.", 6: "Innocent — it never gets a chance to run." },
+          fixes: ["elif 9 <= hour <= 16:", "elif hour > 9:", "elif 9 <= hour or hour <= 16:"],
           fixAnswer: 0,
-          fixHints: ["hour >= 9 is True for 20 as well, so it wrongly counts as OPEN.", "Open hours have an upper bound too — clamp both ends: 9 <= hour <= 16."],
-          why: "hour >= 9 has no upper bound, so 20 matches OPEN. Bound both ends with 9 <= hour <= 16.",
+          fixHints: ["hour >= 9 is True for 20 as well, so it wrongly counts as OPEN.", "Open hours have an upper bound too — clamp both ends with one chained comparison."],
+          why: "hour >= 9 has no upper bound, so 20 matches OPEN. Bound both ends with 9 <= hour <= 16 (with or, almost every hour would pass).",
         },
       ],
     },
@@ -373,7 +373,7 @@ const TRACKS = [
         {
           kind: "mcq",
           code: "bmi = 27.0\nif bmi < 18.5:\n    print(\"Underweight\")\nelif bmi < 25:\n    print(\"Normal\")\nelse:\n    print(\"Overweight/Obese\")",
-          options: ["Overweight/Obese", "Normal", "Underweight", "Error"],
+          options: ["Overweight/Obese", "Normal", "Underweight", "Normal, then Overweight/Obese"],
           answer: 0,
           hints: ["Check the branches top to bottom: is 27.0 < 18.5? is 27.0 < 25?", "If neither is True, the else runs."],
           why: "27.0 is not < 18.5 nor < 25, so the else branch prints \"Overweight/Obese\".",
@@ -409,14 +409,14 @@ const TRACKS = [
           why: "The if header was missing its colon (:) — that's what opens the indented block below it.",
         },
         {
-          intro: "A BMI of 27 should be 'Overweight/Obese' — but this prints 'Underweight'. No crash, wrong band. Click the faulty line.",
-          lines: ["bmi = 27.0", "if bmi > 18.5:", "    print(\"Underweight\")", "elif bmi > 25:", "    print(\"Overweight/Obese\")", "else:", "    print(\"Normal\")"],
-          buggyLine: 1,
-          lineHints: { 0: "bmi = 27.0 is the value we're testing.", 2: "The print reports the branch taken.", 3: "This branch is fine but never reached.", 4: "Innocent.", 5: "else is fine.", 6: "Innocent." },
-          fixes: ["if bmi < 18.5:  (underweight is BELOW 18.5; order bands low→high with <)", "if bmi >= 18.5:", "if bmi == \"Underweight\":"],
+          intro: "A BMI of 27 should be 'Overweight/Obese' — but this prints 'Normal'. No crash, wrong band. Click the faulty line.",
+          lines: ["bmi = 27.0", "if bmi < 18.5:", "    print(\"Underweight\")", "elif bmi > 18.5:", "    print(\"Normal\")", "else:", "    print(\"Overweight/Obese\")"],
+          buggyLine: 3,
+          lineHints: { 0: "bmi = 27.0 is the value we're testing.", 1: "27 is not below 18.5, so this is skipped — correctly.", 2: "Never runs for 27.", 4: "The print reports the branch taken.", 5: "else is fine — it's where Overweight/Obese should come from.", 6: "Innocent — it never gets a chance to run." },
+          fixes: ["elif bmi < 25:", "elif bmi <= 27:", "elif bmi > 25:"],
           fixAnswer: 0,
-          fixHints: ["Underweight means BELOW 18.5, so the test flips to bmi < 18.5.", "Order the bands lowest-first using < so each value lands in the right one."],
-          why: "Underweight is below 18.5, so the comparison must be bmi < 18.5; bands should be ordered lowest-first with <.",
+          fixHints: ["bmi > 18.5 is True for 27 too, so 27 lands in 'Normal'.", "The Normal band ends at 25 — order the bands lowest-first with <."],
+          why: "bmi > 18.5 has no upper limit, so 27 counts as Normal. With elif bmi < 25, the bands go lowest-first (< 18.5, < 25, else) and 27 falls through to Overweight/Obese.",
         },
       ],
     },
@@ -474,6 +474,21 @@ const TRACKS = [
 ];
 
 // ── Hint box: reveals one nudge at a time, never the whole answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -551,7 +566,8 @@ function SparkStage({ data, onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -673,7 +689,8 @@ function FlameStage({ data, onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -858,7 +875,10 @@ function TemperStage({ data, onPass }) {
         // Redirect stdout, then run the pre-set variables + the student's code.
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");
         try {
-          py.runPython(t.pre + "\n" + code);
+          // A fresh namespace per test, so names left over from an earlier run
+          // (or another lesson) can never make incomplete code pass.
+          const ns = py.globals.get("dict")();
+          try { py.runPython(t.pre + "\n" + code, { globals: ns }); } finally { ns.destroy(); }
         } catch (e) {
           const lines = String(e.message || e).trim().split("\n");
           setStatus("error");
@@ -1082,7 +1102,7 @@ function TrackDonePanel({ track, claimed, onClaim }) {
             background: `linear-gradient(135deg, ${C.orange}, ${C.red})`,
             color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
           }}>🏅 Submit checkpoint to my record</button>
-          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>You can still return and try the other tracks afterwards — they're optional.</div>
+          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>One track per crucible is all you need — you can still come back and try the others.</div>
         </div>
       ) : (
         <div style={{ marginTop: 18, color: C.green, fontWeight: 700, fontSize: 14 }}>✓ Checkpoint recorded. Explore the other tracks any time, or close this.</div>
@@ -1152,7 +1172,7 @@ export default function UnitLAB2_5({ student, onUnitComplete, challengeProgress 
           <div style={{ fontSize: 12, color: C.orange, letterSpacing: 1, fontWeight: 700 }}>PYTHON LAB › CHECKPOINT · EXP 1 & 2</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Mini-Project Crucible</div>
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "optional"}</div>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "required"}</div>
       </div>
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>

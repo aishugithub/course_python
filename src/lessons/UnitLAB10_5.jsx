@@ -82,14 +82,14 @@ const TRACKS = [
           lines: ["data = [98.6, 101.2, 99.5, 97.9]", "print(data.mean())"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine." },
-          fixes: ["print(sum(data) / len(data))", "print(data.average())", "print(mean(data))"],
+          fixes: ["print(sum(data) / len(data))", "print(sum(data) / data.count())", "print(mean(data))"],
           fixAnswer: 0,
           fixHints: ["A plain Python list has no .mean() method — that's a pandas Series/DataFrame feature.", "Compute the mean yourself with sum(data) / len(data)."],
           why: "A plain list has no .mean(); compute it with sum(data) / len(data) (or load the data into a pandas DataFrame first).",
         },
         {
           intro: "This should print the average temperature (°F) — it runs fine but the number is too BIG. Click the faulty line.",
-          lines: ["vals = [10, 20, 30]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
+          lines: ["vals = [98.0, 99.0, 100.0]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine.", 2: "print just shows whatever avg holds." },
           fixes: ["avg = sum(vals) / len(vals)", "avg = sum(vals) / (len(vals) + 1)", "avg = sum(vals) // len(vals)"],
@@ -100,7 +100,7 @@ const TRACKS = [
       ],
     },
     forge: {
-      intro: "Rebuild the Experiment-9 analysis: count the readings with a fever (≥ 100.4) and print their mean. Use ↑↓ to order the scrambled lines.",
+      intro: "Rebuild the Experiment-9 analysis: count the readings with a fever (≥ 100.4) and print the mean of ALL the readings. Use ↑↓ to order the scrambled lines.",
       target: [
         { code: "temps = [98.6, 101.2, 99.5, 97.9]", defines: "t0", needs: [] },
         { code: "hits = [x for x in temps if x >= 100.4]", defines: "t1", needs: ["t0"] },
@@ -154,14 +154,14 @@ const TRACKS = [
           lines: ["data = [12, 5, 20, 3]", "print(data.mean())"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine." },
-          fixes: ["print(sum(data) / len(data))", "print(data.average())", "print(mean(data))"],
+          fixes: ["print(sum(data) / len(data))", "print(sum(data) / data.count())", "print(mean(data))"],
           fixAnswer: 0,
           fixHints: ["A plain Python list has no .mean() method — that's a pandas Series/DataFrame feature.", "Compute the mean yourself with sum(data) / len(data)."],
           why: "A plain list has no .mean(); compute it with sum(data) / len(data) (or load the data into a pandas DataFrame first).",
         },
         {
           intro: "This should print the average stock quantity — it runs fine but the number is too BIG. Click the faulty line.",
-          lines: ["vals = [10, 20, 30]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
+          lines: ["vals = [4, 8, 12]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine.", 2: "print just shows whatever avg holds." },
           fixes: ["avg = sum(vals) / len(vals)", "avg = sum(vals) / (len(vals) + 1)", "avg = sum(vals) // len(vals)"],
@@ -172,7 +172,7 @@ const TRACKS = [
       ],
     },
     forge: {
-      intro: "Rebuild the Experiment-9 analysis: count the readings below the reorder level (< 10) and print their mean. Use ↑↓ to order the scrambled lines.",
+      intro: "Rebuild the Experiment-9 analysis: count the readings below the reorder level (< 10) and print the mean of ALL the readings. Use ↑↓ to order the scrambled lines.",
       target: [
         { code: "qtys = [12, 5, 20, 3]", defines: "t0", needs: [] },
         { code: "hits = [x for x in qtys if x < 10]", defines: "t1", needs: ["t0"] },
@@ -226,14 +226,14 @@ const TRACKS = [
           lines: ["data = [10, 35, 40, 5]", "print(data.mean())"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine." },
-          fixes: ["print(sum(data) / len(data))", "print(data.average())", "print(mean(data))"],
+          fixes: ["print(sum(data) / len(data))", "print(sum(data) / data.count())", "print(mean(data))"],
           fixAnswer: 0,
           fixHints: ["A plain Python list has no .mean() method — that's a pandas Series/DataFrame feature.", "Compute the mean yourself with sum(data) / len(data)."],
           why: "A plain list has no .mean(); compute it with sum(data) / len(data) (or load the data into a pandas DataFrame first).",
         },
         {
           intro: "This should print the average patient wait (min) — it runs fine but the number is too BIG. Click the faulty line.",
-          lines: ["vals = [10, 20, 30]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
+          lines: ["vals = [10, 35, 40, 5]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine.", 2: "print just shows whatever avg holds." },
           fixes: ["avg = sum(vals) / len(vals)", "avg = sum(vals) / (len(vals) + 1)", "avg = sum(vals) // len(vals)"],
@@ -244,7 +244,7 @@ const TRACKS = [
       ],
     },
     forge: {
-      intro: "Rebuild the Experiment-9 analysis: count the readings over the 30-minute target (≥ 30) and print their mean. Use ↑↓ to order the scrambled lines.",
+      intro: "Rebuild the Experiment-9 analysis: count the readings over the 30-minute target (≥ 30) and print the mean of ALL the readings. Use ↑↓ to order the scrambled lines.",
       target: [
         { code: "waits = [10, 35, 40, 5]", defines: "t0", needs: [] },
         { code: "hits = [x for x in waits if x >= 30]", defines: "t1", needs: ["t0"] },
@@ -298,14 +298,14 @@ const TRACKS = [
           lines: ["data = [22.0, 27.5, 24.9, 30.0]", "print(data.mean())"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine." },
-          fixes: ["print(sum(data) / len(data))", "print(data.average())", "print(mean(data))"],
+          fixes: ["print(sum(data) / len(data))", "print(sum(data) / data.count())", "print(mean(data))"],
           fixAnswer: 0,
           fixHints: ["A plain Python list has no .mean() method — that's a pandas Series/DataFrame feature.", "Compute the mean yourself with sum(data) / len(data)."],
           why: "A plain list has no .mean(); compute it with sum(data) / len(data) (or load the data into a pandas DataFrame first).",
         },
         {
           intro: "This should print the average visitor BMI — it runs fine but the number is too BIG. Click the faulty line.",
-          lines: ["vals = [10, 20, 30]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
+          lines: ["vals = [22.0, 27.5, 24.9, 30.0]", "avg = sum(vals) / (len(vals) - 1)", "print(avg)"],
           buggyLine: 1,
           lineHints: { 0: "Building the list is fine.", 2: "print just shows whatever avg holds." },
           fixes: ["avg = sum(vals) / len(vals)", "avg = sum(vals) / (len(vals) + 1)", "avg = sum(vals) // len(vals)"],
@@ -316,7 +316,7 @@ const TRACKS = [
       ],
     },
     forge: {
-      intro: "Rebuild the Experiment-9 analysis: count the readings overweight (≥ 25) and print their mean. Use ↑↓ to order the scrambled lines.",
+      intro: "Rebuild the Experiment-9 analysis: count the readings overweight (≥ 25) and print the mean of ALL the readings. Use ↑↓ to order the scrambled lines.",
       target: [
         { code: "bmis = [22.0, 27.5, 24.9, 30.0]", defines: "t0", needs: [] },
         { code: "hits = [x for x in bmis if x >= 25]", defines: "t1", needs: ["t0"] },
@@ -355,6 +355,21 @@ const TRACKS = [
 ];
 
 // ── Hint box: reveals one nudge at a time, never the whole answer ──
+// Display order for a question's options. A fixed shuffle seeded by the question's
+// own text, so the right answer is not always first, yet the order never jumps
+// between renders or between visits.
+function optionOrder(n, seedText) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
+  const idx = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+}
+
 function Hints({ hints, shown, onMore }) {
   return (
     <div style={{ marginTop: 10 }}>
@@ -413,7 +428,7 @@ function SparkStage({ data, onPass }) {
   return (
     <div>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Warm-up on YOUR project's objects: read each snippet <em>as Python would</em>. Two are multiple choice —
+        Warm-up on YOUR project's data: read each snippet <em>as Python would</em>. Two are multiple choice —
         the third has no options: trace the loop in your head and TYPE the answer. Wrong tries just light hints. ✨
       </p>
 
@@ -431,7 +446,8 @@ function SparkStage({ data, onPass }) {
 
             {q.kind === "mcq" && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {q.options.map((opt, oi) => {
+                {optionOrder(q.options.length, q.code).map((oi) => {
+                  const opt = q.options[oi];
                   let bg = C.surface, border = C.border, col = C.text;
                   if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
                   else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -552,7 +568,8 @@ function FlameStage({ data, onPass }) {
           <div style={{ marginTop: 14 }}>
             <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {b.fixes.map((f, i) => {
+              {optionOrder(b.fixes.length, b.intro).map((i) => {
+                const f = b.fixes[i];
                 let bg = C.surface, border = C.border, col = C.text;
                 if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
                 else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
@@ -733,7 +750,10 @@ function TemperStage({ data, onPass }) {
       for (const t of TESTS) {
         py.runPython("import sys, io\nsys.stdout = io.StringIO()");
         try {
-          py.runPython(t.pre + "\n" + code);
+          // A fresh namespace per test, so names left over from an earlier run
+          // (or another lesson) can never make incomplete code pass.
+          const ns = py.globals.get("dict")();
+          try { py.runPython(t.pre + "\n" + code, { globals: ns }); } finally { ns.destroy(); }
         } catch (e) {
           const lines = String(e.message || e).trim().split("\n");
           setStatus("error");
@@ -853,7 +873,7 @@ function TemperStage({ data, onPass }) {
 //  each stage as "UnitLAB10_5@<key>_<stageId>"; when all four are done it
 //  shows the completion panel (which claims the whole checkpoint).
 // ═════════════════════════════════════════════════════════════════════
-function TrackRunner({ track, challengeProgress, onStageComplete, claimed, onClaim, onBack }) {
+function TrackRunner({ track, challengeProgress, onStageComplete, claimed, onClaim, onBack, labCertStatus, onOpenLabCertificate }) {
   const persisted = STAGE_DEFS.filter((s) => challengeProgress.includes(`${UNIT_ID}@${track.key}_${s.id}`)).map((s) => s.id);
   const [doneStages, setDoneStages] = useState(persisted);
   const [active, setActive] = useState(() => {
@@ -919,7 +939,7 @@ function TrackRunner({ track, challengeProgress, onStageComplete, claimed, onCla
 
       <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
         {active >= STAGE_DEFS.length
-          ? <TrackDonePanel track={track} claimed={claimed} onClaim={onClaim} />
+          ? <TrackDonePanel track={track} claimed={claimed} onClaim={onClaim} labCertStatus={labCertStatus} onOpenLabCertificate={onOpenLabCertificate} />
           : isUnlocked(active)
             ? renderStage(active)
             : <div style={{ textAlign: "center", color: C.muted, padding: 40 }}>🔒 Locked — pass the previous stage first.</div>}
@@ -929,8 +949,12 @@ function TrackRunner({ track, challengeProgress, onStageComplete, claimed, onCla
 }
 
 // ── Completion panel for a finished track. Claiming records the whole
-//    checkpoint (onUnitComplete), so it must be SEEN and clicked. ──
-function TrackDonePanel({ track, claimed, onClaim }) {
+//    checkpoint (onUnitComplete), so it must be SEEN and clicked. This is the
+//    LAST mini-project crucible, so it also shows where the student stands on
+//    the e-Lab certificate (all ten experiments + all five crucibles). When
+//    everything is done, submitting opens the certificate (App.jsx does that). ──
+function TrackDonePanel({ track, claimed, onClaim, labCertStatus, onOpenLabCertificate }) {
+  const lab = labCertStatus;
   return (
     <div style={{ textAlign: "center", padding: 20 }}>
       <div style={{ fontSize: 60 }}>🔥</div>
@@ -952,11 +976,28 @@ function TrackDonePanel({ track, claimed, onClaim }) {
             padding: "12px 28px", borderRadius: 10, border: "none",
             background: `linear-gradient(135deg, ${C.orange}, ${C.red})`,
             color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
-          }}>🏅 Submit checkpoint to my record</button>
-          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>You can still return and try the other tracks afterwards — they're optional.</div>
+          }}>{lab && lab.eligible && onOpenLabCertificate ? "🎓 Submit & get my e-Lab certificate" : "🏅 Submit checkpoint to my record"}</button>
+          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>One track per crucible is all you need — you can still come back and try the others.</div>
         </div>
       ) : (
-        <div style={{ marginTop: 18, color: C.green, fontWeight: 700, fontSize: 14 }}>✓ Checkpoint recorded. Explore the other tracks any time, or close this.</div>
+        <div style={{ marginTop: 18 }}>
+          <div style={{ color: C.green, fontWeight: 700, fontSize: 14 }}>✓ Checkpoint recorded.</div>
+          {lab && lab.eligible && onOpenLabCertificate && (
+            <button onClick={onOpenLabCertificate} style={{
+              marginTop: 12, padding: "12px 28px", borderRadius: 10, border: "none",
+              background: C.accent, color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
+            }}>🎓 Open my e-Lab certificate</button>
+          )}
+        </div>
+      )}
+      {lab && !lab.eligible && (
+        <div style={{ marginTop: 20, padding: "12px 16px", borderRadius: 10, background: C.card, border: `1px solid ${C.border}`, textAlign: "left", maxWidth: 520, marginLeft: "auto", marginRight: "auto" }}>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 13.5 }}>🎓 e-Lab certificate</div>
+          <div style={{ color: C.muted, fontSize: 12.5, marginTop: 6, lineHeight: 1.7 }}>
+            Experiments {lab.experimentsDone}/{lab.experimentsTotal} · Mini-project crucibles {lab.cruciblesDone}/{lab.cruciblesTotal} · Feedback {lab.feedbackDone ? "✓" : "pending"}.
+            Still to do: {lab.missing.join(" · ")}. Finish these and the certificate unlocks from your dashboard.
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1000,7 +1041,7 @@ function TrackChooser({ challengeProgress, onPick }) {
 // ═════════════════════════════════════════════════════════════════════
 //  MAIN — track chooser ⇄ track runner.
 // ═════════════════════════════════════════════════════════════════════
-export default function UnitLAB10_5({ student, onUnitComplete, challengeProgress = [], onStageComplete }) {
+export default function UnitLAB10_5({ student, onUnitComplete, challengeProgress = [], onStageComplete, labCertStatus, onOpenLabCertificate }) {
   const [selected, setSelected] = useState(null);
   const [claimed, setClaimed] = useState(challengeProgress.includes(UNIT_ID));
 
@@ -1019,7 +1060,7 @@ export default function UnitLAB10_5({ student, onUnitComplete, challengeProgress
           <div style={{ fontSize: 12, color: C.orange, letterSpacing: 1, fontWeight: 700 }}>PYTHON LAB › CHECKPOINT · EXP 9 & 10</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Mini-Project Crucible — Analysis & Charts</div>
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "optional"}</div>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: claimed ? C.green : C.muted }}>{claimed ? "✓ recorded" : "required"}</div>
       </div>
 
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
@@ -1031,6 +1072,8 @@ export default function UnitLAB10_5({ student, onUnitComplete, challengeProgress
               claimed={claimed}
               onClaim={claimCheckpoint}
               onBack={() => setSelected(null)}
+              labCertStatus={labCertStatus}
+              onOpenLabCertificate={student ? onOpenLabCertificate : null}
             />
           : <TrackChooser challengeProgress={challengeProgress} onPick={setSelected} />}
       </div>
