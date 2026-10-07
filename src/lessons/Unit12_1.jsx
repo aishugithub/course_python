@@ -68,10 +68,66 @@ function TheNeed() {
   );
 }
 
+// ── Install-first callout ────────────────────────────────────────────────────
+function InstallFirst({ pkgs, mod, check }) {
+  const [env, setEnv] = useState("win");
+  const [showErr, setShowErr] = useState(false);
+  const envs = {
+    win: { label: "Windows (cmd)", lines: ["env\\Scripts\\activate", "pip install " + pkgs, 'python -c "' + check + '"'], prompt: "(env) C:\\project>" },
+    ps: { label: "PowerShell", lines: [".\\env\\Scripts\\Activate.ps1", "pip install " + pkgs, 'python -c "' + check + '"'], prompt: "(env) PS C:\\project>" },
+    nix: { label: "macOS / Linux", lines: ["source env/bin/activate", "pip install " + pkgs, 'python3 -c "' + check + '"'], prompt: "(env) ~/project$" },
+    nb: { label: "Jupyter / Colab", lines: ["%pip install " + pkgs, check.replace("; ", "\n")], prompt: "In [1]:" },
+  };
+  const e = envs[env];
+  return (
+    <div style={{ background: C.card, border: `1.5px solid ${C.yellow}55`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
+      <div style={{ color: C.yellow, fontWeight: 700, fontSize: 12.5, marginBottom: 6 }}>📥 Step 0 — install it first (one time per project)</div>
+      <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 10 }}>
+        <code style={{ color: C.text }}>{mod}</code> is not part of the standard library, so <code style={{ color: C.text }}>import</code> fails
+        until you pip-install it. Activate your project's venv (Unit 11.1), then run:
+      </div>
+      <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+        {Object.entries(envs).map(([k, v]) => (
+          <button key={k} onClick={() => setEnv(k)} style={{
+            flex: 1, minWidth: 90, padding: "6px 4px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600,
+            background: env === k ? C.yellow + "22" : C.surface, color: env === k ? C.yellow : C.muted,
+            border: `1px solid ${env === k ? C.yellow : C.border}`,
+          }}>{v.label}</button>
+        ))}
+      </div>
+      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
+        {e.lines.map((l, i) => (
+          <div key={i}><span style={{ color: env === "nb" ? C.accent : C.green }}>{env === "nb" ? "" : e.prompt + " "}</span>{l}</div>
+        ))}
+      </pre>
+      <div style={{ color: C.muted, fontSize: 11.5, lineHeight: 1.6, marginTop: 8 }}>
+        {env === "nb"
+          ? "In a notebook use %pip (with the %) so the package lands in the same Python the notebook is running. Colab already has most of these — the command just confirms it."
+          : "The last line is a quick check: if it prints a version number, the install worked. You only install once per venv; after that, just activate and import."}
+      </div>
+      <button onClick={() => setShowErr(!showErr)} style={{ marginTop: 8, padding: "5px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${C.red}55`, color: C.red, fontSize: 11, cursor: "pointer" }}>
+        {showErr ? "▾" : "▸"} Got ModuleNotFoundError?
+      </button>
+      {showErr && (
+        <div style={{ marginTop: 8, fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.red, margin: "0 0 6px", whiteSpace: "pre-wrap" }}>{"ModuleNotFoundError: No module named '" + mod.split(".")[0] + "'"}</pre>
+          Python can't find the package in the interpreter that ran your file. Usual causes: (1) you never ran pip install,
+          (2) you installed it while the venv was <em>not</em> active, so it went to the global Python, or (3) VS Code is
+          running a different interpreter — pick the env one via Ctrl+Shift+P → "Python: Select Interpreter".
+          Safest form: <code style={{ color: C.text }}>python -m pip install {pkgs}</code> — it installs into exactly the
+          python you'll run.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Section 2: Series & DataFrame ────────────────────────────────────────────
 function SeriesDataFrame() {
   return (
     <div>
+      <InstallFirst pkgs="pandas" mod="pandas" check="import pandas; print(pandas.__version__)" />
+
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
         Two core objects. A <strong style={{ color: C.teal }}>Series</strong> is a single labelled column. A{" "}
         <strong style={{ color: C.orange }}>DataFrame</strong> is a whole table — columns of Series sharing one
