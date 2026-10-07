@@ -199,7 +199,7 @@ function Compare() {
         </div>
       </div>
 
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" }}>{`low = 0\nhigh = len(data) - 1\nfound = -1\nwhile low <= high:\n    mid = (low + high) // 2\n    if data[mid] == target:\n        found = mid\n        break\n    elif data[mid] < target:\n        low = mid + 1\n    else:\n        high = mid - 1`}</pre>
+      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" }}>{`data = [12, 23, 45, 67, 89, 91, 103]   # must be SORTED\ntarget = 67\n\nlow = 0\nhigh = len(data) - 1\nfound = -1\nwhile low <= high:\n    mid = (low + high) // 2\n    if data[mid] == target:\n        found = mid\n        break\n    elif data[mid] < target:\n        low = mid + 1\n    else:\n        high = mid - 1\nprint("found at index", found)`}</pre>
 
       <div style={{ marginTop: 16, background: C.red + "12", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
         ⚠️ <strong style={{ color: C.red }}>Binary's catch:</strong> it only works if the list is already sorted.

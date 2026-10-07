@@ -164,10 +164,10 @@ const PROGRAMS = [
 // Six stages = 2 programs × 3 stages, gated strictly in this order.
 const STAGES = [
   { id: "p1_algo", prog: 0, kind: "algo", label: "Algorithm", sub: "Program 1", icon: "①" },
-  { id: "p1_flow", prog: 0, kind: "flow", label: "Flowchart", sub: "Program 1", icon: "①" },
+  { id: "p1_flow", prog: 0, kind: "flow", optional: true, label: "Flowchart", sub: "P1 · optional", icon: "①" },
   { id: "p1_prog", prog: 0, kind: "prog", label: "Program", sub: "Program 1", icon: "①" },
   { id: "p2_algo", prog: 1, kind: "algo", label: "Algorithm", sub: "Program 2", icon: "②" },
-  { id: "p2_flow", prog: 1, kind: "flow", label: "Flowchart", sub: "Program 2", icon: "②" },
+  { id: "p2_flow", prog: 1, kind: "flow", optional: true, label: "Flowchart", sub: "P2 · optional", icon: "②" },
   { id: "p2_prog", prog: 1, kind: "prog", label: "Program", sub: "Program 2", icon: "②" },
 ];
 
@@ -202,7 +202,7 @@ function ProgHeader({ prog }) {
 // ─────────────────────────────────────────────────────────────
 //  STAGE ① — ALGORITHM: reorder the jumbled steps into sequence.
 // ─────────────────────────────────────────────────────────────
-function AlgorithmStage({ prog, onPass }) {
+function AlgorithmStage({ prog, onPass, onSkip }) {
   const [order, setOrder] = useState(prog.algoShuffle);
   const [verdict, setVerdict] = useState(null);
   const [solved, setSolved] = useState(false);
@@ -261,7 +261,12 @@ function AlgorithmStage({ prog, onPass }) {
       {!solved && hints > 0 && <Hints hints={[prog.algoHint]} shown={hints} onMore={() => {}} />}
       {solved && (
         <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.teal, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>
-          Algorithm done ✓ — draw the flowchart →
+          Algorithm done ✓ — draw the flowchart (optional) →
+        </button>
+      )}
+      {solved && onSkip && (
+        <button onClick={onSkip} style={{ width: "100%", padding: 12, borderRadius: 10, background: "transparent", border: `1.5px solid ${C.teal}`, color: C.teal, fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 8 }}>
+          ⏭ Skip the flowchart — go straight to the program →
         </button>
       )}
     </div>
@@ -292,7 +297,7 @@ const TONE = { terminator: "#3FB950", io: "#58A6FF", output: "#58A6FF", process:
 // ─────────────────────────────────────────────────────────────
 //  STAGE ② — FLOWCHART: assemble the jumbled shapes top→bottom.
 // ─────────────────────────────────────────────────────────────
-function FlowchartStage({ prog, onPass }) {
+function FlowchartStage({ prog, onPass, onSkip }) {
   const [order, setOrder] = useState(prog.flowShuffle);
   const [verdict, setVerdict] = useState(null);
   const [solved, setSolved] = useState(false);
@@ -321,6 +326,12 @@ function FlowchartStage({ prog, onPass }) {
   return (
     <div>
       <ProgHeader prog={prog} />
+      {onSkip && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: C.yellow + "12", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12.5, color: C.muted }}>
+          <span>⭐ <strong style={{ color: C.yellow }}>Optional step.</strong> The flowchart is not required for your record.</span>
+          <button onClick={onSkip} style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 6, background: "transparent", border: `1px solid ${C.teal}`, color: C.teal, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Skip → go to the program</button>
+        </div>
+      )}
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 6, lineHeight: 1.7 }}>
         Arrange the flowchart boxes into the correct top-to-bottom flow. The shapes tell you their role:
         rounded = <span style={{ color: TONE.terminator }}>Start/Stop</span>,
@@ -536,20 +547,21 @@ function ProgramStage({ prog, onPass }) {
 }
 
 // ── Record screen: submits the whole experiment to the e-record ──
-function RecordScreen({ student, submitted, onSubmit }) {
+function RecordScreen({ student, submitted, onSubmit, doneStages = [] }) {
+  const fc = (id) => (doneStages.includes(id) ? "Flowchart ✓" : "Flowchart — skipped (optional)");
   return (
     <div style={{ textAlign: "center", padding: 24 }}>
       <div style={{ fontSize: 60 }}>🧪</div>
       <div style={{ fontSize: 24, fontWeight: 800, color: C.teal, marginTop: 8 }}>EXPERIMENT 4 COMPLETE</div>
       <div style={{ color: C.muted, fontSize: 14, marginTop: 10, lineHeight: 1.8, maxWidth: 520, margin: "10px auto 0" }}>
-        Both programs, all three stages: you sequenced the algorithm, assembled the flowchart, and ran real
+        Both programs done: you sequenced the algorithm, ran real
         Python that passed the hidden test. Inheritance, method overriding and polymorphism — with hospital-staff classes.
       </div>
       <div style={{ marginTop: 20, padding: 18, borderRadius: 12, display: "inline-block", background: `linear-gradient(135deg, ${C.teal}22, ${C.accent}22)`, border: `1px solid ${C.teal}66` }}>
         <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>e-Observation Record · Experiment 4</div>
         <div style={{ color: C.muted, fontSize: 12, marginTop: 6, lineHeight: 1.7 }}>
-          P1: Algorithm ✓ · Flowchart ✓ · Program ✓<br />
-          P2: Algorithm ✓ · Flowchart ✓ · Program ✓
+          P1: Algorithm ✓ · {fc("p1_flow")} · Program ✓<br />
+          P2: Algorithm ✓ · {fc("p2_flow")} · Program ✓
         </div>
         <div style={{ color: student ? C.green : C.yellow, fontSize: 11.5, marginTop: 8 }}>
           {student ? `Will be recorded against: ${student.rollNo}` : "Sign in first so this is filed under your roll number."}
@@ -575,12 +587,14 @@ export default function UnitLAB4({ student, onUnitComplete, challengeProgress = 
   const persisted = STAGES.filter((s) => challengeProgress.includes(`${UNIT_ID}@${s.id}`)).map((s) => s.id);
   const [doneStages, setDoneStages] = useState(persisted);
   const [active, setActive] = useState(() => {
-    const firstOpen = STAGES.findIndex((s) => !persisted.includes(s.id));
+    const firstOpen = STAGES.findIndex((s) => !s.optional && !persisted.includes(s.id));
     return firstOpen === -1 ? STAGES.length : firstOpen; // length = record screen
   });
   const [submitted, setSubmitted] = useState(challengeProgress.includes(UNIT_ID));
 
-  const isUnlocked = (idx) => idx === 0 || doneStages.includes(STAGES[idx - 1].id);
+  const isUnlocked = (idx) => STAGES.slice(0, idx).every((st) => st.optional || doneStages.includes(st.id));
+  const REQUIRED = STAGES.filter((st) => !st.optional);
+  const requiredDone = REQUIRED.filter((st) => doneStages.includes(st.id)).length;
 
   const passStage = (idx) => {
     const stage = STAGES[idx];
@@ -599,8 +613,8 @@ export default function UnitLAB4({ student, onUnitComplete, challengeProgress = 
   const renderStage = (idx) => {
     const s = STAGES[idx];
     const prog = PROGRAMS[s.prog];
-    if (s.kind === "algo") return <AlgorithmStage key={s.id} prog={prog} onPass={() => passStage(idx)} />;
-    if (s.kind === "flow") return <FlowchartStage key={s.id} prog={prog} onPass={() => passStage(idx)} />;
+    if (s.kind === "algo") return <AlgorithmStage key={s.id} prog={prog} onPass={() => passStage(idx)} onSkip={STAGES[idx + 1] && STAGES[idx + 1].optional ? () => { passStage(idx); setActive(idx + 2); } : null} />;
+    if (s.kind === "flow") return <FlowchartStage key={s.id} prog={prog} onPass={() => passStage(idx)} onSkip={() => setActive(idx + 1)} />;
     return <ProgramStage key={s.id} prog={prog} onPass={() => passStage(idx)} />;
   };
 
@@ -612,11 +626,11 @@ export default function UnitLAB4({ student, onUnitComplete, challengeProgress = 
           <div style={{ fontSize: 12, color: C.teal, letterSpacing: 1, fontWeight: 700 }}>PYTHON LAB › EXPERIMENT 4 · CO2</div>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Inheritance & Polymorphism</div>
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{doneStages.length} / {STAGES.length} steps</div>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{requiredDone} / {REQUIRED.length} required steps</div>
       </div>
 
       <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(doneStages.length / STAGES.length) * 100}%`, background: `linear-gradient(90deg, ${C.teal}, ${C.accent})`, transition: "width 0.4s ease" }} />
+        <div style={{ height: "100%", width: `${(requiredDone / REQUIRED.length) * 100}%`, background: `linear-gradient(90deg, ${C.teal}, ${C.accent})`, transition: "width 0.4s ease" }} />
       </div>
 
       <div style={{ maxWidth: 820, margin: "0 auto", padding: "24px 16px" }}>
@@ -650,7 +664,7 @@ export default function UnitLAB4({ student, onUnitComplete, challengeProgress = 
 
         <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 320 }}>
           {active >= STAGES.length
-            ? <RecordScreen student={student} submitted={submitted} onSubmit={submitRecord} />
+            ? <RecordScreen student={student} submitted={submitted} onSubmit={submitRecord} doneStages={doneStages} />
             : isUnlocked(active)
               ? renderStage(active)
               : <div style={{ textAlign: "center", color: C.muted, padding: 40 }}>🔒 Locked — finish the previous step first.</div>}

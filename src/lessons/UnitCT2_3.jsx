@@ -36,7 +36,7 @@ function TheNeed() {
         🔁 <strong style={{ color: C.yellow }}>First, the swap.</strong> To exchange two slots you need a{" "}
         <strong style={{ color: C.text }}>temporary</strong> box — or the first value gets overwritten before you
         can save it:
-        <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: "8px 0 0", lineHeight: 1.7, whiteSpace: "pre" }}>{`temp = data[j]\ndata[j] = data[j + 1]\ndata[j + 1] = temp`}</pre>
+        <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: "8px 0 0", lineHeight: 1.7, whiteSpace: "pre" }}>{`data = [5, 2, 8, 1]\nj = 0\ntemp = data[j]\ndata[j] = data[j + 1]\ndata[j + 1] = temp\nprint(data)    # [2, 5, 8, 1]`}</pre>
       </div>
 
       <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
@@ -154,17 +154,17 @@ function ThreeSorts() {
     bubble: {
       label: "Bubble", color: C.teal,
       idea: "Compare each adjacent pair, swap if out of order. Big values bubble to the end.",
-      code: "for i in range(n):\n    for j in range(n - 1 - i):\n        if data[j] > data[j + 1]:\n            temp = data[j]\n            data[j] = data[j + 1]\n            data[j + 1] = temp",
+      code: "data = [5, 2, 8, 1]\nn = len(data)\n\nfor i in range(n):\n    for j in range(n - 1 - i):\n        if data[j] > data[j + 1]:\n            temp = data[j]\n            data[j] = data[j + 1]\n            data[j + 1] = temp\nprint(data)",
     },
     selection: {
       label: "Selection", color: C.orange,
       idea: "Each pass, find the smallest of what's left and swap it to the front. The front grows sorted.",
-      code: "for i in range(n):\n    smallest = i\n    for j in range(i + 1, n):\n        if data[j] < data[smallest]:\n            smallest = j\n    temp = data[i]\n    data[i] = data[smallest]\n    data[smallest] = temp",
+      code: "data = [5, 2, 8, 1]\nn = len(data)\n\nfor i in range(n):\n    smallest = i\n    for j in range(i + 1, n):\n        if data[j] < data[smallest]:\n            smallest = j\n    temp = data[i]\n    data[i] = data[smallest]\n    data[smallest] = temp\nprint(data)",
     },
     insertion: {
       label: "Insertion", color: C.purple,
       idea: "Take the next item and slide it back into its correct place among the already-sorted items. Like sorting a hand of cards.",
-      code: "for i in range(1, n):\n    key = data[i]\n    j = i - 1\n    while j >= 0 and data[j] > key:\n        data[j + 1] = data[j]\n        j = j - 1\n    data[j + 1] = key",
+      code: "data = [5, 2, 8, 1]\nn = len(data)\n\nfor i in range(1, n):\n    key = data[i]\n    j = i - 1\n    while j >= 0 and data[j] > key:\n        data[j + 1] = data[j]\n        j = j - 1\n    data[j + 1] = key\nprint(data)",
     },
   };
   const m = modes[mode];

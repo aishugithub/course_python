@@ -187,13 +187,15 @@ function TryExceptWidget() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 16 }}>
           <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>❌ NO NET</div>
-          <pre style={{ ...mono, fontSize: 11.5 }}>{`mark = int(raw)
+          <pre style={{ ...mono, fontSize: 11.5 }}>{`raw = input("Mark: ")
+mark = int(raw)
 print("Rest of program...")`}</pre>
           <div style={{ color: C.red, fontSize: 11.5, marginTop: 8 }}>Bad input → 💥 crash. Line 2 never runs.</div>
         </div>
         <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 16 }}>
           <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>✅ WITH NET</div>
-          <pre style={{ ...mono, fontSize: 11.5 }}>{`try:
+          <pre style={{ ...mono, fontSize: 11.5 }}>{`raw = input("Mark: ")
+try:
     mark = int(raw)
 except ValueError:
     print("Type a number.")

@@ -285,12 +285,21 @@ grade(&asha);   /* hand over a pointer */`}</pre>
           <div style={cardBox(C.accent + "55")}>
             <div style={tag(C.accent)}>🐍 Python — the dot does it for you</div>
             <pre style={{ ...mono, fontSize: 11.5 }}>{`class Student:
+    def __init__(self, name, mark):
+        self.name = name
+        self.mark = mark
+
     def grade(self):
         if self.mark >= 90:
             return "A"
-        ...
+        elif self.mark >= 75:
+            return "B"
+        elif self.mark >= 50:
+            return "C"
+        return "F"
 
-asha.grade()    # self = asha, automatically`}</pre>
+asha = Student("Asha", 85)
+print(asha.grade())    # self = asha, automatically → B`}</pre>
           </div>
         </div>
       )}
@@ -311,9 +320,9 @@ function StrWidget() {
   const [broken, setBroken] = useState(false);
 
   const uses = [
-    { code: "print(asha)", out: "Asha: 85 (B)", note: "print() needs text, so it calls asha.__str__() for you." },
-    { code: "s = str(asha)\nprint(len(s))", out: "12", note: "str(asha) also calls __str__. Now it's an ordinary string: \"Asha: 85 (B)\" has 12 characters." },
-    { code: 'print("Topper: " + str(asha))', out: "Topper: Asha: 85 (B)", note: "Joining with + needs a string (Unit 4.4), so wrap the object in str()." },
+    { code: "# asha = Student(\"Asha\", 85), built above\nprint(asha)", out: "Asha: 85 (B)", note: "print() needs text, so it calls asha.__str__() for you." },
+    { code: "# asha = Student(\"Asha\", 85), built above\ns = str(asha)\nprint(len(s))", out: "12", note: "str(asha) also calls __str__. Now it's an ordinary string: \"Asha: 85 (B)\" has 12 characters." },
+    { code: '# asha = Student("Asha", 85), built above\nprint("Topper: " + str(asha))', out: "Topper: Asha: 85 (B)", note: "Joining with + needs a string (Unit 4.4), so wrap the object in str()." },
   ];
 
   return (
@@ -332,12 +341,14 @@ function StrWidget() {
         <div style={cardBox()}>
           <div style={tag(C.accent)}>🐍 CODE</div>
           <pre style={{ ...mono, fontSize: 11.5 }}>{nice
-            ? `    def __str__(self):
+            ? `class Student:     # __init__ and grade() exactly as before
+    def __str__(self):
         return self.name + ": " + str(self.mark) + " (" + self.grade() + ")"
 
 asha = Student("Asha", 85)
 print(asha)`
-            : `    # (no __str__ defined)
+            : `class Student:     # __init__ and grade() exactly as before
+    # (no __str__ defined)
 
 asha = Student("Asha", 85)
 print(asha)`}</pre>
@@ -369,9 +380,11 @@ print(asha)`}</pre>
       </button>
       <div style={{ ...twoCol, marginTop: 10 }}>
         <pre style={{ ...mono, fontSize: 11.5, background: C.surface, borderRadius: 8, padding: 10, border: `1px solid ${broken ? C.red : C.green}55` }}>{broken
-          ? `    def __str__(self):
+          ? `class Student:     # rest of the class unchanged
+    def __str__(self):
         return self.mark      # an int!`
-          : `    def __str__(self):
+          : `class Student:     # rest of the class unchanged
+    def __str__(self):
         return str(self.mark)  # a string ✓`}</pre>
         <pre style={{ ...mono, fontSize: 11.5, background: C.surface, borderRadius: 8, padding: 10, color: broken ? C.red : C.green }}>{broken
           ? "print(asha)\nTypeError: __str__ returned\nnon-string (type int)"
@@ -500,7 +513,7 @@ function PrivateWidget() {
       <div style={twoCol}>
         <div style={cardBox(o.color + "55")}>
           <div style={tag(o.color)}>INSIDE THE CLASS</div>
-          <pre style={{ ...mono, fontSize: 12 }}>{"    def set_mark(self, m):\n        ...\n        " + o.def}</pre>
+          <pre style={{ ...mono, fontSize: 12 }}>{"class Student:     # rest of the class unchanged\n    def set_mark(self, m):\n        if m < 0 or m > 100:\n            raise ValueError(\"mark must be 0-100\")\n        " + o.def}</pre>
         </div>
         <div style={cardBox(o.color + "55")}>
           <div style={tag(o.color)}>OUTSIDE CODE TRIES…</div>
@@ -728,6 +741,7 @@ asha.mark = 999;  // ✗ error: mark has private access`, note: "Everything live
     def __str__(self):
         return self.name + ": " + str(self._mark)
 
+asha = Student("Asha", 85)
 asha._mark = 999   # runs — but the _ says "don't"`, note: "Shortest of the four. Privacy is a convention, not a compiler rule." },
 };
 

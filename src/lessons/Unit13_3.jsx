@@ -11,6 +11,81 @@ const C = {
 const NAMES = ["Asha", "Ravi", "Meera", "Karan"];
 const MARKS = [88, 45, 72, 91];
 
+const FULL_TYPES = {
+  bar: `import pandas as pd
+import plotly.express as px
+
+df = pd.DataFrame({
+    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Hours": [5, 2, 4, 6],
+})
+
+fig = px.bar(df, x="Name", y="Marks")
+fig.show()`,
+  line: `import pandas as pd
+import plotly.express as px
+
+df = pd.DataFrame({
+    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Hours": [5, 2, 4, 6],
+})
+
+fig = px.line(df, x="Name", y="Marks")
+fig.show()`,
+  scatter: `import pandas as pd
+import plotly.express as px
+
+df = pd.DataFrame({
+    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Hours": [5, 2, 4, 6],
+})
+
+fig = px.scatter(df, x="Hours", y="Marks")
+fig.show()`,
+  pie: `import pandas as pd
+import plotly.express as px
+
+df = pd.DataFrame({
+    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Hours": [5, 2, 4, 6],
+})
+
+fig = px.pie(df, names="Name", values="Marks")
+fig.show()`,
+};
+
+// ── Full runnable program toggle ─────────────────────────────────────────────
+function FullCode({ code, note }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <button onClick={() => setOpen(!open)} style={{ padding: "5px 12px", borderRadius: 6, background: open ? C.green + "18" : "transparent", border: `1px solid ${C.green}66`, color: C.green, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+        {open ? "▾ Hide" : "▸ Show"} the full runnable program
+      </button>
+      {open && (
+        <div style={{ marginTop: 8 }}>
+          <pre style={{ background: "#0A0E14", border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" , overflowX: "auto" }}>{code}</pre>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{note || "Complete as shown — paste into a .py file and run."}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CsvFile_unused() {
+  return (
+    <div style={{ background: C.card, border: `1px dashed ${C.yellow}66`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <div style={{ color: C.yellow, fontSize: 11.5, fontWeight: 700, marginBottom: 6 }}>📄 marks.csv — create this file first, in the SAME folder as your .py file</div>
+      <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{""}</pre>
+      <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>Type it in Notepad / VS Code and save as <code style={{ color: C.text }}>marks.csv</code>. Without it, read_csv stops with FileNotFoundError.</div>
+    </div>
+  );
+}
+
 // ── Section 1: The Need ──────────────────────────────────────────────────────
 function TheNeed() {
   return (
@@ -113,13 +188,20 @@ function Recipe() {
         <strong style={{ color: C.text }}>returns a figure object</strong> you then show or save.
       </p>
 
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.9, margin: "0 0 14px", whiteSpace: "pre" }}>{`import plotly.express as px
+      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.9, margin: "0 0 14px", whiteSpace: "pre" }}>{`import pandas as pd
+import plotly.express as px
 
-fig = px.bar(df, x="Name", y="Marks",   # 1. build a figure
+df = pd.DataFrame({
+    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Hours": [5, 2, 4, 6],
+})
+
+fig = px.bar(df, x="Name", y="Marks",    # 1. build a figure
              title="Class Marks")
 
-fig.show()                # 2. open it (interactive!) in the browser
-fig.write_html("marks.html")   # 3. or save it for a webpage`}</pre>
+fig.show()                      # 2. open it (interactive!) in the browser
+fig.write_html("marks.html")    # 3. and/or save it as a webpage`}</pre>
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
         <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.7 }}>
@@ -266,6 +348,8 @@ function ChartTypes() {
 
       <pre style={{ background: C.card, border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: "0 0 10px", whiteSpace: "pre-wrap" }}>{t.code}
 fig.show()</pre>
+      <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 6 }}>📎 This one line replaces the <code style={{ color: C.text }}>fig = px.bar(...)</code> line in The Recipe program — same df, same fig.show().</div>
+      <FullCode code={FULL_TYPES[type]} />
 
       <div style={{ background: t.color + "14", border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
         Notice the pattern: <code style={{ color: t.color }}>px.&lt;type&gt;(df, ...)</code> → a <code style={{ color: t.color }}>fig</code> → hover for values. Swap the chart type, keep everything else.

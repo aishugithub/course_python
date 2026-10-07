@@ -105,7 +105,10 @@ function CapstoneBuilder() {
       </div>
 
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.85, marginBottom: 14 }}>
-{`pass_result = average >= 40
+{`average = ${average}
+attendance = ${attendance}
+
+pass_result = average >= 40
 
 if average >= 90:
     grade = "A"
@@ -161,7 +164,7 @@ function LogicTrace() {
 
   const steps = [
     { title: "Step 1 — Pass or Fail?", code: "pass_result = average >= 40", result: `pass_result = ${r.pass}`, note: "The simplest check runs first: is 92 at least 40? Yes." },
-    { title: "Step 2 — Which Grade?", code: "if average >= 90: grade = \"A\"\n...", result: `grade = "${r.grade}"`, note: "The elif chain runs top to bottom. 92 >= 90 is True, so grade is set to \"A\" immediately — the rest of the chain is skipped." },
+    { title: "Step 2 — Which Grade?", code: "if average >= 90:\n    grade = \"A\"\nelif average >= 75:\n    grade = \"B\"\nelif average >= 60:\n    grade = \"C\"\nelif average >= 40:\n    grade = \"D\"\nelse:\n    grade = \"F\"", result: `grade = "${r.grade}"`, note: "The elif chain runs top to bottom. 92 >= 90 is True, so grade is set to \"A\" immediately — the rest of the chain is skipped." },
     { title: "Step 3 — Scholarship?", code: "scholarship = pass_result and average >= 85 and attendance >= 75", result: `scholarship = ${r.scholarship}`, note: "All three conditions must be True together: passed (yes), average >= 85 (92, yes), attendance >= 75 (100, yes)." },
     { title: "Step 4 — Honor Roll? (nested)", code: "if scholarship:\n    print(\"Scholarship eligible!\")\n    honor_roll = attendance >= 90\n    if honor_roll:\n        print(\"Wow — Honor Roll!\")", result: `honor_roll = ${r.honorRoll}`, note: "This check is NESTED inside the scholarship check — it only even runs because scholarship was already True. It additionally requires attendance of at least 90%, so this student (95%) makes it." },
   ];
@@ -179,6 +182,7 @@ function LogicTrace() {
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
         <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{s.title}</div>
         <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, background: C.bg, borderRadius: 6, padding: "10px 12px", margin: "0 0 10px 0", whiteSpace: "pre-wrap" }}>{s.code}</pre>
+        <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>📎 One step of the full decision program in the previous tab — it runs inside that program, after average and attendance are set.</div>
         <div style={{ fontFamily: "monospace", fontSize: 14, color: C.green, marginBottom: 10 }}>&gt; {s.result}</div>
         <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>{s.note}</div>
       </div>

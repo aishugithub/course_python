@@ -11,6 +11,126 @@ const C = {
 const NAMES = ["Asha", "Ravi", "Meera", "Karan"];
 const MARKS = [88, 45, 72, 91];
 
+const SETUP = `import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame({
+    "Name": ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+})`;
+const FULL_HUE = { no: `import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame({
+    "Name":    ["Asha", "Ravi", "Meera", "Karan"] * 2,
+    "Subject": ["Math"] * 4 + ["CS"] * 4,
+    "Score":   [82, 40, 78, 95,  94, 50, 66, 87],
+})
+
+sns.barplot(data=df, x="Name", y="Score")
+plt.show()`, yes: `import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame({
+    "Name":    ["Asha", "Ravi", "Meera", "Karan"] * 2,
+    "Subject": ["Math"] * 4 + ["CS"] * 4,
+    "Score":   [82, 40, 78, 95,  94, 50, 66, 87],
+})
+
+sns.barplot(data=df, x="Name", y="Score", hue="Subject")
+plt.show()` };
+
+const FULL_TYPES = {
+  bar: `import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame({
+    "Name":   ["Asha", "Ravi", "Meera", "Karan", "Divya", "Arun",
+               "Sara", "John", "Priya", "Vikram", "Nila", "Dev"],
+    "Hours":  [6, 2, 4, 7, 5, 1, 3, 4, 6, 2, 5, 3],
+    "Marks":  [88, 45, 72, 91, 80, 38, 60, 70, 85, 50, 78, 64],
+    "Absent": [1, 9, 4, 0, 2, 12, 6, 3, 1, 8, 2, 5],
+})
+
+sns.barplot(data=df, x="Name", y="Marks")
+plt.xticks(rotation=45)
+plt.show()`,
+  hist: `import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame({
+    "Name":   ["Asha", "Ravi", "Meera", "Karan", "Divya", "Arun",
+               "Sara", "John", "Priya", "Vikram", "Nila", "Dev"],
+    "Hours":  [6, 2, 4, 7, 5, 1, 3, 4, 6, 2, 5, 3],
+    "Marks":  [88, 45, 72, 91, 80, 38, 60, 70, 85, 50, 78, 64],
+    "Absent": [1, 9, 4, 0, 2, 12, 6, 3, 1, 8, 2, 5],
+})
+
+sns.histplot(data=df, x="Marks", bins=7)
+plt.show()`,
+  box: `import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame({
+    "Name":   ["Asha", "Ravi", "Meera", "Karan", "Divya", "Arun",
+               "Sara", "John", "Priya", "Vikram", "Nila", "Dev"],
+    "Hours":  [6, 2, 4, 7, 5, 1, 3, 4, 6, 2, 5, 3],
+    "Marks":  [88, 45, 72, 91, 80, 38, 60, 70, 85, 50, 78, 64],
+    "Absent": [1, 9, 4, 0, 2, 12, 6, 3, 1, 8, 2, 5],
+})
+
+sns.boxplot(data=df, y="Marks")
+plt.show()`,
+  heat: `import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame({
+    "Name":   ["Asha", "Ravi", "Meera", "Karan", "Divya", "Arun",
+               "Sara", "John", "Priya", "Vikram", "Nila", "Dev"],
+    "Hours":  [6, 2, 4, 7, 5, 1, 3, 4, 6, 2, 5, 3],
+    "Marks":  [88, 45, 72, 91, 80, 38, 60, 70, 85, 50, 78, 64],
+    "Absent": [1, 9, 4, 0, 2, 12, 6, 3, 1, 8, 2, 5],
+})
+
+sns.heatmap(df.corr(numeric_only=True), annot=True)
+plt.show()`,
+};
+
+// ── Full runnable program toggle ─────────────────────────────────────────────
+function FullCode({ code, note }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <button onClick={() => setOpen(!open)} style={{ padding: "5px 12px", borderRadius: 6, background: open ? C.green + "18" : "transparent", border: `1px solid ${C.green}66`, color: C.green, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+        {open ? "▾ Hide" : "▸ Show"} the full runnable program
+      </button>
+      {open && (
+        <div style={{ marginTop: 8 }}>
+          <pre style={{ background: "#0A0E14", border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" , overflowX: "auto" }}>{code}</pre>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{note || "Complete as shown — paste into a .py file and run."}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CsvFile_unused() {
+  return (
+    <div style={{ background: C.card, border: `1px dashed ${C.yellow}66`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <div style={{ color: C.yellow, fontSize: 11.5, fontWeight: 700, marginBottom: 6 }}>📄 marks.csv — create this file first, in the SAME folder as your .py file</div>
+      <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{""}</pre>
+      <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>Type it in Notepad / VS Code and save as <code style={{ color: C.text }}>marks.csv</code>. Without it, read_csv stops with FileNotFoundError.</div>
+    </div>
+  );
+}
+
 // ── Section 1: The Need ──────────────────────────────────────────────────────
 function TheNeed() {
   return (
@@ -119,7 +239,12 @@ function OneLiner() {
       </p>
 
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, color: C.yellow, letterSpacing: 1, marginBottom: 6 }}>THE MATPLOTLIB WAY — pull columns out yourself</div>
+        <div style={{ fontSize: 11, color: C.purple, letterSpacing: 1, marginBottom: 6 }}>SHARED SETUP — both programs below start with these lines</div>
+        <pre style={{ background: "#0A0E14", border: `1px solid ${C.purple}44`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre" }}>{SETUP}</pre>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 11, color: C.yellow, letterSpacing: 1, marginBottom: 6 }}>THE MATPLOTLIB WAY — setup above + these lines</div>
         <pre style={{ background: "#0A0E14", border: `1px solid ${C.yellow}33`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre" }}>{`plt.bar(df["Name"], df["Marks"])
 plt.xticks(rotation=45)
 plt.ylabel("Marks")
@@ -127,10 +252,8 @@ plt.show()`}</pre>
       </div>
 
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: C.teal, letterSpacing: 1, marginBottom: 6 }}>THE SEABORN WAY — pass the DataFrame + column NAMES</div>
-        <pre style={{ background: "#0A0E14", border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre" }}>{`import seaborn as sns
-
-sns.barplot(data=df, x="Name", y="Marks")
+        <div style={{ fontSize: 11, color: C.teal, letterSpacing: 1, marginBottom: 6 }}>THE SEABORN WAY — setup above + these lines</div>
+        <pre style={{ background: "#0A0E14", border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre" }}>{`sns.barplot(data=df, x="Name", y="Marks")
 plt.show()`}</pre>
       </div>
 
@@ -220,7 +343,7 @@ function ChartTypes() {
     bar: { label: "barplot", color: C.teal, code: 'sns.barplot(data=df, x="Name", y="Marks")', svg: bar, note: "Compare a value across categories — and if a category repeats, Seaborn averages it AND draws an error bar for free." },
     hist: { label: "histplot", color: C.purple, code: 'sns.histplot(data=df, x="Marks", bins=7)', svg: hist, note: "The shape of ONE column: how many marks fall in each band. Instantly shows whether the class clusters, spreads, or is skewed." },
     box: { label: "boxplot", color: C.orange, code: 'sns.boxplot(data=df, y="Marks")', svg: box, note: "Five numbers at a glance: min, Q1, median, Q3, max — plus dots for outliers. The box holds the middle 50% of students." },
-    heat: { label: "heatmap", color: C.green, code: "sns.heatmap(df.corr(), annot=True)", svg: heat, note: "Colour a whole table of numbers. On df.corr() it shows which columns move together — e.g. study hours vs marks glow teal (positive)." },
+    heat: { label: "heatmap", color: C.green, code: "sns.heatmap(df.corr(numeric_only=True), annot=True)", svg: heat, note: "Colour a whole table of numbers. On df.corr() it shows which columns move together — e.g. study hours vs marks glow teal (positive)." },
   };
   const t = types[type];
 
@@ -245,6 +368,8 @@ function ChartTypes() {
       </div>
 
       <pre style={{ background: C.card, border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: "0 0 10px", whiteSpace: "pre-wrap" }}>{t.code}</pre>
+      <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 6 }}>📎 One plotting line — it needs a class-sized <code style={{ color: C.text }}>df</code> (a histogram of 4 marks says nothing). The full program builds one with 12 students.</div>
+      <FullCode code={FULL_TYPES[type]} />
 
       <div style={{ background: t.color + "14", border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
         {t.note}
@@ -311,6 +436,8 @@ function HueSuperpower() {
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: "0 0 12px", whiteSpace: "pre-wrap" }}>
         {split ? 'sns.barplot(data=df, x="Name", y="Score", hue="Subject")' : 'sns.barplot(data=df, x="Name", y="Score")'}
       </pre>
+      <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 6 }}>📎 This df is new: each student appears twice (one Math row, one CS row) with a Subject column — that's what hue groups by.</div>
+      <FullCode code={FULL_HUE[split ? "yes" : "no"]} />
 
       <div style={{ background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
         🔑 <strong style={{ color: C.green }}>One keyword, a whole new dimension.</strong> In Matplotlib you'd filter

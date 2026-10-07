@@ -88,7 +88,8 @@ function TryIt() {
         <em>only</em> your error type. Drag the mark to see it accept or reject.
       </p>
 
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 12, lineHeight: 1.8, whiteSpace: "pre" }}>{`try:
+      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 12, lineHeight: 1.8, whiteSpace: "pre" }}>{`# uses InvalidMarkError and set_mark() from the previous tab
+try:
     m = set_mark(${mark})
     print("Accepted:", m)
 except InvalidMarkError as e:

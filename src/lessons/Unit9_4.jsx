@@ -151,7 +151,7 @@ def save_marks(filename, marks):
             f.write(name + "," + str(marks[name]) + "\\n")
 
 marks = load_marks("marks.csv")   # ← startup
-# ... menu ...
+# (menu loop unchanged from v2 — the Full Code tab shows the complete program)
 # on Exit:  save_marks("marks.csv", marks)`,
     },
   ];

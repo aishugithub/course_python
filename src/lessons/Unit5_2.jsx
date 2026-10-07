@@ -38,7 +38,7 @@ function NeedForBranching() {
         </div>
         <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 16 }}>
           <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>✅ WITH BRANCHING</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: "0 0 10px 0" }}>{`if number % 2 == 0:\n    print("Even")\nelse:\n    print("Odd")`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: "0 0 10px 0" }}>{`number = int(input("Enter a number: "))\nif number % 2 == 0:\n    print("Even")\nelse:\n    print("Odd")`}</pre>
           <div style={{ fontFamily: "monospace", fontSize: 15, color: C.green }}>&gt; {isEven ? "Even" : "Odd"}</div>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 10, lineHeight: 1.6 }}>
             This version checks the number FIRST (using % from Unit 4.4!) and picks the correct branch every time.
@@ -75,7 +75,7 @@ function IndentationDemo() {
         </div>
         <div style={{ background: C.card, border: `1.5px solid ${C.accent}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>🐍 Python</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0 }}>{`if age >= 18:\n    print("Adult")`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0 }}>{`age = 20\nif age >= 18:\n    print("Adult")`}</pre>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>The colon : starts the block; indentation IS the syntax. No braces at all.</div>
         </div>
       </div>
@@ -92,7 +92,7 @@ function IndentationDemo() {
       <pre style={{
         background: C.card, border: `1.5px solid ${broken ? C.red : C.border}`, borderRadius: 8,
         padding: "14px 16px", fontFamily: "monospace", fontSize: 13, color: broken ? C.red : C.text,
-      }}>{broken ? `if age >= 18:\nprint("Adult")` : `if age >= 18:\n    print("Adult")`}</pre>
+      }}>{broken ? `age = 20\nif age >= 18:\nprint("Adult")` : `age = 20\nif age >= 18:\n    print("Adult")`}</pre>
 
       {broken && (
         <div style={{ marginTop: 10, background: C.red + "18", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>

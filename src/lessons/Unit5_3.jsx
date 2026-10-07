@@ -35,7 +35,7 @@ function LoanEligibility() {
       </div>
 
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, color: C.text, marginBottom: 14 }}>
-        {`if age >= 18 and income >= 20000:\n    print("Eligible")\nelse:\n    print("Not eligible")`}
+        {`age = 25\nincome = 30000\n\nif age >= 18 and income >= 20000:\n    print("Eligible")\nelse:\n    print("Not eligible")`}
       </pre>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -114,7 +114,10 @@ function NestedEligibility() {
       </div>
 
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8 }}>
-{`if attendance >= 75:
+{`attendance = 80
+internal = 25
+
+if attendance >= 75:
     if internal >= 20:
         print("Eligible - hall ticket issued")
     else:
@@ -156,7 +159,7 @@ function ShortCircuitDemo() {
       </p>
 
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, color: C.text, marginBottom: 14 }}>
-        {`if x != 0 and 10 / x > 1:\n    print("big enough")`}
+        {`x = 4\nif x != 0 and 10 / x > 1:\n    print("big enough")`}
       </pre>
 
       <div style={{ marginBottom: 16 }}>
@@ -213,11 +216,17 @@ function NestedVsCombined() {
 
       <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, color: C.text, lineHeight: 1.8 }}>
 {combined
-  ? `if age >= 18 and income >= 20000:
+  ? `age = 25
+income = 30000
+
+if age >= 18 and income >= 20000:
     print("Eligible")
 else:
     print("Not eligible")`
-  : `if age >= 18:
+  : `age = 25
+income = 30000
+
+if age >= 18:
     if income >= 20000:
         print("Eligible")
     else:

@@ -153,17 +153,17 @@ function MatrixToolkit() {
   const modes = {
     add: {
       label: "Add", color: C.green, res: add,
-      code: "result = []\nfor i in range(rows):\n    row = []\n    for j in range(cols):\n        row.append(A[i][j] + B[i][j])\n    result.append(row)",
+      code: "A = [[1, 2], [3, 4]]\nB = [[5, 6], [7, 8]]\nrows = 2\ncols = 2\n\nresult = []\nfor i in range(rows):\n    row = []\n    for j in range(cols):\n        row.append(A[i][j] + B[i][j])\n    result.append(row)\nprint(result)",
       note: "Same shape in, same shape out — add matching cells.",
     },
     transpose: {
       label: "Transpose", color: C.teal, res: trans,
-      code: "result = []\nfor j in range(cols):\n    newrow = []\n    for i in range(rows):\n        newrow.append(A[i][j])\n    result.append(newrow)",
+      code: "A = [[1, 2], [3, 4]]\nB = [[5, 6], [7, 8]]\nrows = 2\ncols = 2\n\nresult = []\nfor j in range(cols):\n    newrow = []\n    for i in range(rows):\n        newrow.append(A[i][j])\n    result.append(newrow)\nprint(result)",
       note: "Swap the loop order: walk columns outside, rows inside.",
     },
     multiply: {
       label: "Multiply", color: C.orange, res: mul,
-      code: "result = []\nfor i in range(rows):\n    row = []\n    for j in range(cols):\n        s = 0\n        for k in range(cols):\n            s = s + A[i][k] * B[k][j]\n        row.append(s)\n    result.append(row)",
+      code: "A = [[1, 2], [3, 4]]\nB = [[5, 6], [7, 8]]\nrows = 2\ncols = 2\n\nresult = []\nfor i in range(rows):\n    row = []\n    for j in range(cols):\n        s = 0\n        for k in range(cols):\n            s = s + A[i][k] * B[k][j]\n        row.append(s)\n    result.append(row)\nprint(result)",
       note: "Three loops! For each output cell, an accumulator sums a row × a column.",
     },
   };

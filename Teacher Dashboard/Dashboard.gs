@@ -133,17 +133,18 @@ COURSES.forEach(function (c) {
 //  Only Exp 1 is built; set built:true and add a `stages` array as you build
 //  the rest. 6-stage template = 2 programs × (algorithm→flowchart→program).
 // ----------------------------------------------------------------------------
-//  `weight` = marks each subdivision is worth (Algo 1 · Flow 1.5 · Program 2.5
+//  Flowcharts are OPTIONAL (weight 0) — their marks were split into Algo + Program.
+//  `weight` = marks each subdivision is worth (Algo 1.5 · Flow 0 · Program 3.5
 //  per program), summing to 10 across both programs. The Program stage is
 //  weighted most, per your choice. If a future experiment uses a different
 //  shape, give its stages their own weights; the maths normalises to /10.
 const LAB_STAGE_TEMPLATE = [
-  { id: 'p1_algo', label: 'P1 · Algorithm', weight: 1.0 },
-  { id: 'p1_flow', label: 'P1 · Flowchart', weight: 1.5 },
-  { id: 'p1_prog', label: 'P1 · Program',   weight: 2.5 },
-  { id: 'p2_algo', label: 'P2 · Algorithm', weight: 1.0 },
-  { id: 'p2_flow', label: 'P2 · Flowchart', weight: 1.5 },
-  { id: 'p2_prog', label: 'P2 · Program',   weight: 2.5 },
+  { id: 'p1_algo', label: 'P1 · Algorithm', weight: 1.5 },
+  { id: 'p1_flow', label: 'P1 · Flowchart', weight: 0, optional: true },
+  { id: 'p1_prog', label: 'P1 · Program',   weight: 3.5 },
+  { id: 'p2_algo', label: 'P2 · Algorithm', weight: 1.5 },
+  { id: 'p2_flow', label: 'P2 · Flowchart', weight: 0, optional: true },
+  { id: 'p2_prog', label: 'P2 · Program',   weight: 3.5 },
 ];
 const LAB_EXPERIMENTS = [
   { expId: 'UnitLAB1',  no: '1',  co: 'CO1',     short: 'Exp 1',  title: 'Data Types, Operators & Conditional Statements', built: true,  stages: LAB_STAGE_TEMPLATE },
@@ -419,13 +420,17 @@ function fmtWhen(raw) {
 //  else the latest stage time.
 function labStatusFor(exp, done) {
   const submittedWhen = done[exp.expId];                   // plain id => submitted
-  const stagesTotal = exp.stages.length;
+  const stagesTotal = exp.stages.filter(function (s) { return !s.optional; }).length;
   let stagesDone = 0, lastStageWhen = '', totalWeight = 0, earnedWeight = 0;
   exp.stages.forEach(function (s) {
     const w = (s.weight != null) ? s.weight : 1;
     totalWeight += w;
     const t = done[exp.expId + '@' + s.id];
-    if (t) { stagesDone++; earnedWeight += w; if (!lastStageWhen || t > lastStageWhen) lastStageWhen = t; }
+    if (t) {
+      if (!s.optional) stagesDone++;
+      earnedWeight += w;
+      if (!lastStageWhen || t > lastStageWhen) lastStageWhen = t;
+    }
   });
   if (submittedWhen)                                       // submitting requires all stages => full credit
     return { status: 'done',    when: submittedWhen, stagesDone: stagesTotal, stagesTotal: stagesTotal, earnedWeight: totalWeight, totalWeight: totalWeight };
@@ -935,7 +940,9 @@ const ELAB_PARTICIPATION_MIN_PCT = 60;   // must match participationMinPct in co
 function elabExperimentState(id, done) {
   if (done[id]) return 'done';
   const n = ELAB_EXP_STAGES.filter(function (s) { return done[id + '@' + s]; }).length;
-  if (n === ELAB_EXP_STAGES.length) return 'done';
+  //  Flowcharts are optional: the four algorithm/program stages are enough.
+  const required = ELAB_EXP_STAGES.filter(function (s) { return !/_flow$/.test(s); });
+  if (required.every(function (s) { return done[id + '@' + s]; })) return 'done';
   return n ? 'started' : 'none';
 }
 

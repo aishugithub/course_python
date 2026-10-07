@@ -78,8 +78,8 @@ const familyAt = (ver) =>
 const USAGE = {
   2: { code: 'asha = Student("Asha", "asha@uni.edu")\nrao = Teacher("Mr Rao", "rao@uni.edu")\nprint(asha.describe())\nprint(rao.email)', out: "Hi, I am Asha.\nrao@uni.edu" },
   3: { code: 'asha = Student("Asha", "asha@uni.edu", 85)\nrao = Teacher("Mr Rao", "rao@uni.edu", "Physics")\nprint(asha.name, asha.mark)\nprint(rao.name, rao.subject)', out: "Asha 85\nMr Rao Physics" },
-  4: { code: "print(asha.grade())\nprint(rao.grade())", out: "B\nTraceback (most recent call last):\n  ...\nAttributeError: 'Teacher' object has no attribute 'grade'" },
-  5: { code: "print(asha.describe())\nprint(rao.describe())", out: "Hi, I am Asha. I study, my mark is 85.\nHi, I am Mr Rao. I teach Physics." },
+  4: { code: "# asha and rao built as in the previous step\nprint(asha.grade())\nprint(rao.grade())", out: "B\nTraceback (most recent call last):\n  ...\nAttributeError: 'Teacher' object has no attribute 'grade'" },
+  5: { code: "# asha and rao built as in the previous step\nprint(asha.describe())\nprint(rao.describe())", out: "Hi, I am Asha. I study, my mark is 85.\nHi, I am Mr Rao. I teach Physics." },
 };
 
 const VERSION_NOTE = {
@@ -481,9 +481,11 @@ function OverrideWidget() {
       </div>
       <div style={twoCol}>
         <pre style={{ ...mono, fontSize: 11.5, background: C.surface, borderRadius: 8, padding: 10 }}>{style === "super"
-          ? `    def describe(self):
+          ? `class Student(Person):     # rest of the class unchanged
+    def describe(self):
         return super().describe() + " I study, my mark is " + str(self.mark) + "."`
-          : `    def describe(self):
+          : `class Student(Person):     # rest of the class unchanged
+    def describe(self):
         return "Hi, I am " + self.name + ". I study, my mark is " + str(self.mark) + "."`}</pre>
         <div style={{ ...cardBox(style === "super" ? C.green + "55" : C.orange + "55"), fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
           {style === "super"
