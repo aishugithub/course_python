@@ -146,13 +146,140 @@ import requests`}</pre>
           environment</strong> is a private, isolated box of packages for one project — so Project A's libraries
           never clash with Project B's.
         </div>
-        <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`python -m venv env      # create an isolated environment
-# activate it, then pip install inside it`}</pre>
+        <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`python -m venv env      # 1. create the box
+# 2. ACTIVATE it  →  next tab shows how, per OS
+pip install requests     # 3. now installs inside env/`}</pre>
       </div>
 
       <div style={{ background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
         🔑 <strong style={{ color: C.green }}>The ecosystem is Python's superpower.</strong> pip + venv are how
         you'll soon install NumPy, Pandas and Matplotlib for the data modules — each project in its own clean box.
+      </div>
+    </div>
+  );
+}
+
+// ── Section 5: activating a venv ─────────────────────────────────────────────
+const VENV_OS = {
+  win: {
+    label: "Windows (cmd)", activate: "env\\Scripts\\activate", where: "where python",
+    globalPath: "C:\\Users\\you\\AppData\\Local\\Programs\\Python\\python.exe",
+    envPath: "C:\\projects\\marks\\env\\Scripts\\python.exe", base: "C:\\projects\\marks>",
+  },
+  ps: {
+    label: "Windows (PowerShell)", activate: ".\\env\\Scripts\\Activate.ps1", where: "Get-Command python",
+    globalPath: "C:\\Users\\you\\AppData\\Local\\Programs\\Python\\python.exe",
+    envPath: "C:\\projects\\marks\\env\\Scripts\\python.exe", base: "PS C:\\projects\\marks>",
+  },
+  nix: {
+    label: "macOS / Linux", activate: "source env/bin/activate", where: "which python",
+    globalPath: "/usr/bin/python3",
+    envPath: "/home/you/marks/env/bin/python", base: "~/marks$",
+  },
+};
+
+function VenvActivate() {
+  const [os, setOs] = useState("win");
+  const [step, setStep] = useState(0);
+  const o = VENV_OS[os];
+
+  const steps = [
+    { title: "1 · Create the box", cmd: "python -m venv env", active: false,
+      out: "(no output — a new folder called env/ appears in your project)",
+      note: "This only BUILDS the box: a private copy of the Python interpreter plus an empty site-packages folder. Nothing is using it yet." },
+    { title: "2 · Activate it", cmd: o.activate, active: true,
+      out: "Notice the prompt now starts with (env)",
+      note: "Activation is the step most people forget. It changes your terminal's PATH so the words python and pip now point INSIDE env/ instead of the system-wide Python. The (env) tag is your proof." },
+    { title: "3 · Check who answers", cmd: o.where, active: true,
+      out: o.envPath,
+      note: "Before activation this printed the global Python. Now it prints the copy inside env/. Same command, different program — that is all activation really does." },
+    { title: "4 · Install inside the box", cmd: "pip install requests", active: true,
+      out: "Successfully installed requests ...  → env/Lib/site-packages",
+      note: "Because env is active, pip drops the package into THIS project's box only. Your other projects and the system Python never see it." },
+    { title: "5 · Deactivate", cmd: "deactivate", active: false,
+      out: "The (env) tag disappears — python points to the global one again",
+      note: "deactivate works the same on every OS. The env/ folder is still there; activate it again next time you open a terminal for this project." },
+  ];
+  const s = steps[step];
+  const prompt = (s.active ? "(env) " : "") + o.base;
+
+  return (
+    <div>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
+        Creating a venv is only half the job. Until you <strong style={{ color: C.teal }}>activate</strong> it,
+        your terminal keeps using the global Python, and <code style={{ color: C.green }}>pip install</code> still
+        pours packages into the shared system box. Step through the full lifecycle for your operating system.
+      </p>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+        {Object.entries(VENV_OS).map(([k, v]) => (
+          <button key={k} onClick={() => setOs(k)} style={{
+            flex: 1, minWidth: 120, padding: "8px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
+            background: os === k ? C.teal + "22" : C.card,
+            border: `1.5px solid ${os === k ? C.teal : C.border}`, color: os === k ? C.teal : C.muted,
+          }}>{v.label}</button>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
+        {steps.map((st, i) => (
+          <button key={i} onClick={() => setStep(i)} style={{
+            flex: 1, minWidth: 90, padding: "6px 4px", borderRadius: 6, cursor: "pointer", fontSize: 11,
+            background: step === i ? C.accentGlow : C.card, color: step === i ? "#fff" : C.muted,
+            border: `1px solid ${step === i ? C.accentGlow : C.border}`,
+          }}>{st.title}</button>
+        ))}
+      </div>
+
+      <div style={{ background: "#0A0E14", border: `1px solid ${s.active ? C.green : C.border}`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 12, lineHeight: 1.8, transition: "border 0.3s" }}>
+        <div>
+          {s.active && <span style={{ color: C.green, fontWeight: 700 }}>(env) </span>}
+          <span style={{ color: C.muted }}>{o.base} </span>
+          <span style={{ color: C.text }}>{s.cmd}</span>
+        </div>
+        <div style={{ color: C.yellow, whiteSpace: "pre-wrap" }}>{s.out}</div>
+        {step === 4 && <div><span style={{ color: C.muted }}>{o.base}</span> <span style={{ color: C.text }}>_</span></div>}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
+        <div style={{ background: C.card, border: `1.5px solid ${!s.active ? C.orange : C.border}`, borderRadius: 10, padding: 12, opacity: !s.active ? 1 : 0.45, transition: "all 0.3s" }}>
+          <div style={{ color: C.orange, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>🌐 Global Python</div>
+          <div style={{ fontFamily: "monospace", fontSize: 10.5, color: C.text, wordBreak: "break-all" }}>{o.globalPath}</div>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>shared by every project</div>
+        </div>
+        <div style={{ background: C.card, border: `1.5px solid ${s.active ? C.green : C.border}`, borderRadius: 10, padding: 12, opacity: s.active ? 1 : 0.45, transition: "all 0.3s" }}>
+          <div style={{ color: C.green, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>📦 env/ (this project)</div>
+          <div style={{ fontFamily: "monospace", fontSize: 10.5, color: C.text, wordBreak: "break-all" }}>{o.envPath}</div>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>{step >= 3 && step < 4 ? "requests installed here ✓" : "private to this project"}</div>
+        </div>
+      </div>
+      <div style={{ textAlign: "center", color: C.muted, fontSize: 11.5, marginTop: 6 }}>
+        <code style={{ color: C.text }}>python</code> currently means → <strong style={{ color: s.active ? C.green : C.orange }}>{s.active ? "env/" : "global"}</strong>
+      </div>
+
+      <div style={{ marginTop: 12, background: C.accent + "14", border: `1px solid ${C.accent}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
+        {s.note}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button disabled={step === 0} onClick={() => setStep(step - 1)} style={{ flex: 1, padding: 8, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: step === 0 ? C.border : C.text, cursor: step === 0 ? "default" : "pointer" }}>← Back</button>
+        <button disabled={step === steps.length - 1} onClick={() => setStep(step + 1)} style={{ flex: 1, padding: 8, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: step === steps.length - 1 ? C.border : C.text, cursor: step === steps.length - 1 ? "default" : "pointer" }}>Next step →</button>
+      </div>
+
+      {os === "ps" && (
+        <div style={{ marginTop: 12, background: C.red + "14", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
+          ⚠️ <strong style={{ color: C.red }}>"running scripts is disabled on this system"?</strong> PowerShell blocks
+          scripts by default. Run this once, then activate again:
+          <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: "6px 0 0", whiteSpace: "pre-wrap" }}>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</pre>
+          Or simply switch the terminal to cmd and use <code style={{ color: C.text }}>env\Scripts\activate</code>.
+        </div>
+      )}
+
+      <div style={{ marginTop: 12, background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
+        🔑 <strong style={{ color: C.teal }}>Rule of thumb:</strong> new terminal → <code style={{ color: C.text }}>cd</code> into
+        the project → activate → look for <span style={{ color: C.green, fontFamily: "monospace" }}>(env)</span> → then
+        pip install or run. In VS Code, also pick the env interpreter (Ctrl+Shift+P → "Python: Select Interpreter") so
+        the Run button uses it too. Add <code style={{ color: C.text }}>env/</code> to .gitignore — never commit it.
       </div>
     </div>
   );
@@ -200,6 +327,17 @@ function Quiz({ onComplete }) {
       answer: 1,
       explain: "pip downloads packages the standard library doesn't include; a venv keeps each project's packages separate so versions don't clash.",
     },
+    {
+      q: "You ran  python -m venv env  and then  pip install pandas,  but the prompt never showed (env). Where did pandas go?",
+      options: [
+        "Into env/, because the folder exists",
+        "Into the global Python — the venv was created but never activated",
+        "Nowhere; pip refuses to run without a venv",
+        "Into both env/ and the global Python",
+      ],
+      answer: 1,
+      explain: "Creating a venv doesn't switch to it. Until you activate (env\\Scripts\\activate on Windows, source env/bin/activate on macOS/Linux), python and pip still point to the global install.",
+    },
   ];
 
   const [current, setCurrent] = useState(0);
@@ -220,11 +358,11 @@ function Quiz({ onComplete }) {
   if (done) {
     return (
       <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
+        <div style={{ fontSize: 52 }}>{score >= 4 ? "🎉" : "👍"}</div>
         <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
         <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You can stand on the shoulders of the whole Python ecosystem." :
-            score >= 2 ? "Good — replay Import Forms to lock in the three styles." :
+          {score === 5 ? "You can stand on the shoulders of the whole Python ecosystem." :
+            score >= 3 ? "Good — replay Import Forms and Activate venv to lock it in." :
               "Revisit Import Forms and Your Own Modules, then try again."}
         </div>
         <div style={{
@@ -232,9 +370,9 @@ function Quiz({ onComplete }) {
           background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
           border: `1px solid ${C.accent}55`,
         }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 11.2 Complete!</div>
+          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 11.1 Complete!</div>
           <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            import, your own modules, and pip + venv for the wider ecosystem.<br /><br />
+            import, your own modules, pip, and creating + activating a venv.<br /><br />
             <strong style={{ color: C.accent }}>Next up: Module 12 — Working with Real Data.</strong> Dates, JSON,
             and your first taste of NumPy and Pandas — the on-ramp to data science.
           </div>
@@ -289,6 +427,7 @@ export default function Unit11_1({ student, onUnitComplete }) {
     { id: "import", label: "import Forms" },
     { id: "own", label: "Your Own Modules" },
     { id: "pip", label: "pip & venv" },
+    { id: "activate", label: "Activate venv" },
     { id: "quiz", label: "Quiz & Wrap-up" },
   ];
 
@@ -303,10 +442,11 @@ export default function Unit11_1({ student, onUnitComplete }) {
     <div><h3 style={{ color: C.text, marginBottom: 6 }}>Three Ways to import</h3><ImportForms /></div>,
     <div><h3 style={{ color: C.text, marginBottom: 6 }}>Your Own Modules</h3><OwnModule /></div>,
     <div><h3 style={{ color: C.text, marginBottom: 6 }}>pip &amp; Virtual Environments</h3><PipVenv /></div>,
+    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Activating a venv — Create → Activate → Install → Deactivate</h3><VenvActivate /></div>,
     <div>
       <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on modules and the ecosystem.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>5 questions on modules and the ecosystem.</p>
+      <Quiz onComplete={() => { markComplete(5); onUnitComplete && onUnitComplete(); }} />
     </div>,
   ];
 

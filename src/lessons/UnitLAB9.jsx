@@ -179,8 +179,20 @@ function ProgHeader({ prog }) {
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
       <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{prog.title}</div>
       <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6, marginTop: 4 }}>🎯 {prog.aim}</div>
+      {neededPkgs(prog).length > 0 && (
+        <div style={{ marginTop: 8, background: "#0A0E14", border: `1px solid ${C.yellow}55`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+          📥 <strong style={{ color: C.yellow }}>Running this on your own PC?</strong> Activate your venv first, then install once:
+          <div style={{ fontFamily: "monospace", color: C.green, marginTop: 4 }}>pip install {neededPkgs(prog).join(" ")}</div>
+          <div style={{ fontSize: 11, marginTop: 2 }}>In Jupyter/Colab use <code style={{ color: C.text }}>%pip install {neededPkgs(prog).join(" ")}</code>. Here in the browser it's already set up for you.</div>
+        </div>
+      )}
     </div>
   );
+}
+
+function neededPkgs(prog) {
+  const src = (prog.codeLines || []).map((l) => l.map((s) => s.text || "").join("")).join("\n");
+  return ["pandas", "numpy", "matplotlib", "seaborn", "plotly"].filter((p) => new RegExp("(import|from)\\s+" + p).test(src));
 }
 
 // ─────────────────────────────────────────────────────────────
