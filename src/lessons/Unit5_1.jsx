@@ -260,20 +260,20 @@ function PythonicIdioms() {
   const idioms = [
     {
       title: "Checking if a list has items",
-      verbose: "if len(my_list) > 0:\n    print(\"has items\")",
-      pythonic: "if my_list:\n    print(\"has items\")",
+      verbose: "my_list = [4, 7]\nif len(my_list) > 0:\n    print(\"has items\")",
+      pythonic: "my_list = [4, 7]\nif my_list:\n    print(\"has items\")",
       note: "An empty list is falsy, so simply testing the list itself already tells you whether it's empty — no need to measure its length first.",
     },
     {
       title: "Checking if a string is empty",
-      verbose: 'if name == "":\n    print("no name given")',
-      pythonic: 'if not name:\n    print("no name given")',
+      verbose: 'name = ""\nif name == "":\n    print("no name given")',
+      pythonic: 'name = ""\nif not name:\n    print("no name given")',
       note: 'An empty string is falsy, so "not name" is True exactly when name is empty — and it also catches None, which the == "" version would miss.',
     },
     {
       title: "Checking a variable exists / was set",
-      verbose: "if result != None:\n    print(result)",
-      pythonic: "if result:\n    print(result)",
+      verbose: "result = 42\nif result != None:\n    print(result)",
+      pythonic: "result = 42\nif result:\n    print(result)",
       note: "This shortcut treats None, 0, and empty values all as \"nothing to show\" — convenient, but be careful: it also skips a genuinely meaningful 0 or empty string if that's a valid result in your program!",
     },
   ];

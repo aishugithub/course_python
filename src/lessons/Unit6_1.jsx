@@ -112,7 +112,7 @@ function WhileAnatomy() {
         </div>
         <div style={{ background: C.card, border: `1.5px solid ${C.accent}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>🐍 Python</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0 }}>{`while count <= 3:\n    print(count)\n    count = count + 1`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0 }}>{`count = 1\nwhile count <= 3:\n    print(count)\n    count = count + 1`}</pre>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>Colon + indentation — the exact same block rule as if. Nothing new to memorise.</div>
         </div>
       </div>

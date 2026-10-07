@@ -22,12 +22,12 @@ function TheNeed() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>❌ Without polymorphism</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`for s in shapes:\n    if s.kind == "circle":\n        a = 3.14*s.r*s.r\n    elif s.kind == "square":\n        a = s.side*s.side\n    print(a)`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`# shapes = a list of shape records (sketch)\nfor s in shapes:\n    if s.kind == "circle":\n        a = 3.14*s.r*s.r\n    elif s.kind == "square":\n        a = s.side*s.side\n    print(a)`}</pre>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>A new shape means editing this if-ladder. Fragile.</div>
         </div>
         <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>✅ With polymorphism</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`for s in shapes:\n    print(s.area())`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`# shapes = [Circle(2), Square(3)] — classes built in the next tab\nfor s in shapes:\n    print(s.area())`}</pre>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>Each object knows its own area(). New shapes just work.</div>
         </div>
       </div>

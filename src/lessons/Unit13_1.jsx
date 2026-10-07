@@ -12,6 +12,75 @@ const NAMES = ["Asha", "Ravi", "Meera", "Karan"];
 const MARKS = [88, 45, 72, 91];
 const PIE_COLORS = [C.teal, C.orange, C.purple, C.green];
 
+const CSV_TEXT = `Name,Marks,Subject
+Asha,88,Math
+Ravi,45,CS
+Meera,72,Math
+Karan,91,CS`;
+
+const FULL_TYPES = {
+  bar: `import matplotlib.pyplot as plt
+
+names = ["Asha", "Ravi", "Meera", "Karan"]
+marks = [88, 45, 72, 91]
+hours = [5, 2, 4, 6]
+
+plt.bar(names, marks)
+plt.show()`,
+  line: `import matplotlib.pyplot as plt
+
+names = ["Asha", "Ravi", "Meera", "Karan"]
+marks = [88, 45, 72, 91]
+hours = [5, 2, 4, 6]
+
+plt.plot(names, marks)
+plt.show()`,
+  scatter: `import matplotlib.pyplot as plt
+
+names = ["Asha", "Ravi", "Meera", "Karan"]
+marks = [88, 45, 72, 91]
+hours = [5, 2, 4, 6]
+
+plt.scatter(hours, marks)
+plt.show()`,
+  pie: `import matplotlib.pyplot as plt
+
+names = ["Asha", "Ravi", "Meera", "Karan"]
+marks = [88, 45, 72, 91]
+hours = [5, 2, 4, 6]
+
+plt.pie(marks, labels=names)
+plt.show()`,
+};
+
+// ── Full runnable program toggle ─────────────────────────────────────────────
+function FullCode({ code, note }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <button onClick={() => setOpen(!open)} style={{ padding: "5px 12px", borderRadius: 6, background: open ? C.green + "18" : "transparent", border: `1px solid ${C.green}66`, color: C.green, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+        {open ? "▾ Hide" : "▸ Show"} the full runnable program
+      </button>
+      {open && (
+        <div style={{ marginTop: 8 }}>
+          <pre style={{ background: "#0A0E14", border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" , overflowX: "auto" }}>{code}</pre>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{note || "Complete as shown — paste into a .py file and run."}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CsvFile() {
+  return (
+    <div style={{ background: C.card, border: `1px dashed ${C.yellow}66`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <div style={{ color: C.yellow, fontSize: 11.5, fontWeight: 700, marginBottom: 6 }}>📄 marks.csv — create this file first, in the SAME folder as your .py file</div>
+      <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{CSV_TEXT}</pre>
+      <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>Type it in Notepad / VS Code and save as <code style={{ color: C.text }}>marks.csv</code>. Without it, read_csv stops with FileNotFoundError.</div>
+    </div>
+  );
+}
+
 // ── Section 1: The Need ──────────────────────────────────────────────────────
 function TheNeed() {
   return (
@@ -212,6 +281,8 @@ function ChartTypes() {
       </div>
 
       <pre style={{ background: C.card, border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 12, color: C.text, margin: "0 0 10px" }}>{t.code}</pre>
+      <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 6 }}>📎 This one line replaces <code style={{ color: C.text }}>plt.bar(...)</code> in the recipe from the previous tab — everything else stays.</div>
+      <FullCode code={FULL_TYPES[type]} />
 
       <div style={{ background: t.color + "14", border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
         {t.note}
@@ -227,6 +298,8 @@ function FromDataFrame() {
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
         The real workflow ties it all together: read data with Pandas (Module 12), then plot a column directly.
       </p>
+
+      <CsvFile />
 
       <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.85, margin: "0 0 14px", whiteSpace: "pre" }}>{`import pandas as pd
 import matplotlib.pyplot as plt

@@ -43,6 +43,79 @@ function Table({ cols, rows, highlightCol }) {
   );
 }
 
+const CSV_TEXT = `Name,Marks,Subject
+Asha,88,Math
+Ravi,45,CS
+Meera,72,Math
+Karan,91,CS`;
+
+const FULL_OPS = {
+  head: `import pandas as pd
+
+df = pd.DataFrame({
+    "Name": ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Subject": ["Math", "CS", "Math", "CS"],
+})
+
+print(df.head(2))`,
+  col: `import pandas as pd
+
+df = pd.DataFrame({
+    "Name": ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Subject": ["Math", "CS", "Math", "CS"],
+})
+
+print(df["Marks"])`,
+  filter: `import pandas as pd
+
+df = pd.DataFrame({
+    "Name": ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Subject": ["Math", "CS", "Math", "CS"],
+})
+
+print(df[df["Marks"] >= 50])`,
+  describe: `import pandas as pd
+
+df = pd.DataFrame({
+    "Name": ["Asha", "Ravi", "Meera", "Karan"],
+    "Marks": [88, 45, 72, 91],
+    "Subject": ["Math", "CS", "Math", "CS"],
+})
+
+print(df["Marks"].describe())`,
+};
+
+// ── Full runnable program toggle ─────────────────────────────────────────────
+function FullCode({ code, note }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <button onClick={() => setOpen(!open)} style={{ padding: "5px 12px", borderRadius: 6, background: open ? C.green + "18" : "transparent", border: `1px solid ${C.green}66`, color: C.green, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
+        {open ? "▾ Hide" : "▸ Show"} the full runnable program
+      </button>
+      {open && (
+        <div style={{ marginTop: 8 }}>
+          <pre style={{ background: "#0A0E14", border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" , overflowX: "auto" }}>{code}</pre>
+          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{note || "Complete as shown — paste into a .py file and run."}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CsvFile() {
+  return (
+    <div style={{ background: C.card, border: `1px dashed ${C.yellow}66`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
+      <div style={{ color: C.yellow, fontSize: 11.5, fontWeight: 700, marginBottom: 6 }}>📄 marks.csv — create this file first, in the SAME folder as your .py file</div>
+      <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{CSV_TEXT}</pre>
+      <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>Type it in Notepad / VS Code and save as <code style={{ color: C.text }}>marks.csv</code>. Without it, read_csv stops with FileNotFoundError.</div>
+    </div>
+  );
+}
+
 // ── Section 1: The Need ──────────────────────────────────────────────────────
 function TheNeed() {
   return (
@@ -217,6 +290,12 @@ function Exploring() {
         {o.render}
       </div>
 
+      <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 8, lineHeight: 1.6 }}>
+        📎 The <code style={{ color: C.text }}>&gt;&gt;&gt;</code> line is one step on the <code style={{ color: C.text }}>df</code> built in the previous tab.
+        In Jupyter the last line displays itself; in a .py file wrap it in <code style={{ color: C.text }}>print(...)</code>.
+      </div>
+      <FullCode code={FULL_OPS[op]} />
+
       <div style={{ background: o.color + "14", border: `1px solid ${o.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
         {o.note}
       </div>
@@ -233,13 +312,15 @@ function ReadCSV() {
         <strong style={{ color: C.text }}>one line</strong> — then all the tools above just work.
       </p>
 
+      <CsvFile />
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
         <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>Module 9 way</div>
+          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>Module 9 way <span style={{ color: C.muted, fontWeight: 400 }}>(deliberately unfinished — you'd still skip the header and int() every mark)</span></div>
           <pre style={{ fontFamily: "monospace", fontSize: 10.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`rows = []\nwith open("marks.csv") as f:\n    for line in f:\n        rows.append(line.split(","))\n# ...now parse numbers by hand`}</pre>
         </div>
         <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>Pandas way</div>
+          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>Pandas way <span style={{ color: C.muted, fontWeight: 400 }}>(complete — runs as is)</span></div>
           <pre style={{ fontFamily: "monospace", fontSize: 10.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`import pandas as pd\ndf = pd.read_csv("marks.csv")\n\nprint(df["Marks"].mean())\nprint(df[df["Marks"] >= 50])`}</pre>
         </div>
       </div>

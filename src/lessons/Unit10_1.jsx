@@ -167,7 +167,7 @@ function IndependenceWidget() {
       </div>
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
-        <pre style={mono}>{`asha = Student()\nasha.name = "Asha"\nasha.mark = ${ashaMark}\n\nravi = Student()\nravi.name = "Ravi"\nravi.mark = 72   # untouched by changes to asha`}</pre>
+        <pre style={mono}>{`class Student:\n    pass\n\nasha = Student()\nasha.name = "Asha"\nasha.mark = ${ashaMark}\n\nravi = Student()\nravi.name = "Ravi"\nravi.mark = 72   # untouched by changes to asha`}</pre>
       </div>
 
       {insight(C.teal, <>

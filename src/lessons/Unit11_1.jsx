@@ -22,11 +22,11 @@ function TheNeed() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>❌ Reinvent it</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`# square root by hand?\nguess = n / 2\nfor i in range(20):\n    guess = (guess + n/guess)/2`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`n = 50\n# square root by hand?\nguess = n / 2\nfor i in range(20):\n    guess = (guess + n/guess)/2`}</pre>
         </div>
         <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>✅ Import it</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`import math\nprint(math.sqrt(n))`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`import math\nn = 50\nprint(math.sqrt(n))`}</pre>
         </div>
       </div>
 

@@ -55,19 +55,19 @@ function CharAnatomy() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <div style={{ background: C.card, border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.teal, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>By character</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`for ch in word:\n    print(ch)`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`word = "PYTHON"\nfor ch in word:\n    print(ch)`}</pre>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>When you only need the letters.</div>
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.orange}44`, borderRadius: 10, padding: 14 }}>
           <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>By index</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`for i in range(len(word)):\n    print(word[i])`}</pre>
+          <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`word = "PYTHON"\nfor i in range(len(word)):\n    print(word[i])`}</pre>
           <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>When you need the position too.</div>
         </div>
       </div>
 
       <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
         <div style={{ color: C.green, fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Reverse a word — accumulate a new string</div>
-        <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`rev = ""\nfor ch in word:\n    rev = ch + rev      # each new letter goes in FRONT\nprint(rev)`}</pre>
+        <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`word = "PYTHON"\nrev = ""\nfor ch in word:\n    rev = ch + rev      # each new letter goes in FRONT\nprint(rev)`}</pre>
       </div>
 
       <div style={{ background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>

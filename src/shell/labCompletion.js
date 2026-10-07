@@ -16,7 +16,8 @@
 //       UnitLAB6_5 (Exp 5&6) · UnitLAB8_5 (Exp 7&8) ·
 //       UnitLAB10_5 (Exp 9&10)
 //  An experiment counts as done when its record was submitted (bare
-//  unitId) OR all six of its stages were recorded ("UnitLAB1@p1_algo" …).
+//  unitId) OR its four required stages were recorded ("UnitLAB1@p1_algo" …;
+//  the two flowchart stages are optional).
 //  A crucible counts as done when it was claimed (bare unitId) OR any
 //  track's final stage was recorded ("UnitLAB2_5@B_temper"). Students may
 //  switch tracks between crucibles — any track counts.
@@ -58,8 +59,11 @@ export const LAB_FEEDBACK_ID = 'UnitFB';
 const TRACK_LETTERS = ['A', 'B', 'C', 'D'];
 const EXP_STAGES = ['p1_algo', 'p1_flow', 'p1_prog', 'p2_algo', 'p2_flow', 'p2_prog'];
 
+// Flowcharts are optional, so only the four algorithm/program stages are needed.
+const EXP_REQUIRED = EXP_STAGES.filter((s) => !s.endsWith('_flow'));
+
 function experimentDone(id, set) {
-  return set.has(id) || EXP_STAGES.every((s) => set.has(`${id}@${s}`));
+  return set.has(id) || EXP_REQUIRED.every((s) => set.has(`${id}@${s}`));
 }
 
 function crucibleDone(id, set) {

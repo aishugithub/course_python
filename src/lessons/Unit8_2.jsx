@@ -187,7 +187,7 @@ function ReturnWidget() {
                 keep using:
               </div>
               <pre style={{ ...mono, marginTop: 8 }}>
-                {`total = add_gst(200) + add_gst(150)\n`}<span style={{ color: C.green }}># 236.0 + 177.0 = 413.0 ✨</span>
+                {`# add_gst() is the function defined above\ntotal = add_gst(200) + add_gst(150)\n`}<span style={{ color: C.green }}># 236.0 + 177.0 = 413.0 ✨</span>
               </pre>
             </>
           )}

@@ -100,7 +100,9 @@ function StepsWidget() {
 
 def grade(mark):
     if mark >= 90: return "A"
-    ...
+    elif mark >= 75: return "B"
+    elif mark >= 50: return "C"
+    return "F"
 
 marks["Asha"] = 85
 print("Asha", grade(marks["Asha"]))`,
@@ -132,7 +134,9 @@ for s in students:
       color: C.green,
       note: "Unit 10.1's idea applied again: make ONE object that owns the list and all the operations on it.",
       warn: null,
-      code: `class Classroom:
+      code: `# class Student exactly as in v2 above
+
+class Classroom:
     def __init__(self):
         self.students = []          # holds Student objects
 

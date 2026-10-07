@@ -99,7 +99,7 @@ function AnatomyWidget() {
 
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
         <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 8 }}>Using it — no <code>self</code> in sight when you call:</div>
-        <pre style={mono}>{`asha = Student("Asha", 85)\n# Python: builds a blank object, calls\n# __init__(that_object, "Asha", 85) for you`}</pre>
+        <pre style={mono}>{`# uses the Student class written above\nasha = Student("Asha", 85)\n# Python: builds a blank object, calls\n# __init__(that_object, "Asha", 85) for you`}</pre>
       </div>
 
       {insight(C.teal, <>

@@ -168,27 +168,27 @@ function ScanToolkit() {
   const modes = {
     max: {
       label: "Largest", color: C.green, out: Math.max(...MARKS),
-      code: "biggest = marks[0]\nfor m in marks:\n    if m > biggest:\n        biggest = m\nprint(biggest)",
+      code: "marks = [23, 67, 12, 89, 45]\n\nbiggest = marks[0]\nfor m in marks:\n    if m > biggest:\n        biggest = m\nprint(biggest)",
       note: "Seed with the first item, keep the bigger one.",
     },
     min: {
       label: "Smallest", color: C.teal, out: Math.min(...MARKS),
-      code: "smallest = marks[0]\nfor m in marks:\n    if m < smallest:\n        smallest = m\nprint(smallest)",
+      code: "marks = [23, 67, 12, 89, 45]\n\nsmallest = marks[0]\nfor m in marks:\n    if m < smallest:\n        smallest = m\nprint(smallest)",
       note: "Exact same shape — just flip > to <.",
     },
     sum: {
       label: "Sum", color: C.purple, out: sum,
-      code: "total = 0\nfor m in marks:\n    total = total + m\nprint(total)",
+      code: "marks = [23, 67, 12, 89, 45]\n\ntotal = 0\nfor m in marks:\n    total = total + m\nprint(total)",
       note: "An accumulator (Unit 1) walking a list instead of a range.",
     },
     avg: {
       label: "Average", color: C.orange, out: (sum / MARKS.length).toFixed(1),
-      code: "total = 0\nfor m in marks:\n    total = total + m\nprint(total / len(marks))",
+      code: "marks = [23, 67, 12, 89, 45]\n\ntotal = 0\nfor m in marks:\n    total = total + m\nprint(total / len(marks))",
       note: "Sum first, then divide by len(marks) — how many items there are.",
     },
     count: {
       label: "Count > 50", color: C.yellow, out: MARKS.filter((m) => m > 50).length,
-      code: "passed = 0\nfor m in marks:\n    if m > 50:\n        passed = passed + 1\nprint(passed)",
+      code: "marks = [23, 67, 12, 89, 45]\n\npassed = 0\nfor m in marks:\n    if m > 50:\n        passed = passed + 1\nprint(passed)",
       note: "A conditional accumulator: only count up when the test passes.",
     },
   };
