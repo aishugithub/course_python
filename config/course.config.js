@@ -38,7 +38,7 @@ const COURSE_CONFIG = {
   // "Mini-Project Report" card on the Dashboard: keep it false until the
   // report builder is finished and the new Code.gs is deployed.
   miniProjectReport: {
-    open:         false,
+    open:         true,
     academicYear: "2026–2027",
     faculty:      "Ms. Aishwarya S",
   },
