@@ -33,6 +33,16 @@ const COURSE_CONFIG = {
     participationMinPct: 60,
   },
 
+  // Mini-project report (MED23CL202). academicYear and faculty print on every
+  // student's cover page, so students don't type them. `open` shows the
+  // "Mini-Project Report" card on the Dashboard: keep it false until the
+  // report builder is finished and the new Code.gs is deployed.
+  miniProjectReport: {
+    open:         false,
+    academicYear: "2026–2027",
+    faculty:      "Ms. Aishwarya S",
+  },
+
   hook: {
     line1: "You don't read Foothold. You click it, break it, and fix it.",
     line2: "Every lesson is something you do — open any module below and see for yourself.",

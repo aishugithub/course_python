@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import Landing from './Landing.jsx';
 import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
@@ -11,6 +11,11 @@ import { certificateStatus } from './completion.js';
 import { labCertificateStatus } from './labCompletion.js';
 import COURSE_CONFIG from '../../config/course.config.js';
 import { DARK, FONT } from './brand.js';
+
+// The report builder loads only when opened, so the dashboard stays light.
+const ReportBuilder = lazy(() => import('./report/ReportBuilder.jsx'));
+// The report card shows when course.config.js says so (or in local testing, see .claude/mock_gas).
+const REPORT_OPEN = !!COURSE_CONFIG.miniProjectReport?.open || import.meta.env.VITE_REPORT_OPEN === '1';
 
 // Loading screens now use the DARK shell palette (see brand.js): landing,
 // dashboard and login are all dark-and-on-brand, and the lessons are dark too,
@@ -47,6 +52,9 @@ export default function App() {
   // the learner back on the dashboard (which used to look exactly like an
   // access gate). Holds a human-readable reason + the raw error for debugging.
   const [lessonError, setLessonError]         = useState(null);
+  // Where to go after signing in: the dashboard, or back to the report when
+  // its sign-in expired mid-way.
+  const afterLogin = useRef('dashboard');
 
   // One 'session_start' event per app load -- fires the moment
   // anyone lands here, guest or not, before they've made any choice.
@@ -79,7 +87,8 @@ export default function App() {
     setStudent(studentData);
     const completed = await getProgress(studentData.rollNo, COURSE_CONFIG.courseId);
     setCompletedUnits(completed);
-    setView('dashboard');
+    setView(afterLogin.current);
+    afterLogin.current = 'dashboard';
   }
 
   // sessionStorage key that guards the "reload once on a stale chunk" logic
@@ -225,6 +234,11 @@ export default function App() {
   // Also reachable from inside the final mini-project crucible, so close any open lesson first.
   function handleOpenLabCertificate() { setActiveUnit(null); setLessonComponent(null); setView('labCertificate'); }
 
+  // The mini-project report (MED23CL202) is its own view, opened from the
+  // Dashboard's report card. It saves to Drive through Code.gs with the
+  // session token from sign-in, so it is for signed-in students only.
+  function handleOpenReport() { setActiveUnit(null); setLessonComponent(null); setView('report'); }
+
   function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); setLessonError(null); }
 
   // A visible failure screen for when a lesson can't be opened. This replaces
@@ -267,6 +281,14 @@ export default function App() {
 
   if (view === 'labCertificate') {
     return <LabCertificate student={student} onBack={() => setView('dashboard')} />;
+  }
+
+  if (view === 'report' && student) {
+    return (
+      <Suspense fallback={<LoadingScreen message="Opening your report…" />}>
+        <ReportBuilder student={student} onBack={() => setView('dashboard')} onSignInAgain={() => { afterLogin.current = 'report'; setView('login'); }} />
+      </Suspense>
+    );
   }
 
   if (loadingLesson) return <LoadingScreen message="Loading lesson…" />;
@@ -334,6 +356,7 @@ export default function App() {
       onOpenCertificate={handleOpenCertificate}
       labCertStatus={labCertificateStatus(completedUnits)}
       onOpenLabCertificate={handleOpenLabCertificate}
+      onOpenReport={REPORT_OPEN ? handleOpenReport : undefined}
     />
   );
 }

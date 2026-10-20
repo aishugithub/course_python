@@ -8,9 +8,9 @@
      Two sub-tabs:
        • Lab Progress : per-experiment class-completion bars; a wide matrix with
          Reg No + Name FROZEN and a tick + completion date/time in each cell;
-         a per-experiment defaulters list. Search + CSV export.
-       • Marks        : the /10 auto-marks (weighted completion − late penalty),
-         with your overrides highlighted. Search + CSV export.
+         a per-experiment "yet to complete" list. Search + CSV export.
+       • Marks        : the /10 marks (weighted completion of the steps),
+         computed purely from student progress (no marks sheet). Search + CSV export.
      Fully read-only. Search filters what you see; CSV export always dumps the
      full class regardless of the current filter.
 =========================================================================== -->
@@ -332,21 +332,17 @@
                                    '<span style="color:var(--good);font-weight:800">✓</span></td>';
               else body += '<td class="'+cls+'"><span style="color:var(--muted)">–</span></td>';
             });
-            // Completion date (green on time / red late)
-            const late = x.daysLate>0;
+            // Completion date — shown as soon as the student finishes
             body += '<td>'+ (x.whenDisplay
-              ? '<span class="when" style="'+(late?'color:var(--bad)':'color:var(--good)')+'">'+
-                esc(x.whenDisplay)+(late?' · '+x.daysLate+'d late':'')+'</span>'
+              ? '<span class="when" style="color:var(--good)">'+esc(x.whenDisplay)+'</span>'
               : '<span style="color:var(--muted)">–</span>') + '</td>';
             // Mark (override=accent✎, late=amber)
             const isOv = (x.override!=='' && x.override!=null);
             const mstyle = isOv ? 'color:var(--accent);font-weight:800'
-                                : (late?'color:var(--warn);font-weight:700':'font-weight:700');
+                                : 'font-weight:700';
             const mshown = (x.finalMark===''?'<span style="color:var(--muted)">–</span>':esc(x.finalMark))+
                            (isOv?' <span style="font-size:9px">✎</span>':'');
-            let mtip = 'Auto '+x.autoMark+'/10 (base '+x.base10+
-                       (late?', −'+(x.daysLate*10)+'% for '+x.daysLate+'d late':'')+')'+
-                       (isOv?' · OVERRIDE '+x.override:'');
+            let mtip = x.autoMark+'/10 from completed steps'+(isOv?' · OVERRIDE '+x.override:'');
             body += '<td class="mk" title="'+esc(mtip)+'"><span style="'+mstyle+'">'+mshown+'</span></td>';
           });
           body += '</tr>';
@@ -385,22 +381,10 @@
           return;
         }
 
-        // Decide the label from the deadline: overdue => defaulters (red);
-        // not yet due => just "yet to complete" (amber); no due date => neutral.
-        let title, note, colorVar;
-        if(!e.hasDue){
-          title = 'Yet to complete (no due date set)';
-          note  = 'No due date is set for this experiment, so no one is a defaulter yet.';
-          colorVar = 'var(--muted)';
-        } else if(!e.duePassed){
-          title = 'Yet to complete — due ' + esc(e.due) + ' (not overdue)';
-          note  = 'These students still have time until '+esc(e.due)+'. They are NOT defaulters yet.';
-          colorVar = 'var(--warn)';
-        } else {
-          title = '⚠ Defaulters — overdue since ' + esc(e.due);
-          note  = 'The deadline ('+esc(e.due)+') has passed; these students have not completed it.';
-          colorVar = 'var(--bad)';
-        }
+        // No due dates: simply list who has not finished yet.
+        const title = 'Yet to complete';
+        const note  = 'Marks appear here automatically as soon as a student finishes.';
+        const colorVar = 'var(--warn)';
         head.innerHTML = title;
         list.innerHTML =
           '<div style="width:100%;color:var(--muted);font-size:11px;margin-bottom:8px">'+note+'</div>'+
@@ -418,14 +402,6 @@
       // ---- MARKS (auto-computed; overrides from the sheet) ----------------
       function renderMarks(){
         const st = filtered(), exps = DATA.labExperiments;
-        if(!DATA.marksLinked){
-          document.getElementById('marksSummary').innerHTML='';
-          document.getElementById('countMarks').textContent='';
-          document.getElementById('marksTable').innerHTML =
-            '<div class="notice">Marks workbook not linked yet — paste its ID into '+
-            '<b>MARKS_SPREADSHEET_ID</b> in Dashboard.gs.</div>';
-          return;
-        }
         document.getElementById('countMarks').textContent =
           st.length + ' of ' + DATA.students.length + ' shown';
 
@@ -443,20 +419,16 @@
             if(m!=='' && !isNaN(Number(m))) tot += Number(m);
             const isOv = (x.override!=='' && x.override!=null);
             if(isOv) overrides++;
-            let tip = 'Auto '+x.autoMark+'/10 (base '+x.base10;
-            if(x.daysLate>0) tip += ', −'+(x.daysLate*10)+'% for '+x.daysLate+'d late';
-            tip += ')'; if(isOv) tip += ' · OVERRIDE '+x.override;
+            let tip = x.autoMark+'/10 from completed steps'; if(isOv) tip += ' · OVERRIDE '+x.override;
             if(x.whenDisplay) tip += ' · done '+x.whenDisplay;
             const markStyle = isOv ? 'color:var(--accent);font-weight:700'
-                                   : (x.daysLate>0 ? 'color:var(--warn)' : '');
+                                   : '';
             const glyph = isOv ? ' <span style="font-size:9px">✎</span>' : '';
             const shown = (m===''? '<span style="color:var(--muted)">–</span>' : esc(m));
-            // Submission date/time under the mark, GREEN if on time, RED if late.
+            // Completion date/time under the mark.
             let whenLine='';
             if(x.whenDisplay){
-              const late = x.daysLate>0;
-              whenLine = '<div class="when" style="'+(late?'color:var(--bad)':'color:var(--good)')+'">'+
-                         esc(x.whenDisplay)+(late? ' · '+x.daysLate+'d late' : ' · on time')+'</div>';
+              whenLine = '<div class="when" style="color:var(--muted)">'+esc(x.whenDisplay)+'</div>';
             }
             cells += '<td title="'+esc(tip)+'"><div class="cell"><span style="'+markStyle+'">'+
                      shown+glyph+'</span>'+whenLine+'</div></td>';
@@ -465,12 +437,12 @@
                   cells+'<td class="total">'+(Math.round(tot*10)/10)+'</td></tr>';
         });
         document.getElementById('marksSummary').innerHTML =
-          chip(DATA.students.length,'students') + chip(DATA.dueDatesCount,'due dates set') +
-          chip(overrides,'overrides shown') + chip('/'+ (exps.length*10),'total possible');
+          chip(DATA.students.length,'students') +
+          chip('/'+ (exps.filter(e=>e.built).length*10),'total possible (experiments started so far)');
         document.getElementById('marksTable').innerHTML =
-          '<div style="color:var(--muted);font-size:11px;margin-bottom:8px">Each cell: mark on top, submission date/time below — '+
-          '<span style="color:var(--good)">green = on time</span>, <span style="color:var(--bad)">red = late</span> · '+
-          '<span style="color:var(--accent)">✎ = your override</span> · hover for the full breakdown</div>'+
+          '<div style="color:var(--muted);font-size:11px;margin-bottom:8px">Marks are calculated from each student\'s progress: '+
+          'per program Algorithm 1.5 + Program 3.5 (flowchart optional, 0) = 10 per experiment; a submitted record = 10. '+
+          'Date below = when it was completed · hover for the breakdown</div>'+
           '<div class="scroller"><table class="marks"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
       }
 

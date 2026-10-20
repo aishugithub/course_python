@@ -60,7 +60,7 @@ function FootholdMark({ size = 34 }) {
   );
 }
 
-export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin, onSignOff, certStatus, onOpenCertificate, labCertStatus, onOpenLabCertificate }) {
+export default function Dashboard({ student, completedUnits, onSelectUnit, onRequestLogin, onSignOff, certStatus, onOpenCertificate, labCertStatus, onOpenLabCertificate, onOpenReport }) {
   // Optional units (Crucibles) are bonus: excluded from the % so skipping
   // challenges never blocks 100%. completedUnits may also hold stage
   // pseudo-ids like "Unit4_C@spark"; counting only required ids filters those.
@@ -307,6 +307,39 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                 cursor: labCertStatus.certificate ? 'pointer' : 'not-allowed', fontFamily: FONT,
               }}>
                 {labCertStatus.certificate ? '⬇ Get lab certificate' : 'Locked'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Mini-project report card (MED23CL202) ──
+            Opens the step-by-step report builder (report/ReportBuilder.jsx).
+            Signed-in students only: the report is saved with their account. */}
+        {labCertStatus && onOpenReport && (
+          <div style={{
+            background: D.surface, border: `1px solid ${D.border}`,
+            borderRadius: 12, padding: '16px 20px', marginBottom: 26,
+            display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+          }}>
+            <div style={{ fontSize: 26 }}>📄</div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Mini-Project Report · MED23CL202</div>
+              <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
+                {isGuest
+                  ? 'Sign in with your roll number to build your report. It is saved with your account, so you can continue on any device.'
+                  : 'Build your report step by step from your working project, then download it as a PDF. Your work is saved as you go.'}
+              </div>
+            </div>
+            {isGuest ? (
+              <button onClick={onRequestLogin} style={{ background: 'transparent', border: `1px solid ${D.border}`, color: D.ink, borderRadius: 8, padding: '9px 16px', fontSize: 13.5, cursor: 'pointer', fontFamily: FONT }}>
+                Sign in
+              </button>
+            ) : (
+              <button onClick={onOpenReport} style={{
+                background: D.amber, color: '#111A2E', border: 'none', borderRadius: 8,
+                padding: '9px 18px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: FONT,
+              }}>
+                Open report
               </button>
             )}
           </div>

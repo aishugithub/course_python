@@ -55,10 +55,10 @@ const STUDENTS_SHEET = 'Students';   // RollNo | Password | Name | Batch | Email
 const PROGRESS_SHEET = 'Progress';   // RollNo | CourseId | UnitId | CompletedAt
 const TIMEZONE       = 'Asia/Kolkata';
 
-//  MARKS live in a BRAND NEW, SEPARATE Google Sheet (never a course backend).
-//  Create it, import Marks_template.csv into a tab named `Marks`, paste its ID
-//  here, and type marks in it by hand each week. The dashboard only READS it.
-const MARKS_SPREADSHEET_ID = '1ZbQhvnjrjKQ_ZkE0PhzeiWbzIYZmtUmlGZn5tlS7Dg0';  // your marks workbook
+//  MARKS come straight from each student's progress in the Python backend —
+//  NO separate marks sheet. Leave this blank. (Only if you ever want manual
+//  overrides or due-date penalties again, paste a workbook id here.)
+const MARKS_SPREADSHEET_ID = '';
 const MARKS_TAB    = 'Marks';      // OVERRIDES (wide): RollNo | Name | Exp1 … Exp10 | MiniProject  (blank = use auto)
 const DUEDATES_TAB = 'DueDates';   // two columns: Experiment | DueDate  (Experiment = 1..10 or MP; date YYYY-MM-DD)
 
@@ -68,7 +68,8 @@ const DUEDATES_TAB = 'DueDates';   // two columns: Experiment | DueDate  (Experi
 //  per-stage weights live on LAB_STAGE_TEMPLATE below and sum to 10. Lateness
 //  removes LATE_PCT_PER_DAY of the earned mark for each day past that
 //  experiment's due date, and it can fall all the way to zero (LATE_FLOOR=0).
-//  Any non-blank value you type in the Marks tab OVERRIDES the auto mark.
+//  With no marks workbook (the default) there are no due dates, so no penalty:
+//  the mark is simply the weighted completion out of 10.
 const LATE_PCT_PER_DAY = 0.10;   // 10% of the earned mark, per day late
 const LATE_FLOOR       = 0.00;   // lowest multiplier (0 => mark can reach zero)
 
@@ -140,23 +141,23 @@ COURSES.forEach(function (c) {
 //  shape, give its stages their own weights; the maths normalises to /10.
 const LAB_STAGE_TEMPLATE = [
   { id: 'p1_algo', label: 'P1 · Algorithm', weight: 1.5 },
-  { id: 'p1_flow', label: 'P1 · Flowchart', weight: 0, optional: true },
+  { id: 'p1_flow', label: 'P1 · Flowchart (opt.)', weight: 0, optional: true },
   { id: 'p1_prog', label: 'P1 · Program',   weight: 3.5 },
   { id: 'p2_algo', label: 'P2 · Algorithm', weight: 1.5 },
-  { id: 'p2_flow', label: 'P2 · Flowchart', weight: 0, optional: true },
+  { id: 'p2_flow', label: 'P2 · Flowchart (opt.)', weight: 0, optional: true },
   { id: 'p2_prog', label: 'P2 · Program',   weight: 3.5 },
 ];
 const LAB_EXPERIMENTS = [
   { expId: 'UnitLAB1',  no: '1',  co: 'CO1',     short: 'Exp 1',  title: 'Data Types, Operators & Conditional Statements', built: true,  stages: LAB_STAGE_TEMPLATE },
   { expId: 'UnitLAB2',  no: '2',  co: 'CO1',     short: 'Exp 2',  title: 'Loops, Collections & Functions',                 built: true,  stages: LAB_STAGE_TEMPLATE },
-  { expId: 'UnitLAB3',  no: '3',  co: 'CO2',     short: 'Exp 3',  title: 'Classes, Objects & Encapsulation',               built: false, stages: [] },
-  { expId: 'UnitLAB4',  no: '4',  co: 'CO2',     short: 'Exp 4',  title: 'Inheritance & Polymorphism',                     built: false, stages: [] },
-  { expId: 'UnitLAB5',  no: '5',  co: 'CO3',     short: 'Exp 5',  title: 'Reading & Writing Text Files',                   built: false, stages: [] },
-  { expId: 'UnitLAB6',  no: '6',  co: 'CO3',     short: 'Exp 6',  title: 'File Operations & CSV Records',                  built: false, stages: [] },
-  { expId: 'UnitLAB7',  no: '7',  co: 'CO4',     short: 'Exp 7',  title: 'Exception Handling: try / except',               built: false, stages: [] },
-  { expId: 'UnitLAB8',  no: '8',  co: 'CO4',     short: 'Exp 8',  title: 'raise, finally & User-defined Exceptions',       built: false, stages: [] },
-  { expId: 'UnitLAB9',  no: '9',  co: 'CO5',     short: 'Exp 9',  title: 'Data Analysis with Pandas',                      built: false, stages: [] },
-  { expId: 'UnitLAB10', no: '10', co: 'CO5',     short: 'Exp 10', title: 'Visualization: Matplotlib & Seaborn',            built: false, stages: [] },
+  { expId: 'UnitLAB3',  no: '3',  co: 'CO2',     short: 'Exp 3',  title: 'Classes, Objects & Encapsulation',               built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB4',  no: '4',  co: 'CO2',     short: 'Exp 4',  title: 'Inheritance & Polymorphism',                     built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB5',  no: '5',  co: 'CO3',     short: 'Exp 5',  title: 'Reading & Writing Text Files',                   built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB6',  no: '6',  co: 'CO3',     short: 'Exp 6',  title: 'File Operations & CSV Records',                  built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB7',  no: '7',  co: 'CO4',     short: 'Exp 7',  title: 'Exception Handling: try / except',               built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB8',  no: '8',  co: 'CO4',     short: 'Exp 8',  title: 'raise, finally & User-defined Exceptions',       built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB9',  no: '9',  co: 'CO5',     short: 'Exp 9',  title: 'Data Analysis with Pandas',                      built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB10', no: '10', co: 'CO5',     short: 'Exp 10', title: 'Visualization: Matplotlib & Seaborn',            built: true,  stages: LAB_STAGE_TEMPLATE },
   { expId: 'UnitLABMP', no: '—',  co: 'CO1–CO5', short: 'Mini',   title: 'Mini-Project — Final Assembly',                  built: false, stages: [] },
 ];
 
@@ -224,18 +225,19 @@ const CRUCIBLE = {
 //    track      – the letter of their furthest track ('' if none yet)
 //    when       – readable timestamp of that furthest step (or the claim)
 //    perTrack   – { A:2, C:4, … } furthest rung reached in each track touched
-function crucibleStatusFor(done) {
+function crucibleStatusFor(done, expId) {
+  expId = expId || CRUCIBLE.expId;
   //  Map each level id to its rung number once (spark→1, flame→2, forge→3, temper→4).
   const rungOf = {};
   CRUCIBLE.levels.forEach(function (lv, i) { rungOf[lv.id] = i + 1; });
 
   //  Did they CLAIM the whole checkpoint? onUnitComplete() writes the plain id.
-  const claimed     = !!done[CRUCIBLE.expId];
-  const claimedWhen = done[CRUCIBLE.expId] || '';
+  const claimed     = !!done[expId];
+  const claimedWhen = done[expId] || '';
 
   //  Walk every "UnitLAB2_5@<TRACK>_<level>" row this student owns, tracking the
   //  furthest rung overall and the furthest rung within each track.
-  const prefix   = CRUCIBLE.expId + '@';       // "UnitLAB2_5@"
+  const prefix   = expId + '@';                // "UnitLAB2_5@"
   let bestRung = 0, bestTrack = '', bestWhen = '';
   const perTrack = {};                          // trackKey -> furthest rung there
   Object.keys(done).forEach(function (u) {
@@ -567,12 +569,49 @@ function getGeneralData() {
 //  The 59 roster students (reg-no order): per-experiment status + timestamp,
 //  plus marks from the separate marks sheet. Reads the PYTHON backend.
 // ----------------------------------------------------------------------------
+//  The five mini-project crucibles, marked alongside the 10 experiments.
+//  Mark = furthest level reached in any track × 2.5  (Spark 2.5 · Flame 5 ·
+//  Forge 7.5 · Temper 10); claiming the checkpoint = 10.
+const MINI_PROJECTS = [
+  { expId: 'UnitLAB2_5',  short: 'MP1', co: 'Exp 1&2',  title: 'Mini-Project 1 (built on Exp 1 & 2)' },
+  { expId: 'UnitLAB4_5',  short: 'MP2', co: 'Exp 3&4',  title: 'Mini-Project 2 (built on Exp 3 & 4)' },
+  { expId: 'UnitLAB6_5',  short: 'MP3', co: 'Exp 5&6',  title: 'Mini-Project 3 (built on Exp 5 & 6)' },
+  { expId: 'UnitLAB8_5',  short: 'MP4', co: 'Exp 7&8',  title: 'Mini-Project 4 (built on Exp 7 & 8)' },
+  { expId: 'UnitLAB10_5', short: 'MP5', co: 'Exp 9&10', title: 'Mini-Project 5 (built on Exp 9 & 10)' },
+];
+
+function miniProjectColumns() {
+  return MINI_PROJECTS.map(function (m) {
+    return { expId: m.expId, no: m.short, co: m.co, short: m.short, title: m.title, built: true, isMini: true,
+             stages: CRUCIBLE.levels.map(function (l) { return { id: l.id, label: l.label }; }) };
+  });
+}
+
+function miniProjectMark(mp, done) {
+  const cs = crucibleStatusFor(done, mp.expId);
+  const n = CRUCIBLE.levels.length;
+  const mark = Math.round((cs.rung / n) * 10 * 10) / 10;
+  return {
+    status: cs.rung >= n ? 'done' : (cs.rung > 0 ? 'partial' : 'none'),
+    whenDisplay: cs.started ? cs.when : '',
+    stagesDone: cs.rung, stagesTotal: n,
+    built: true, base10: mark, daysLate: 0,
+    autoMark: mark, override: '', finalMark: mark, dueSet: false,
+    track: cs.track,
+    stages: CRUCIBLE.levels.map(function (l, i) {
+      return { label: l.label + (cs.track ? ' (Track ' + cs.track + ')' : ''), done: cs.rung > i, when: '' };
+    }),
+  };
+}
+
 function getMedData() {
   const ss = SpreadsheetApp.openById(PYTHON_SHEET_ID);
   const progress  = buildProgressIndex(ss, 'course_python');
   const overrides = readMarks();        // manual overrides from the Marks tab (wide)
   const dueDates  = readDueDates();     // expId -> Date, from the DueDates tab
-  const exps      = resolveExperiments(progress);   // auto-detect which are built
+  const exps      = resolveExperiments(progress)    // auto-detect which are built
+                      .filter(function (e) { return e.expId !== 'UnitLABMP'; });   // replaced by the 5 mini-projects
+  const miniCols  = miniProjectColumns();
 
   //  Attach due-date info to each experiment: the formatted date, whether a due
   //  date is set, and whether the deadline has already passed. This lets the UI
@@ -608,6 +647,7 @@ function getMedData() {
         finalMark: finalMark, dueSet: !!dueDates[exp.expId], stages: stages,
       };
     });
+    miniCols.forEach(function (mp) { experiments.push(miniProjectMark(mp, done)); });
     return { rollNo: stu.rollNo, name: stu.name,
              signedUp: !!progress[normalizeId(stu.rollNo)], experiments: experiments };
   });
@@ -647,9 +687,9 @@ function getMedData() {
 
   return {
     generatedAt:  Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm'),
-    labExperiments: exps,               // resolved (auto-detected) built flags
+    labExperiments: exps.concat(miniCols),   // 10 experiments + 5 mini-projects
     students:     students,
-    marksLinked:  marksSheetConfigured(),
+    marksLinked:  true,                 // marks are computed from progress — always available
     dueDatesCount: Object.keys(dueDates).length,
     //  Everything the new "Mini-Project" sub-tab in Med.html needs.
     crucible: {
