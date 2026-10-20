@@ -41,6 +41,7 @@ const COURSE_CONFIG = {
     open:         true,
     academicYear: "2026–2027",
     faculty:      "Ms. Aishwarya S",
+    hod:          "Dr. Nandakumar",     // Head of the Department, on the bonafide certificate
   },
 
   hook: {

@@ -181,7 +181,7 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
     P(['Certified that this is the bonafide record of the mini-project titled “', { text: title, bold: true }, '” carried out by the above student in the course ', { text: 'MED23CL202 – Python Programming Laboratory', bold: true }, ` during the academic year ${cfg.academicYear || '________'}.`], { alignment: 'justify', lineHeight: 1.5 }),
     { columns: [
       { stack: [line, { text: 'Faculty in-charge', bold: true }, { text: cfg.faculty || 'Name & designation', fontSize: 9.5 }] },
-      { stack: [line, { text: 'Head of the Department', bold: true }, { text: 'Name & seal', fontSize: 9.5 }], alignment: 'right' },
+      { stack: [line, { text: 'Head of the Department', bold: true }, { text: cfg.hod || '', fontSize: 9.5 }], alignment: 'right' },
     ], margin: [0, 70, 0, 0] },
     { text: 'Submitted for the Practical Examination held on ______________________', margin: [0, 40, 0, 0] },
     { columns: [
@@ -192,12 +192,9 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
   );
 
   // Declaration + acknowledgement
-  const aiLine = d.reflect.aiUsed === 'yes'
-    ? ` I used an AI tool as described under “Use of AI tools” in Section 6, and I understand and can explain all the code in this report.`
-    : d.reflect.aiUsed === 'no' ? ' I did not use any AI tool to write this project.' : '';
   content.push(
     { text: 'DECLARATION', alignment: 'center', bold: true, fontSize: 15, color: NAVY, margin: [0, 0, 0, 16] },
-    P(`I, ${student.name || '________'} (Reg. No. ${regNo}), declare that this mini-project report titled “${title}” is my own work, done as part of MED23CL202 – Python Programming Laboratory under the guidance of ${cfg.faculty || 'my faculty in-charge'}. The program code and results in this report were written, run and tested by me. Any code, data or idea taken from another source is credited in the References.${aiLine}`, { alignment: 'justify', lineHeight: 1.5 }),
+    P(`I, ${student.name || '________'} (Reg. No. ${regNo}), declare that this mini-project report titled “${title}” is my own work, done as part of MED23CL202 – Python Programming Laboratory under the guidance of ${cfg.faculty || 'my faculty in-charge'}. The program code and results in this report were written, run and tested by me. Any code, data or idea taken from another source is credited in the References.`, { alignment: 'justify', lineHeight: 1.5 }),
     { columns: [{ text: 'Place: Chennai\nDate: ______________' }, { text: '\n______________________\nSignature of the student', alignment: 'right' }], margin: [0, 30, 0, 0] },
   );
   if (filled(d.ack)) {
@@ -305,7 +302,10 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
     P('This program is a student learning project. It is not a medical device and must not be used to make decisions about real patients.', { italics: true }));
   if (filled(r.conclusion)) reflSection('Conclusion', P(clean(r.conclusion)));
   if (r.future.some(filled)) reflSection('Future scope', { ul: r.future.filter(filled).map(x => ({ text: clean(x), style: 'body' })), margin: [10, 0, 0, 8] });
-  reflSection('Use of AI tools', P(r.aiUsed === 'yes' ? (clean(r.aiWhat) || 'I used an AI tool.') : r.aiUsed === 'no' ? 'I did not use any AI tool.' : '—'));
+  // The AI answer is one plain line at the end of the reflection, not its own numbered heading.
+  if (r.aiUsed) {
+    refl.push(P([{ text: 'Use of AI tools: ', bold: true }, r.aiUsed === 'yes' ? (clean(r.aiWhat) || 'I used an AI tool.') : 'I did not use any AI tool.'], { margin: [0, 8, 0, 6] }));
+  }
   content.push(...refl);
 
   // 7. References
