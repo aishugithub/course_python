@@ -5,7 +5,7 @@ import { loadReport, saveReport, submitReportSummary } from './reportApi.js';
 import { STEPS, newDraft, upgradeDraft, missingFor, stepStatus, codeHash } from './reportModel.js';
 import { TitleStep, ProblemStep, ObjectivesStep, CodeStep } from './ReportSteps.jsx';
 import ConceptsStep from './ConceptsStep.jsx';
-import { RunningStep, TestingStep, GrewStep, ReflectStep, FinishStep } from './MoreSteps.jsx';
+import { RunningStep, TestingStep, ReflectStep, FinishStep } from './MoreSteps.jsx';
 import { analyseCode } from './analyzer.js';
 import { loadLabProgress } from './progress.js';
 
@@ -64,12 +64,15 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!student?.token) { setPhase('error'); setLoadError('session'); return; }
+      // A fresh sign-in always carries a token once the report's Code.gs is deployed,
+      // so a missing token (or "Unknown action") means the backend is still the old one.
+      if (!student?.token) { setPhase('error'); setLoadError('server'); return; }
       const r = await loadReport(student.token);
       if (cancelled) return;
       const cache = readCache(student.rollNo);
       if (!r.success) {
         if (r.code === 'SESSION') { setPhase('error'); setLoadError('session'); return; }
+        if (r.message === 'Unknown action') { setPhase('error'); setLoadError('server'); return; }
         if (cache?.draft) {        // offline: carry on from this device's copy
           start(upgradeDraft(cache.draft), cache.baseVersion || 0, !!cache.dirty);
           setSave({ state: 'offline', at: null, message: r.message });
@@ -207,7 +210,7 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
   }
   function keepThisCopy() { dirty.current = true; flush(true); }
 
-  const codeKey = draft ? codeHash(draft.files.map(f => f.id + ' ' + f.code).join('')) : '';
+  const codeKey = draft ? codeHash(draft.files.map(f => f.id + '\u0000' + f.code).join('\u0001')) : '';
   const needsAnalysis = draft && (draft.step === 'concepts' || draft.step === 'finish');
   useEffect(() => {
     if (!needsAnalysis || analysedHash.current === codeKey) return;
@@ -220,7 +223,7 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
     return () => { live = false; };
   }, [needsAnalysis, codeKey]);
 
-  const needsLab = draft && (draft.step === 'grew' || draft.step === 'finish');
+  const needsLab = draft && draft.step === 'finish';
   async function fetchLab() {
     setLab(l => ({ ...l, state: l.status ? 'ready' : 'loading' }));
     try {
@@ -267,9 +270,11 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
   if (phase === 'error') {
     return (
       <Centered>
-        <div style={{ color: D.ink, fontSize: 17, fontWeight: 700 }}>{loadError === 'session' ? 'Please sign in again' : 'Couldn’t open your report'}</div>
+        <div style={{ color: D.ink, fontSize: 17, fontWeight: 700 }}>{loadError === 'session' ? 'Please sign in again' : loadError === 'server' ? 'The report isn’t ready on the server yet' : 'Couldn’t open your report'}</div>
         <div style={{ color: D.inkSoft, fontSize: 14, maxWidth: 420, lineHeight: 1.6 }}>
-          {loadError === 'session' ? 'Your report is saved with your Foothold account. Sign in again to open it.' : loadError}
+          {loadError === 'session' ? 'Your report is saved with your Foothold account. Sign in again to open it.'
+            : loadError === 'server' ? 'Foothold’s server hasn’t been updated for the mini-project report yet. Please tell your faculty; nothing is wrong with your account.'
+            : loadError}
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           {loadError === 'session'
@@ -392,7 +397,6 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
             {step.id === 'concepts' && <ConceptsStep {...props} />}
             {step.id === 'running' && <RunningStep {...props} />}
             {step.id === 'testing' && <TestingStep {...props} />}
-            {step.id === 'grew' && <GrewStep {...props} progress={lab} />}
             {step.id === 'reflect' && <ReflectStep {...props} />}
             {step.id === 'finish' && <FinishStep {...props} cert={lab} onDownload={download} downloading={downloading} downloadError={downloadError} goTo={goTo} />}
           </div>

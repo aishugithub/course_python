@@ -7,11 +7,10 @@
 // ============================================================
 
 import COURSE_CONFIG from '../../../config/course.config.js';
-import { CONCEPTS, CONCEPT, SCREENS, colorOf, conceptState, taggedLines, toRanges, rangeText, whereText, questionFor, usedCount } from './concepts.js';
+import { CONCEPTS, CONCEPT, SCREENS, colorOf, conceptState, taggedLines, toRanges, rangeText, whereText, usedCount } from './concepts.js';
 import { checkConcept } from './analyzer.js';
-import { filled, testDone } from './reportModel.js';
+import { filled, testDone, shotCaption } from './reportModel.js';
 import { imageData } from './images.js';
-import { fmtDate } from './MoreSteps.jsx';
 
 const BASE = import.meta.env.BASE_URL;
 const FONT_FILES = {
@@ -61,8 +60,8 @@ async function getPdfMake() {
 }
 
 // ── small builders ──
-const H1 = (text) => ({ text, style: 'h1', tocItem: true, tocStyle: 'tocH1' });
-const H2 = (text) => ({ text, style: 'h2', tocItem: true, tocStyle: 'tocH2', tocMargin: [14, 0, 0, 0] });
+const H1 = (text) => ({ text, style: 'h1', tocItem: true, tocStyle: 'tocH1', headlineLevel: 1 });
+const H2 = (text) => ({ text, style: 'h2', tocItem: true, tocStyle: 'tocH2', tocMargin: [14, 0, 0, 0], headlineLevel: 2 });
 const P = (text, extra = {}) => ({ text: text || '', style: 'body', ...extra });
 const clean = (s) => String(s || '').replace(/\t/g, '    ').replace(/\r/g, '');
 const tableLayout = {
@@ -133,13 +132,18 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
   const today = new Date();
   const monthYear = today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   let figNo = 0;
+  const figureOf = {};      // fileId -> its figure number, once printed
   const figure = (shot) => {
+    if (figureOf[shot.fileId]) {
+      return { text: `See Figure ${figureOf[shot.fileId]}: ${clean(shotCaption(shot)) || 'Screenshot'}.`, italics: true, fontSize: 9.5, color: GREY, margin: [0, 0, 0, 8] };
+    }
     const img = shotImages[shot.fileId];
     figNo += 1;
+    figureOf[shot.fileId] = figNo;
     return {
       stack: [
         img ? { image: img, fit: [440, 300], alignment: 'center' } : { text: '[screenshot could not be loaded]', italics: true, color: GREY, alignment: 'center' },
-        { text: `Figure ${figNo}: ${clean(shot.caption) || 'Screenshot'}`, italics: true, fontSize: 9.5, alignment: 'center', margin: [0, 4, 0, 0] },
+        { text: `Figure ${figNo}: ${clean(shotCaption(shot)) || 'Screenshot'}`, italics: true, fontSize: 9.5, alignment: 'center', margin: [0, 4, 0, 0] },
       ],
       margin: [0, 6, 0, 12], unbreakable: true,
     };
@@ -189,7 +193,7 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
 
   // Declaration + acknowledgement
   const aiLine = d.reflect.aiUsed === 'yes'
-    ? ` I used an AI tool as described in Section 7.5, and I understand and can explain all the code in this report.`
+    ? ` I used an AI tool as described under “Use of AI tools” in Section 6, and I understand and can explain all the code in this report.`
     : d.reflect.aiUsed === 'no' ? ' I did not use any AI tool to write this project.' : '';
   content.push(
     { text: 'DECLARATION', alignment: 'center', bold: true, fontSize: 15, color: NAVY, margin: [0, 0, 0, 16] },
@@ -264,11 +268,8 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
         : { text: `Not confirmed by Foothold: Python’s check could not find ${c.label.toLowerCase()} in these lines.${d.concepts[id]?.keep ? ' The student kept the tag.' : ''}`, fontSize: 9, italics: true, color: GREY, margin: [0, 0, 0, 4] });
       for (const shot of d.shots.filter(sh => sh.concepts.includes(id))) content.push(figure(shot));
     }
-    const ans = d.answers[s.id] || {};
-    const q = [];
-    if (s.id === 'e56' && ans.place) q.push({ text: [{ text: 'My program saves its file in: ', bold: true }, ans.place], style: 'body' });
-    if (filled(ans.text)) q.push({ text: [{ text: questionFor(s.id, d) + ' ', italics: true }, clean(ans.text)], style: 'body' });
-    if (q.length) content.push({ stack: q, margin: [8, 4, 0, 8] });
+    const place = s.id === 'e56' && d.answers?.e56?.place;
+    if (place) content.push({ text: [{ text: 'My program saves its file in: ', bold: true }, place], style: 'body', margin: [8, 4, 0, 8] });
     for (const id of s.concepts.filter(x => conceptState(d, x) === 'notused' && filled(d.concepts[x]?.note))) {
       content.push(P([{ text: `${CONCEPT[id].label} (not used): `, bold: true }, clean(d.concepts[id].note)]));
     }
@@ -286,35 +287,29 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
   else loose.forEach(s => content.push(figure(s)));
 
   // 5. Testing
-  const tests = d.tests.filter(t => filled(t.input) || filled(t.expected) || filled(t.actual));
+  const tests = d.tests.filter(t => filled(t.input) || filled(t.actual));
   content.push(H1('5. TESTING'), tests.length
-    ? table(['No.', 'Type', 'Input / action', 'Expected', 'What happened', 'Result'], tests.map((t, i) => [String(i + 1), t.kind || '', clean(t.input), clean(t.expected), clean(t.actual), { text: t.result || '', bold: true, color: t.result === 'Fail' ? '#A32D2D' : '#1F6B3A' }]), [20, 62, '*', '*', '*', 36])
+    ? table(['No.', 'Type', 'What I tried', 'What happened', 'Result'], tests.map((t, i) => [String(i + 1), t.kind || '', clean(t.input), clean(t.actual), { text: t.result || '', bold: true, color: t.result === 'Fail' ? '#A32D2D' : '#1F6B3A' }]), [20, 70, '*', '*', 36])
     : P('No tests were recorded.', { italics: true, color: GREY }));
   if (tests.length) content.push(P(`${tests.filter(testDone).length} tests recorded; ${tests.filter(t => t.result === 'Pass').length} passed, ${tests.filter(t => t.result === 'Fail').length} failed.`, { fontSize: 9.5, color: GREY }));
 
-  // 6. How it grew
-  content.push(H1('6. HOW THE PROJECT GREW'), table(['Exp', 'Completed in Foothold', 'What I added to my project'],
-    Array.from({ length: 10 }, (_, i) => [String(i + 1), lab?.expDates?.[i + 1] ? fmtDate(lab.expDates[i + 1]) : '—', clean(d.grew[i + 1]) || '—']), [26, 90, '*']));
-
-  // 7. Reflection
+  // 6. Reflection (every part is optional, so only what was written is shown)
   const r = d.reflect;
-  content.push(
-    H1('7. REFLECTION'),
-    H2('7.1 The hardest bug'),
-    kvTable([['What went wrong', clean(r.saw)], ['How I found the cause', clean(r.found)], ['How I fixed it', clean(r.fixed)]]),
-    H2('7.2 Limitations and safety'),
-    P(clean(r.limits)),
-    P('This program is a student learning project. It is not a medical device and must not be used to make decisions about real patients.', { italics: true }),
-    H2('7.3 Conclusion'),
-    P(clean(r.conclusion)),
-    H2('7.4 Future scope'),
-    r.future.some(filled) ? { ul: r.future.filter(filled).map(x => ({ text: clean(x), style: 'body' })), margin: [10, 0, 0, 8] } : P('—'),
-    H2('7.5 Use of AI tools'),
-    P(r.aiUsed === 'yes' ? clean(r.aiWhat) : r.aiUsed === 'no' ? 'I did not use any AI tool.' : '—'),
-  );
+  const refl = [H1('6. REFLECTION')];
+  let rn = 0;
+  const reflSection = (title, ...body) => { rn += 1; refl.push(H2(`6.${rn} ${title}`), ...body); };
+  if (filled(r.saw) || filled(r.found) || filled(r.fixed)) {
+    reflSection('The hardest bug', kvTable([['What went wrong', clean(r.saw)], ['How I found the cause', clean(r.found)], ['How I fixed it', clean(r.fixed)]]));
+  }
+  reflSection('Limitations and safety', ...(filled(r.limits) ? [P(clean(r.limits))] : []),
+    P('This program is a student learning project. It is not a medical device and must not be used to make decisions about real patients.', { italics: true }));
+  if (filled(r.conclusion)) reflSection('Conclusion', P(clean(r.conclusion)));
+  if (r.future.some(filled)) reflSection('Future scope', { ul: r.future.filter(filled).map(x => ({ text: clean(x), style: 'body' })), margin: [10, 0, 0, 8] });
+  reflSection('Use of AI tools', P(r.aiUsed === 'yes' ? (clean(r.aiWhat) || 'I used an AI tool.') : r.aiUsed === 'no' ? 'I did not use any AI tool.' : '—'));
+  content.push(...refl);
 
-  // 8. References
-  content.push(H1('8. REFERENCES'), ...d.refs.filter(filled).map((x, i) => ({ text: `[${i + 1}]  ${clean(x)}`, style: 'body', margin: [0, 0, 0, 4] })));
+  // 7. References
+  content.push(H1('7. REFERENCES'), ...d.refs.filter(filled).map((x, i) => ({ text: `[${i + 1}]  ${clean(x)}`, style: 'body', margin: [0, 0, 0, 4] })));
 
   // Appendix A
   onProgress('Adding your code…');
@@ -330,6 +325,8 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
   const docDefinition = {
     pageSize: 'A4',
     pageMargins: [64, 56, 52, 60],
+    // A heading that would be the last thing on a page moves to the next page with its text.
+    pageBreakBefore: (node, followingOnPage) => !!node.headlineLevel && followingOnPage.length === 0,
     info: { title: `${title} – Mini-Project Report`, author: `${student.name || ''} (${regNo})`, subject: 'MED23CL202 Python Programming Laboratory' },
     defaultStyle: { font: 'Serif', fontSize: 11, lineHeight: 1.25 },
     styles: {
@@ -426,7 +423,7 @@ export function vivaSummary(d, student, analysis, lab) {
     notConfirmed: used.filter(c => checks[c.id].state !== 'ok').map(c => `${c.code} (${whereText(d, c.id)})`).join('; '),
     keyLines: used.map(c => `${c.code}: ${whereText(d, c.id)}`).join('\n'),
     hardestBug: [d.reflect.saw, d.reflect.fixed].filter(filled).join(' → '),
-    tests: `${d.tests.filter(testDone).length} recorded, ${d.tests.filter(t => t.result === 'Pass').length} pass, ${d.tests.filter(t => t.result === 'Fail').length} fail`,
+    tests: d.tests.filter(testDone).map(t => `${t.kind ? t.kind + ': ' : ''}${t.input} -> ${t.actual} (${t.result})`).join('\n'),
     certificate: s ? `${s.eligible ? 'completion' : 'progress'} ${s.itemsDone}/${s.itemsTotal}${s.feedbackDone ? '' : ' (feedback pending)'}` : 'not loaded',
     minutesPerStep: Object.entries(d.meta.seconds || {}).map(([k, v]) => `${k} ${Math.round(v / 60)}`).join(', '),
     pastedShare: typed + pasted ? `${Math.round((pasted / (typed + pasted)) * 100)}% of ${typed + pasted} characters pasted` : '',
