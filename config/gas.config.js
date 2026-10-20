@@ -5,4 +5,6 @@
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbz0MRvmvi1FYHH1B_1hm29v_RjwY4mrDGlWLGRhAivfy4tZ9kDJrJnzUPNYZg21WMQh/exec";
 
-export default GAS_URL;
+// Local testing only: `VITE_GAS_URL=http://localhost:8787 npx vite` points the
+// app at a stand-in backend instead. Builds for GitHub Pages never set it.
+export default import.meta.env.VITE_GAS_URL || GAS_URL;

@@ -1,3 +1,5 @@
+> **Update (Oct 2026):** No marks workbook and no due dates are needed any more. Marks are calculated straight from student progress: 10 experiments (Algorithm 1.5 + Program 3.5 per program; flowchart optional) + 5 mini-projects (Spark 2.5 · Flame 5 · Forge 7.5 · Temper/claimed 10). Skip the Marks/DueDates steps below.
+
 # Teacher Dashboard — Setup Checklist
 
 A read-only dashboard that reads your Foothold course sheets (Python + COA) and
