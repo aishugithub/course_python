@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { DARK as D, FONT, MONO } from '../brand.js';
 import { Question, TextField, SmallButton, Chips } from './ReportSteps.jsx';
 import { CONCEPT, CONCEPTS, conceptState, usedCount } from './concepts.js';
-import { STEPS, MIN_TESTS, TEST_KINDS, newTest, testDone, missingFor, filled } from './reportModel.js';
+import { STEPS, MIN_TESTS, TEST_IDEAS, MIN_SHOTS, SHOT_IDEAS, newTest, testDone, missingFor, filled } from './reportModel.js';
 import { shrinkImage, rememberImage, imageData } from './images.js';
 import { uploadReportImage, deleteReportImage } from './reportApi.js';
 
@@ -27,7 +27,7 @@ export function RunningStep({ draft, edit, track, student }) {
         const r = await uploadReportImage(student.token, dataUrl, files[i].name);
         if (!r.success) { setError(r.message || 'Upload failed.'); break; }
         rememberImage(r.fileId, dataUrl);
-        edit(d => ({ ...d, shots: [...d.shots, { fileId: r.fileId, caption: '', concepts: [] }] }));
+        edit(d => ({ ...d, shots: [...d.shots, { fileId: r.fileId, idea: '', caption: '', concepts: [] }] }));
       } catch (e) {
         setError(e.message || 'Upload failed.');
         break;
@@ -56,16 +56,26 @@ export function RunningStep({ draft, edit, track, student }) {
   return (
     <>
       <Block>
-        <Question hint="Run your program in Colab and take screenshots of it working: some output, an error message your program handles, the file it saves, a chart. Keep Colab’s title bar (your notebook named with your register number) in each screenshot.">
+        <Question hint={`Run your program in Colab and take screenshots. Here are five ideas; add at least ${MIN_SHOTS}. Keep Colab’s title bar (your notebook named with your register number) in each one.`}>
           Show your program running
         </Question>
+        <div style={{ display: 'grid', gap: 4, margin: '4px 0 12px' }}>
+          {SHOT_IDEAS.map(idea => {
+            const done = draft.shots.some(s => s.idea === idea);
+            return (
+              <div key={idea} style={{ color: done ? D.green : D.inkSoft, fontSize: 13.5 }}>
+                {done ? '✓' : '○'} {idea}
+              </div>
+            );
+          })}
+        </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <input ref={input} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => addFiles(e.target.files)} />
           <button type="button" disabled={!!busy || draft.shots.length >= MAX_SHOTS} onClick={() => input.current?.click()} style={{
             background: D.amber, color: '#111A2E', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13.5, fontWeight: 700,
             cursor: busy ? 'wait' : 'pointer', fontFamily: FONT, opacity: draft.shots.length >= MAX_SHOTS ? 0.5 : 1,
           }}>+ Add screenshots</button>
-          <div style={{ color: D.inkMuted, fontSize: 12.5 }}>{busy || `${draft.shots.length} of up to ${MAX_SHOTS}. Images are shrunk before upload.`}</div>
+          <div style={{ color: D.inkMuted, fontSize: 12.5 }}>{busy || `${draft.shots.length} added (at least ${MIN_SHOTS}). Images are shrunk before upload.`}</div>
         </div>
         {error && <div style={{ color: D.red, fontSize: 13, marginTop: 8 }}>{error}</div>}
       </Block>
@@ -76,11 +86,14 @@ export function RunningStep({ draft, edit, track, student }) {
             <Thumb token={student.token} fileId={s.fileId} />
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ color: D.inkMuted, fontFamily: MONO, fontSize: 12, marginBottom: 6 }}>SCREENSHOT {i + 1}</div>
+              <div style={{ color: D.ink, fontSize: 13.5, marginBottom: 2 }}>What does it show?</div>
+              <Chips options={[...SHOT_IDEAS, 'Something else']} value={s.idea} onPick={v => setShot(i, { idea: v })} />
               <TextField value={s.caption} onValue={v => setShot(i, { caption: v })} track={track} maxLength={160}
-                placeholder="Caption, e.g. Entering 150 °F shows my error message instead of crashing" ariaLabel={`Caption for screenshot ${i + 1}`} />
+                placeholder={s.idea && s.idea !== 'Something else' ? `Caption (optional): “${s.idea}” is used if you leave this empty` : 'Caption, e.g. Entering 150 °F shows my error message'}
+                ariaLabel={`Caption for screenshot ${i + 1}`} />
               {usedConcepts.length > 0 && (
                 <>
-                  <div style={{ color: D.inkMuted, fontSize: 12.5, margin: '8px 0 2px' }}>What does it show? (optional; it then appears beside that concept in your report)</div>
+                  <div style={{ color: D.inkMuted, fontSize: 12.5, margin: '8px 0 2px' }}>Optional: which concept does it show? It then appears beside that concept in your report.</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {usedConcepts.map(c => {
                       const on = s.concepts.includes(c.id);
@@ -132,10 +145,15 @@ export function TestingStep({ draft, edit, track }) {
   return (
     <>
       <Block>
-        <Question hint={`At least ${MIN_TESTS} tests. Try a normal value, a value exactly on a limit, text where a number is expected, an impossible value, and anything else your program should handle. Fill in “What happened” only after you run it.`}>
-          How did you test your program?
+        <Question hint={`Here are some ideas. Try at least ${MIN_TESTS} on your program and write what happened.`}>
+          Test your program
         </Question>
-        <div style={{ color: D.inkMuted, fontSize: 12.5 }}>{done} of {tests.length} filled in.</div>
+        <div style={{ display: 'grid', gap: 3, margin: '4px 0 6px' }}>
+          {TEST_IDEAS.map(t => (
+            <div key={t.kind} style={{ color: D.inkSoft, fontSize: 13 }}><b style={{ color: D.ink, fontWeight: 600 }}>{t.kind}:</b> {t.hint}</div>
+          ))}
+        </div>
+        <div style={{ color: D.inkMuted, fontSize: 12.5 }}>{done} done (at least {MIN_TESTS}).</div>
       </Block>
       {tests.map((t, i) => (
         <div key={i} style={{ border: `1px solid ${D.borderSoft}`, borderRadius: 10, padding: 12, marginBottom: 12, background: D.bgDeep }}>
@@ -144,69 +162,26 @@ export function TestingStep({ draft, edit, track }) {
             <select value={t.kind} onChange={e => setTest(i, { kind: e.target.value })} aria-label={`Type of test ${i + 1}`} className="rb-input" style={{
               background: D.bgDeep, color: t.kind ? D.ink : D.inkMuted, border: `1px solid ${D.border}`, borderRadius: 8, padding: '6px 8px', fontSize: 13, fontFamily: FONT,
             }}>
-              <option value="">Type of test (optional)</option>
-              {TEST_KINDS.map(k => <option key={k} value={k}>{k}</option>)}
+              <option value="">Which idea? (optional)</option>
+              {TEST_IDEAS.map(k => <option key={k.kind} value={k.kind}>{k.kind}</option>)}
+              <option value="Other">Other</option>
             </select>
             <div style={{ flex: 1 }} />
             {tests.length > MIN_TESTS && <SmallButton danger onClick={() => edit(d => ({ ...d, tests: d.tests.filter((_, j) => j !== i) }))}>Remove</SmallButton>}
           </div>
-          <div className="rb-test-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 8 }}>
-            <TextField value={t.input} onValue={v => setTest(i, { input: v })} track={track} maxLength={200} placeholder="Input or action, e.g. temperature “abc”" ariaLabel={`Test ${i + 1} input`} />
-            <TextField value={t.expected} onValue={v => setTest(i, { expected: v })} track={track} maxLength={200} placeholder="What should happen" ariaLabel={`Test ${i + 1} expected result`} />
-            <TextField value={t.actual} onValue={v => setTest(i, { actual: v })} track={track} maxLength={200} placeholder="What happened" ariaLabel={`Test ${i + 1} actual result`} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+            <TextField value={t.input} onValue={v => setTest(i, { input: v })} track={track} maxLength={200} placeholder="What I tried, e.g. typed “abc” for the temperature" ariaLabel={`Test ${i + 1}: what you tried`} />
+            <TextField value={t.actual} onValue={v => setTest(i, { actual: v })} track={track} maxLength={200} placeholder="What happened, e.g. it said “Please type a number”" ariaLabel={`Test ${i + 1}: what happened`} />
           </div>
           <div style={{ marginTop: 6 }}>
             <Chips options={['Pass', 'Fail']} value={t.result} onPick={v => setTest(i, { result: t.result === v ? '' : v })} />
           </div>
         </div>
       ))}
-      {tests.length < 15 && <SmallButton onClick={() => edit(d => ({ ...d, tests: [...d.tests, newTest()] }))}>+ Add a test</SmallButton>}
+      {tests.length < 10 && <SmallButton onClick={() => edit(d => ({ ...d, tests: [...d.tests, newTest()] }))}>+ Add a test</SmallButton>}
     </>
   );
 }
-
-// ── Step 8: how it grew ─────────────────────────────────────────────────────
-
-const EXP_TITLES = [
-  'Data types, operators and decisions', 'Loops, collections and functions', 'Classes, objects and encapsulation',
-  'Inheritance and polymorphism', 'Reading and writing text files', 'File operations and CSV records',
-  'Exception handling: try / except', 'raise, finally and user-defined exceptions', 'Data analysis with pandas', 'Charts with Matplotlib and Seaborn',
-];
-
-export function GrewStep({ draft, edit, track, progress }) {
-  return (
-    <>
-      <Block>
-        <Question hint="Your project grew a little after each experiment. In one line each, say what you added to YOUR project that week. Leave a row empty if you added nothing then. Completion dates come from your Foothold e-Lab Record.">
-          How did your project grow?
-        </Question>
-        {progress.state === 'loading' && <div style={{ color: D.inkMuted, fontSize: 12.5 }}>Loading your e-Lab dates…</div>}
-        {progress.state === 'failed' && <div style={{ color: D.amberSoft, fontSize: 12.5 }}>Couldn’t load your e-Lab dates right now. They will be added when the report is downloaded.</div>}
-      </Block>
-      {EXP_TITLES.map((title, i) => {
-        const n = i + 1;
-        const date = progress.expDates?.[n];
-        return (
-          <div key={n} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' }}>
-            <div style={{ width: 220, flexShrink: 0 }}>
-              <div style={{ color: D.ink, fontSize: 13.5, fontWeight: 600 }}>Exp {n}. {title}</div>
-              <div style={{ color: date ? D.green : D.inkMuted, fontSize: 12, fontFamily: MONO, marginTop: 2 }}>{date ? `done ${fmtDate(date)}` : 'not done in Foothold'}</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <TextField value={draft.grew[n]} onValue={v => edit(d => ({ ...d, grew: { ...d.grew, [n]: v } }))} track={track} maxLength={220}
-                placeholder={n === 1 ? 'e.g. Read one patient’s temperature and printed NORMAL or FEVER' : 'What I added to my project'} ariaLabel={`What you added after experiment ${n}`} />
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-export const fmtDate = (iso) => {
-  const d = new Date(iso);
-  return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-};
 
 // ── Step 9: reflection ──────────────────────────────────────────────────────
 
@@ -216,7 +191,8 @@ export function ReflectStep({ draft, edit, track }) {
   return (
     <>
       <Block>
-        <Question hint="Pick the bug that took you longest. Expect a question about it in your viva.">The hardest bug you met</Question>
+        <div style={{ color: D.inkMuted, fontSize: 13, marginBottom: 14 }}>Everything on this page is optional except the AI question at the bottom (one tap). Write as much or as little as you like.</div>
+        <Question hint="Pick the bug that took you longest.">The hardest bug you met</Question>
         <div style={{ display: 'grid', gap: 8 }}>
           <TextField value={r.saw} onValue={v => setR({ saw: v })} track={track} multiline rows={2} maxLength={400} placeholder="What went wrong? e.g. My chart was empty even though the file had data." ariaLabel="What went wrong" />
           <TextField value={r.found} onValue={v => setR({ found: v })} track={track} multiline rows={2} maxLength={400} placeholder="How did you find the cause? e.g. I printed df.head() and saw the temperatures were text." ariaLabel="How you found the cause" />
@@ -287,7 +263,7 @@ export function FinishStep({ draft, edit, track, cert, onDownload, downloading, 
       </Block>
 
       <Block>
-        <Question hint="Optional. A few lines thanking the people who helped you.">Acknowledgement</Question>
+        <Question hint="A few lines thanking the people who helped you.">Acknowledgement</Question>
         <TextField value={draft.ack} onValue={v => edit(d => ({ ...d, ack: v }))} track={track} multiline rows={3} maxLength={700} ariaLabel="Acknowledgement" />
       </Block>
 

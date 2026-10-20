@@ -5,7 +5,7 @@
 //  `schema` lets a later version upgrade older drafts.
 // ============================================================
 
-import { CONCEPTS, SCREENS, conceptState } from './concepts.js';
+import { CONCEPTS, conceptState } from './concepts.js';
 
 export const SCHEMA = 2;
 
@@ -17,17 +17,33 @@ export const STEPS = [
   { id: 'concepts',   label: 'Python concepts' },
   { id: 'running',    label: 'Program running' },
   { id: 'testing',    label: 'Testing' },
-  { id: 'grew',       label: 'How it grew' },
   { id: 'reflect',    label: 'Reflection' },
   { id: 'finish',     label: 'References & download' },
 ];
 
-export const MIN_TESTS = 5;
-export const TEST_KINDS = ['Normal value', 'Boundary value', 'Wrong type (e.g. text for a number)', 'Impossible value', 'Missing or empty file', 'My own exception', 'Other'];
+// Light on purpose (one-credit course): a few suggestions, only a couple required.
+export const MIN_TESTS = 2;
+export const TEST_IDEAS = [
+  { kind: 'Normal value', hint: 'An ordinary input, e.g. a temperature of 98.6' },
+  { kind: 'Boundary value', hint: 'A value exactly on a limit, e.g. 100.4' },
+  { kind: 'Wrong type', hint: 'Text where a number is expected, e.g. “abc”' },
+  { kind: 'Impossible value', hint: 'A value no patient can have, e.g. 0 or 500' },
+  { kind: 'Missing or empty file', hint: 'Run it before any data is saved' },
+  { kind: 'My own exception', hint: 'An input that should raise your own exception' },
+  { kind: 'Menu or choice', hint: 'A wrong menu choice or an unknown name' },
+];
+export const MIN_SHOTS = 2;
+export const SHOT_IDEAS = [
+  'My program running normally',
+  'Wrong input handled with a message (no crash)',
+  'Data saved in the file',
+  'pandas summary of the data',
+  'A chart',
+];
 
 const fileId = () => 'f' + Math.random().toString(36).slice(2, 9);
 export const newFile = (name = 'main.py') => ({ id: fileId(), name, code: '' });
-export const newTest = () => ({ kind: '', input: '', expected: '', actual: '', result: '' });
+export const newTest = () => ({ kind: '', input: '', actual: '', result: '' });
 
 export function newDraft() {
   return {
@@ -39,13 +55,12 @@ export function newDraft() {
     files: [newFile('main.py')],
     // concepts[id] = { lines: { fileId: [lineNo, ...] }, notUsed, note, keep, sig: { fileId: hash }, variant }
     concepts: {},
-    // answers[screenId] = { text, place }
+    // answers[screenId] = { place } (only Experiments 5-6: where the file is saved)
     answers: {},
-    conceptScreen: SCREENS[0].id,
-    // shots: uploaded screenshots { fileId, caption, concepts: [conceptId] }
+    conceptScreen: 'e1',
+    // shots: uploaded screenshots { fileId, idea, caption, concepts: [conceptId] }
     shots: [],
-    tests: [newTest(), newTest(), newTest(), newTest(), newTest()],
-    grew: {},          // grew[exp] = what I added that week
+    tests: [newTest(), newTest()],
     reflect: { saw: '', found: '', fixed: '', limits: '', conclusion: '', future: ['', ''], aiUsed: '', aiWhat: '' },
     refs: [''],
     ack: '',
@@ -74,14 +89,15 @@ export function upgradeDraft(d) {
     shots: Array.isArray(d.shots) ? d.shots : [],
     concepts: d.concepts && typeof d.concepts === 'object' ? d.concepts : {},
     answers: d.answers && typeof d.answers === 'object' ? d.answers : {},
-    grew: d.grew && typeof d.grew === 'object' ? d.grew : {},
   };
 }
 
 export const filled = (s) => String(s || '').trim().length > 0;
 const words = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).length;
 
-export const testDone = (t) => filled(t.input) && filled(t.expected) && filled(t.actual) && filled(t.result);
+export const testDone = (t) => filled(t.input) && filled(t.actual) && filled(t.result);
+// A screenshot's caption: the student's own, or the suggestion they picked.
+export const shotCaption = (s) => (filled(s.caption) ? s.caption.trim() : s.idea || '');
 
 // What is still missing on each step, as short friendly notes.
 // Missing items never block moving on; they are listed again before the download.
@@ -105,36 +121,28 @@ export function missingFor(stepId, d) {
       return d.files.some(f => filled(f.code)) ? [] : ['Paste your program code.'];
     case 'concepts': {
       const undecided = CONCEPTS.filter(c => conceptState(d, c.id) === 'pending').length;
-      const unanswered = SCREENS.filter(s => s.concepts.some(id => conceptState(d, id) === 'used') && !filled(d.answers[s.id]?.text)).length;
-      const m = [];
-      if (undecided) m.push(`${undecided} concept${undecided === 1 ? ' is' : 's are'} not tagged or marked “not used” yet.`);
-      if (unanswered) m.push(`${unanswered} short question${unanswered === 1 ? ' is' : 's are'} not answered yet.`);
-      return m;
+      return undecided ? [`${undecided} concept${undecided === 1 ? ' is' : 's are'} not tagged or marked “not used” yet.`] : [];
     }
     case 'running': {
-      if (!d.shots.length) return ['Add at least one screenshot of your program running.'];
-      const noCap = d.shots.filter(s => !filled(s.caption)).length;
-      return noCap ? [`Write a caption for ${noCap} screenshot${noCap === 1 ? '' : 's'}.`] : [];
+      const m = [];
+      if (d.shots.length < MIN_SHOTS) m.push(`Add at least ${MIN_SHOTS} screenshots (${d.shots.length} so far).`);
+      const unnamed = d.shots.filter(s => !shotCaption(s)).length;
+      if (unnamed) m.push(`Say what ${unnamed === 1 ? 'one screenshot shows' : `${unnamed} screenshots show`}.`);
+      return m;
     }
     case 'testing': {
       const n = d.tests.filter(testDone).length;
       return n >= MIN_TESTS ? [] : [`Fill in at least ${MIN_TESTS} tests (${n} done).`];
     }
-    case 'grew': {
-      const n = Object.values(d.grew).filter(filled).length;
-      return n >= 3 ? [] : ['Write what you added to your project in at least three experiments.'];
-    }
-    case 'reflect': {
-      const r = d.reflect, m = [];
-      if (!filled(r.saw) || !filled(r.fixed)) m.push('Describe the hardest bug and how you fixed it.');
-      if (!filled(r.limits)) m.push('Write one limitation of your program.');
-      if (!filled(r.conclusion)) m.push('Write your conclusion.');
-      if (!r.aiUsed) m.push('Say whether you used any AI tool.');
-      else if (r.aiUsed === 'yes' && !filled(r.aiWhat)) m.push('Say which AI tool you used and what for.');
+    case 'reflect':
+      // Everything here is optional except one tap, which the declaration page needs.
+      return d.reflect.aiUsed ? [] : ['Say whether you used any AI tool (one tap).'];
+    case 'finish': {
+      const m = [];
+      if (!d.refs.some(filled)) m.push('Add at least one reference.');
+      if (!filled(d.ack)) m.push('Write a short acknowledgement.');
       return m;
     }
-    case 'finish':
-      return d.refs.some(filled) ? [] : ['Add at least one reference.'];
     default:
       return [];
   }
@@ -148,8 +156,7 @@ function touched(stepId, d) {
     case 'code': return d.files.some(f => filled(f.code));
     case 'concepts': return CONCEPTS.some(c => conceptState(d, c.id) !== 'pending');
     case 'running': return d.shots.length > 0;
-    case 'testing': return d.tests.some(t => filled(t.input) || filled(t.expected));
-    case 'grew': return Object.values(d.grew).some(filled);
+    case 'testing': return d.tests.some(t => filled(t.input) || filled(t.actual));
     case 'reflect': return Object.values(d.reflect).some(v => (Array.isArray(v) ? v.some(filled) : filled(v)));
     case 'finish': return d.refs.some(filled) || filled(d.ack);
     default: return false;

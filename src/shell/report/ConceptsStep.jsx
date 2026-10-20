@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { DARK as D, FONT, MONO } from '../brand.js';
-import { CONCEPTS, CONCEPT, SCREENS, colorOf, conceptState, taggedLines, usedCount, toRanges, rangeText, questionFor, FILE_PLACES } from './concepts.js';
+import { CONCEPTS, CONCEPT, SCREENS, colorOf, conceptState, taggedLines, usedCount, toRanges, rangeText, FILE_PLACES } from './concepts.js';
 import { checkConcept, untaggedFound, foundHint } from './analyzer.js';
-import { codeHash, filled } from './reportModel.js';
+import { codeHash } from './reportModel.js';
 import { TextField, SmallButton, Chips } from './ReportSteps.jsx';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ConceptsStep — one screen per experiment. The student picks a concept, then
 // clicks the lines of their own code where it appears (shift-click for a
 // range), or marks it "I didn't use this". Python's parser (analyzer.js)
-// confirms tags or warns; it never tags for them. One light question per screen.
+// confirms tags or warns; it never tags for them. No writing is asked here.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ConceptsStep({ draft, edit, track, analysis, analysisState }) {
@@ -134,24 +134,14 @@ export default function ConceptsStep({ draft, edit, track, analysis, analysisSta
               onPick={() => pickConcept(id)} setConcept={setConcept} removeRange={removeRange} track={track} />
           ))}
 
-          {screenUsed && (
+          {screen.id === 'e56' && screenUsed && (
             <div style={{ border: `1px solid ${D.border}`, borderRadius: 10, padding: 14, background: D.bgDeep, marginTop: 6 }}>
-              <div style={{ color: D.inkMuted, fontSize: 12.5, marginBottom: 6 }}>One short line about your own code:</div>
-              {screen.id === 'e56' && (
-                <>
-                  <div style={{ color: D.ink, fontSize: 14, marginBottom: 2 }}>My program saves its file in:</div>
-                  <Chips options={FILE_PLACES} value={answer.place} onPick={v => setAnswer({ place: v })} />
-                  {answer.place === FILE_PLACES[0] && (
-                    <div style={{ color: D.amberSoft, fontSize: 12.5, lineHeight: 1.55, marginBottom: 8 }}>
-                      Files in Colab’s own folder are deleted when the runtime disconnects. That’s fine for a test, but your data will be gone next time. See “Files in Google Colab” to save in Google Drive instead.
-                    </div>
-                  )}
-                </>
-              )}
-              <div style={{ color: D.ink, fontSize: 14.5, marginBottom: 6 }}>{questionFor(screen.id, draft)} …</div>
-              <TextField value={answer.text} onValue={v => setAnswer({ text: v })} track={track} maxLength={300} placeholder="finish the sentence" ariaLabel="Finish the sentence" />
-              {filled(answer.text) && answer.text.trim().split(/\s+/).length < 3 && (
-                <div style={{ color: D.inkMuted, fontSize: 12.5, marginTop: 4 }}>A few more words would help.</div>
+              <div style={{ color: D.ink, fontSize: 14, marginBottom: 2 }}>One tap: where does your program save its file?</div>
+              <Chips options={FILE_PLACES} value={answer.place} onPick={v => setAnswer({ place: v })} />
+              {answer.place === FILE_PLACES[0] && (
+                <div style={{ color: D.amberSoft, fontSize: 12.5, lineHeight: 1.55 }}>
+                  Files in Colab’s own folder are deleted when the runtime disconnects. That’s fine for a test, but your data will be gone next time. See “Files in Google Colab” to save in Google Drive instead.
+                </div>
               )}
             </div>
           )}

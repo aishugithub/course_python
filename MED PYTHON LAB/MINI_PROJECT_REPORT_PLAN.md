@@ -1,5 +1,7 @@
 # Mini-Project Report builder (inside Foothold): plan
 
+**Lightened (2026-10-20, owner):** no sentences after tagging concepts (only the one-tap "where is the file saved" for Exp 5–6 remains); screenshots: 5 ideas shown, at least 2, each tagged by tapping an idea (caption optional); testing: 7 ideas shown, at least 2, each = what I tried + what happened + Pass/Fail; "How it grew" removed (9 steps now); reflection all optional except the AI yes/no tap; references and acknowledgement both required. The sections below describe the original design; where they differ, this note wins.
+
 **Status (2026-10-17): BUILT and tested locally; hidden from students until switched on (see "Switching it on" at the end).**
 Code: `src/shell/report/` (ReportBuilder, steps, concepts.js, analyzer.py/.js, pdf.js), backend in `Code.gs` (report actions at the end), fonts in `public/fonts/report/`.
 
