@@ -88,7 +88,7 @@ export default function ConceptsStep({ draft, edit, track, analysis, analysisSta
   return (
     <div>
       <style>{`
-        .cs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; align-items: start; }
+        .cs-grid { display: grid; grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.4fr); gap: 18px; align-items: start; }
         .cs-viewer { position: sticky; top: 76px; }
         .cs-line:hover { background: ${D.surfaceRaised}; }
         @media (max-width: 980px) { .cs-grid { grid-template-columns: minmax(0, 1fr); } .cs-viewer { position: static; } }
@@ -288,6 +288,12 @@ function CodeViewer({ draft, fileId, setFileId, active, onLine }) {
     }
     return m;
   }, [draft, file?.id, active]);
+  // The fixed strip on the left is only as wide as this file needs: the line number,
+  // then one code (and "+n" when a line has more; hover shows them all), only if some line has any.
+  const numWidth = String(lines.length).length * 8 + 10;
+  const anyCodes = Object.values(others).some(m => m.length > 0);
+  const hasMore = Object.values(others).some(m => m.length > 1);
+  const gutterWidth = numWidth + (anyCodes ? 22 : 0) + (hasMore ? 16 : 0);
 
   return (
     <div style={{ border: `1px solid ${D.border}`, borderRadius: 10, background: D.bgDeep, overflow: 'hidden' }}>
@@ -322,15 +328,15 @@ function CodeViewer({ draft, fileId, setFileId, active, onLine }) {
                 }}>
                 <span style={{
                   position: 'sticky', left: 0, zIndex: 1, flexShrink: 0, display: 'flex', alignItems: 'center',
-                  width: 96, background: on ? D.surfaceRaised : D.bgDeep, borderLeft: `3px solid ${on ? color : 'transparent'}`,
-                  borderRight: `1px solid ${D.borderSoft}`, marginRight: 10,
+                  width: gutterWidth, background: on ? D.surfaceRaised : D.bgDeep, borderLeft: `3px solid ${on ? color : 'transparent'}`,
+                  borderRight: `1px solid ${D.borderSoft}`, marginRight: 8,
                 }}>
-                  <span style={{ width: 34, textAlign: 'right', paddingRight: 6, color: on ? color : D.inkMuted }}>{n}</span>
-                  <span style={{ display: 'flex', gap: 2, overflow: 'hidden' }}>
-                    {marks.slice(0, 2).map(c => (
-                      <span key={c.id} title={c.label} style={{ fontSize: 9.5, color: colorOf(c.id), border: `1px solid ${colorOf(c.id)}88`, borderRadius: 3, padding: '0 3px', lineHeight: '14px' }}>{c.code}</span>
+                  <span style={{ width: numWidth, flexShrink: 0, textAlign: 'right', paddingRight: 6, color: on ? color : D.inkMuted }}>{n}</span>
+                  <span title={marks.map(c => c.label).join(', ')} style={{ display: 'flex', gap: 2, alignItems: 'center', overflow: 'hidden' }}>
+                    {marks.slice(0, 1).map(c => (
+                      <span key={c.id} style={{ fontSize: 9.5, color: colorOf(c.id), border: `1px solid ${colorOf(c.id)}88`, borderRadius: 3, padding: '0 3px', lineHeight: '14px' }}>{c.code}</span>
                     ))}
-                    {marks.length > 2 && <span title={marks.slice(2).map(c => c.label).join(', ')} style={{ fontSize: 9.5, color: D.inkMuted }}>+{marks.length - 2}</span>}
+                    {marks.length > 1 && <span style={{ fontSize: 9.5, color: D.inkMuted }}>+{marks.length - 1}</span>}
                   </span>
                 </span>
                 <span style={{ whiteSpace: 'pre', color: D.ink, paddingRight: 16 }}>{text || ' '}</span>
