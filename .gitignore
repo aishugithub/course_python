@@ -2,3 +2,6 @@ node_modules/
 dist/
 .env
 .claude/
+
+# Report-building videos: too large for GitHub (they are shared from Google Drive)
+MED PYTHON LAB/Videos explaining the projecct report building/
