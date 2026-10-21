@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini-Project Report Guide · MED23CL202</title>
+<meta name="description" content="How to build your MED23CL202 mini-project report in Foothold: sample Colab projects, step-by-step videos and what to do.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F1EEE6; --card: #FFFFFF; --cream-deep: #EDE8DC; --border: #E7E0D2;
+    --navy: #16294A; --slate: #40506A; --mist: #6E7C92;
+    --amber: #E7A13E; --bronze: #A97A3B; --code-brown: #B0651F;
+    --green: #1F7A4D; --red: #B0322F;
+    --font: 'Space Grotesk', system-ui, sans-serif; --mono: 'Space Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--cream); color: var(--navy); font-family: var(--font); line-height: 1.6; font-size: 16.5px; }
+  a { color: var(--code-brown); }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--bronze); }
+  code { font-family: var(--mono); font-size: .88em; background: var(--cream-deep); color: var(--code-brown); padding: 1px 6px; border-radius: 5px; }
+
+  /* hero */
+  .hero { background: var(--navy); color: #E7EAF0; padding: 56px 0 48px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.12; margin: 10px 0 14px; letter-spacing: -.01em; }
+  .hero h1 span { color: var(--amber); }
+  .hero p { color: #C6CDD8; font-size: 18px; max-width: 680px; margin: 0 0 22px; }
+  .hero .kicker { color: #D5AE72; }
+  .btns { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 600; font-size: 15px; padding: 11px 18px; border-radius: 10px; border: 1.5px solid transparent; }
+  .btn-amber { background: var(--amber); color: #16294A; }
+  .btn-ghost { border-color: #4A5B7A; color: #E7EAF0; }
+  .btn-line { border-color: var(--border); color: var(--navy); background: var(--card); }
+  .btn.disabled { opacity: .55; pointer-events: none; }
+
+  section { padding: 44px 0 8px; }
+  h2 { font-size: clamp(24px, 3.4vw, 30px); line-height: 1.2; margin: 6px 0 12px; }
+  h3 { font-size: 19px; margin: 0 0 6px; }
+  .lead { color: var(--slate); font-size: 17.5px; max-width: 760px; }
+
+  /* the big idea */
+  .idea { background: var(--card); border: 1px solid var(--border); border-left: 6px solid var(--amber); border-radius: 0; padding: 22px 24px; margin-top: 18px; }
+  .idea p { margin: 0 0 10px; }
+  .idea p:last-child { margin: 0; }
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 18px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .tile h3 { display: flex; align-items: center; gap: 10px; }
+  .tile ul { margin: 6px 0 0; padding-left: 20px; color: var(--slate); }
+  .badge { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--cream-deep); color: var(--bronze); }
+  .tile.app { background: #F7F3EA; }
+
+  /* sample cards */
+  .samples { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 18px; }
+  .sample { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .sample p { margin: 0; color: var(--slate); }
+  .sample .btn { margin-top: auto; align-self: flex-start; }
+  .note { font-size: 14.5px; color: var(--slate); background: var(--cream-deep); border-radius: 10px; padding: 12px 14px; margin-top: 16px; }
+  .note strong { color: var(--navy); }
+  pre.snippet { background: var(--navy); color: #E7EAF0; font-family: var(--mono); font-size: 13.5px; padding: 14px 16px; border-radius: 10px; overflow-x: auto; margin: 10px 0 0; line-height: 1.55; }
+  pre.snippet .c { color: #9FB0C8; }
+
+  /* steps + videos */
+  .steps { list-style: none; margin: 18px 0 0; padding: 0; counter-reset: step; }
+  .step { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px 22px 22px 70px; margin-bottom: 18px; }
+  .step::before { counter-increment: step; content: counter(step); position: absolute; left: 20px; top: 20px; width: 36px; height: 36px; border-radius: 50%; background: var(--navy); color: var(--amber); font-family: var(--mono); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .step p { margin: 6px 0 0; color: var(--slate); }
+  .step ul { margin: 8px 0 0; padding-left: 20px; color: var(--slate); }
+  .video { margin-top: 14px; position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--navy); border-radius: 12px; overflow: hidden; }
+  .video iframe, .video video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .video .soon { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #C6CDD8; text-align: center; padding: 16px; }
+  .video .soon b { color: #E7EAF0; font-size: 16px; }
+  .video .soon span { font-size: 13.5px; }
+  .vtitle { font-family: var(--mono); font-size: 12.5px; color: var(--bronze); margin-top: 10px; }
+
+  /* checklist */
+  .check { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 8px; }
+  .check li { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px 11px 44px; position: relative; color: var(--slate); }
+  .check li::before { content: "✓"; position: absolute; left: 14px; top: 10px; width: 20px; height: 20px; border-radius: 50%; background: var(--green); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .check li b { color: var(--navy); }
+
+  .tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 14px; }
+  .track { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; color: var(--slate); }
+  .track b { display: block; color: var(--navy); font-size: 15.5px; }
+
+  .must { margin-top: 12px; background: #FFF4E0; border: 1.5px solid var(--amber); border-radius: 10px; padding: 12px 14px; color: var(--navy); font-size: 15px; }
+  .must b { color: #8A4B0C; }
+  footer { padding: 40px 0 56px; color: var(--mist); font-size: 14px; }
+  @media (max-width: 560px) {
+    .step { padding: 18px 16px 18px 16px; }
+    .step::before { position: static; margin-bottom: 10px; }
+    body { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!--
+  ════════════════════════════════════════════════════════════════════
+  FOR THE FACULTY: paste the links here, then save the file.
+  • Videos: upload each video to Google Drive, Share → General access →
+    "Anyone with the link" (Viewer), then paste the share link.
+    (A YouTube "Unlisted" link also works.)
+  • Colab notebooks: upload the .ipynb files to Google Drive, share them
+    the same way, and paste the share link (it opens in Colab).
+  Anything left empty shows a "coming soon" box instead of breaking.
+  ════════════════════════════════════════════════════════════════════
+-->
+<script>
+  const LINKS = {
+    foothold:       'https://aishugithub.github.io/course_python/',
+    colabStepByStep: 'https://colab.research.google.com/drive/1rfMnjhBz-YV-nx4OVtOcldiyZgNStQua?usp=sharing',   // VitalCheck_Sample_MiniProject_TrackA.ipynb (text + code cells)
+    colabOneCell:    'https://colab.research.google.com/drive/1hJrwEa28hCIKpXi6Zbciyc0_GwHfKeEL?usp=sharing',   // VitalCheck_Sample_OneCell_TrackA.ipynb (the whole program in one cell)
+    colabFiles:      'https://colab.research.google.com/drive/18oXPAQg7Y7Epp8endSZnqE87zgmnUZav?usp=sharing',   // Files_in_Colab_MED23CL202.ipynb (optional: where files go in Colab)
+    sampleReport:    'https://drive.google.com/file/d/1qpjgabsg5MZldmGSsaFZ3eKxhPF_P9fv/view?usp=sharing',   // Sample_Report_VitalCheck_TestStudent.pdf (optional)
+    videos: {
+      overview: 'https://drive.google.com/file/d/1jg7KU5j4HyD2_UAm66LTfmwoz0ORJq1W/view',        // Python lab Report Building my video with camera on - explaining the whole process..mp4
+      run:      'https://drive.google.com/file/d/1_6g3lCQ1C3ih5AVaehHSuNvXQ8-Wq1NR/view',        // Running the project in one cell of my colab.mp4
+      tagging:  'https://drive.google.com/file/d/1htQXh7rkXRdwh6UotqsYOtt2EBWSus69/view',        // Tagging the concepts to your code - the most imp step in reort building.mp4
+      testShot: 'https://drive.google.com/file/d/1Diy8HS4iulkkXNBHY2Dkubo0-d21OP9A/view',        // How to do Testing and taking screenshot.mp4
+      addShot:  'https://drive.google.com/file/d/1PD_b1zjWA-UBd6Se-gsTyn34iOyUW5sK/view',        // adding screenshot.mp4
+      download: 'https://drive.google.com/file/d/1yDQ8sDN-ainD4uJTNJ6-Z5DOfnjFZgNW/view',        // Test cases  and downloading report.mp4
+    },
+  };
+</script>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">MED23CL202 · Python Programming Laboratory</div>
+    <h1>Your mini-project report, <span>built for you</span>.</h1>
+    <p>Write your program, then show what you understood. Foothold turns that into a complete, formatted PDF report: cover, bonafide certificate, declaration, your e-Lab certificate, contents, every section and your full code.</p>
+    <div class="btns">
+      <a class="btn btn-amber" data-link="foothold" href="#" target="_blank" rel="noopener">Open Foothold →</a>
+      <a class="btn btn-ghost" href="#steps">See the steps</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section aria-labelledby="overview">
+    <div class="kicker">Watch this first</div>
+    <h2 id="overview">The whole process, explained</h2>
+    <p class="lead">This video walks you through everything on this page from start to finish. Watch it once, then use the step-by-step videos further down while you work.</p>
+    <div class="video" data-video="overview" data-title="The whole report-building process"></div>
+    <div class="vtitle">Video · Python lab report building: the whole process</div>
+  </section>
+
+  <section aria-labelledby="idea">
+    <div class="kicker">First, the good news</div>
+    <h2 id="idea">The documentation is off your shoulders</h2>
+    <div class="idea">
+      <p>In most projects, the hardest and most tiring part is the documentation: formatting, page numbers, contents, copying code into Word. <strong>You don't have to do any of that.</strong> The report builder in Foothold creates the whole document for you.</p>
+      <p>So spend your time where it counts: <strong>understanding each concept, applying it in your own program, and making that program work well.</strong> That is what your report and your viva are really about.</p>
+    </div>
+    <div class="split">
+      <div class="tile">
+        <h3>Your part <span class="badge">you</span></h3>
+        <ul>
+          <li>Write and run your own program in Colab</li>
+          <li>Tag the lines where each Python concept is used</li>
+          <li>Add screenshots of your program running</li>
+          <li>Test it and record your test cases</li>
+        </ul>
+      </div>
+      <div class="tile app">
+        <h3>Foothold's part <span class="badge">the app</span></h3>
+        <ul>
+          <li>Cover page, bonafide certificate and declaration</li>
+          <li>Your e-Lab certificate, from your saved progress</li>
+          <li>Contents, page numbers and every section</li>
+          <li>Your full code, with every tagged line marked</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="sample">
+    <div class="kicker">Start here</div>
+    <h2 id="sample">Look at the sample project first</h2>
+    <p class="lead"><strong>VitalCheck</strong> is a complete sample mini-project, built on <em>Track A: Patient Vitals Monitor</em>, one of the four mini-project tracks you met in Foothold. A nurse records each patient's temperature, pulse and blood pressure; VitalCheck flags abnormal readings at once, uses stricter limits for ICU patients, saves every reading in a file, and shows a summary and charts. It uses all 25 concepts from Experiments 1 to 10.</p>
+    <p class="lead">There are two versions of the <em>same</em> program:</p>
+
+    <div class="samples">
+      <div class="sample">
+        <div class="kicker">Version 1 · to learn from</div>
+        <h3>Step by step, with explanations</h3>
+        <p>Text cells explain each part, and each code cell is one piece of the program: setup, the exception, the classes, file handling, pandas, charts and the menu. Read this one to understand how the project is built.</p>
+        <a class="btn btn-line" data-link="colabStepByStep" href="#" target="_blank" rel="noopener">Open in Colab →</a>
+      </div>
+      <div class="sample">
+        <div class="kicker">Version 2 · to copy from</div>
+        <h3>The whole program in one cell</h3>
+        <p>The same program, top to bottom, in a single code cell. This is easy to copy and paste in one go into the <em>Your code</em> step of the report builder.</p>
+        <a class="btn btn-line" data-link="colabOneCell" href="#" target="_blank" rel="noopener">Open in Colab →</a>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Saving your data in Google Drive.</strong> Look at the very first cell of the sample. It connects your Google Drive, so the program's <code>.csv</code> file is saved in your Drive instead of Colab's temporary folder (which is wiped when the runtime disconnects). Use the same idea in your own project:
+      <pre class="snippet"><span class="c"># connect Google Drive (run this first in every session)</span>
+from google.colab import drive
+drive.mount("/content/drive")
+
+import os
+DATA_DIR = "/content/drive/MyDrive/MiniProject"   <span class="c"># your project folder in Drive</span>
+os.makedirs(DATA_DIR, exist_ok=True)
+DATA_FILE = os.path.join(DATA_DIR, "vitals.csv")   <span class="c"># change the name for your project</span></pre>
+      <p style="margin:10px 0 0">Want to understand files in Colab properly? <a data-link="colabFiles" href="#" target="_blank" rel="noopener">Files in Google Colab</a> (an optional short notebook) shows where files go, which ones are temporary, and how Drive keeps them.</p>
+    </div>
+
+    <div class="note" style="border-left: 4px solid var(--amber); border-radius: 0 10px 10px 0;">
+      <strong>Do not submit VitalCheck.</strong> It is a sample to learn from. Build <strong>your own project</strong> with your own objective: one of the four tracks below, or your own idea of a similar size.
+      <div class="tracks">
+        <div class="track"><b>A · Patient Vitals Monitor</b>Record vitals, flag abnormal readings</div>
+        <div class="track"><b>B · Pharmacy Stock Manager</b>Dispense and restock, warn on low stock</div>
+        <div class="track"><b>C · Clinic Appointment Book</b>Book and cancel OPD slots, no double-booking</div>
+        <div class="track"><b>D · Health-Camp Screening</b>Classify visitors by BMI and BP</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="steps" id="steps">
+    <div class="kicker">The process</div>
+    <h2 id="steps-h">Build your report, step by step</h2>
+    <p class="lead">Sign in to Foothold with your roll number and open the <strong>Mini-Project Report</strong> card on the dashboard. Your work is saved as you go, so you can stop and continue later, even on another device.</p>
+
+    <ol class="steps">
+      <li class="step">
+        <h3>Write and run your program in Colab</h3>
+        <p>Get the program working first; the report comes after.</p>
+        <div class="must"><b>Name your notebook with your register number,</b> for example <code>E0125001_miniproject.ipynb</code> (click the name at the top left of Colab). That name is how your register number appears in your screenshots.</div>
+        <div class="video" data-video="run" data-title="Running the project in one cell of my Colab"></div>
+        <div class="vtitle">Video · Running the project in one cell of my Colab</div>
+      </li>
+
+      <li class="step">
+        <h3>Steps 1–4 in the report: title, problem, objectives, code</h3>
+        <p>Type your project title, who will use it and the problem it solves, your objectives, and paste your code (one box per file or cell). Your name, register number and faculty details are filled in for you.</p>
+      </li>
+
+      <li class="step">
+        <h3>Tag the concepts in your code <span class="badge">most important</span></h3>
+        <p>For each experiment, pick a concept and click the lines in your code where you used it (shift-click selects a range). Foothold checks each tag with Python itself and shows <em>“✓ Checked by Foothold”</em>.</p>
+        <ul>
+          <li>Didn't use a concept? Mark it <em>“I didn't use this”</em>. That's fine; the report simply lists it.</li>
+          <li>Use <em>☰ Steps</em> at the top to hide the step list and give your code more room.</li>
+        </ul>
+        <div class="video" data-video="tagging" data-title="Tagging the concepts to your code"></div>
+        <div class="vtitle">Video · Tagging the concepts to your code: the most important step</div>
+      </li>
+
+      <li class="step">
+        <h3>Test your program and take screenshots</h3>
+        <p>In Colab, run your program with normal input, wrong input and impossible values, and take screenshots of what happens: the output, an error your program handles, the saved file, the pandas summary, a chart.</p>
+        <div class="must"><b>Your register number must be visible in every screenshot.</b> Include Colab's title bar at the top, where your notebook name (with your register number) is shown. It shows that the program running is yours.</div>
+        <div class="video" data-video="testShot" data-title="How to do testing and taking screenshots"></div>
+        <div class="vtitle">Video · How to do testing and taking screenshots</div>
+      </li>
+
+      <li class="step">
+        <h3>Add your screenshots</h3>
+        <p>Upload at least <strong>two</strong> (up to 15). For each one, tap what it shows; the caption is filled in for you. You can also link a screenshot to a concept, and it then appears beside that concept in your report.</p>
+        <div class="must"><b>Check before you upload:</b> can you see your register number in the screenshot? If not, take it again with the Colab title bar included.</div>
+        <div class="video" data-video="addShot" data-title="Adding screenshots"></div>
+        <div class="vtitle">Video · Adding screenshots</div>
+      </li>
+
+      <li class="step">
+        <h3>Record your test cases, finish, and download</h3>
+        <p>Add at least <strong>two</strong> test cases (up to 10): what you tried, what happened, Pass or Fail. Then write a short reflection (optional, except one yes/no about AI tools), add at least one reference and a short acknowledgement, and download your report as a PDF.</p>
+        <div class="video" data-video="download" data-title="Test cases and downloading the report"></div>
+        <div class="vtitle">Video · Test cases and downloading the report</div>
+      </li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="check">
+    <div class="kicker">Before you download</div>
+    <h2 id="check">Checklist</h2>
+    <ul class="check">
+      <li><b>Your own project,</b> working in Colab, with its data file saved in Google Drive.</li>
+      <li><b>Your register number is visible in every screenshot</b> (your notebook is named with it, and Colab's title bar is in the picture).</li>
+      <li><b>All 25 concepts</b> either tagged in your code or marked “I didn't use this”.</li>
+      <li><b>At least 2 screenshots</b> and <b>at least 2 test cases.</b></li>
+      <li><b>Reflection:</b> the AI question answered honestly (using AI is allowed if you say so).</li>
+      <li><b>At least 1 reference</b> and a short <b>acknowledgement.</b></li>
+      <li>Finish as much of your <b>Foothold e-Lab Record</b> as you can first: your certificate in the report is made from it when you download.</li>
+    </ul>
+    <p class="lead" style="margin-top:16px">You can download the PDF as many times as you like; each download uses your latest saved work. <span data-show-if="sampleReport">Want to see the result first? <a data-link="sampleReport" href="#" target="_blank" rel="noopener">Look at a sample report</a> made from VitalCheck.</span></p>
+    <div class="btns" style="margin-top:18px">
+      <a class="btn btn-amber" data-link="foothold" href="#" target="_blank" rel="noopener">Open Foothold and start →</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">MED23CL202 Python Programming Laboratory · Sri Ramachandra Faculty of Engineering and Technology · Faculty in-charge: Ms.&nbsp;Aishwarya&nbsp;S</div>
+</footer>
+
+<script>
+  // Turn a Google Drive or YouTube share link into something that can be embedded.
+  function embedUrl(link) {
+    const drive = link.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([\w-]+)/);
+    if (drive) return { kind: 'iframe', src: 'https://drive.google.com/file/d/' + drive[1] + '/preview' };
+    const yt = link.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/embed\/)([\w-]{6,})/);
+    if (yt) return { kind: 'iframe', src: 'https://www.youtube-nocookie.com/embed/' + yt[1] };
+    if (/\.(mp4|webm)(\?|$)/i.test(link)) return { kind: 'video', src: link };
+    return { kind: 'link', src: link };
+  }
+  // A Drive share link for a notebook opens straight in Colab.
+  function colabUrl(link) {
+    const drive = link.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]+)/);
+    return drive ? 'https://colab.research.google.com/drive/' + drive[1] : link;
+  }
+
+  document.querySelectorAll('[data-link]').forEach(a => {
+    const key = a.dataset.link;
+    const link = (LINKS[key] || '').trim();
+    if (!link) { a.classList.add('disabled'); a.setAttribute('aria-disabled', 'true'); a.removeAttribute('href'); a.title = 'Link coming soon'; if (!a.classList.contains('btn')) a.textContent += ' (link coming soon)'; return; }
+    a.href = key.startsWith('colab') ? colabUrl(link) : link;
+  });
+  document.querySelectorAll('[data-show-if]').forEach(el => { if (!(LINKS[el.dataset.showIf] || '').trim()) el.remove(); });
+
+  document.querySelectorAll('.video').forEach(box => {
+    const link = (LINKS.videos[box.dataset.video] || '').trim();
+    const title = box.dataset.title;
+    if (!link) {
+      box.innerHTML = '<div class="soon"><b>Video coming soon</b><span>' + title + '</span></div>';
+      return;
+    }
+    const e = embedUrl(link);
+    if (e.kind === 'iframe') {
+      box.innerHTML = '<iframe loading="lazy" allow="autoplay; fullscreen" allowfullscreen title="' + title + '"></iframe>';
+      box.querySelector('iframe').src = e.src;
+    } else if (e.kind === 'video') {
+      box.innerHTML = '<video controls preload="metadata"></video>';
+      box.querySelector('video').src = e.src;
+    } else {
+      box.innerHTML = '<div class="soon"><b>' + title + '</b><span><a style="color:#E7A13E" target="_blank" rel="noopener">Watch the video →</a></span></div>';
+      box.querySelector('a').href = e.src;
+    }
+  });
+</script>
+</body>
+</html>
