@@ -59,6 +59,11 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
   const [lab, setLab] = useState({ state: 'idle' });
   const [downloading, setDownloading] = useState('');
   const [downloadError, setDownloadError] = useState('');
+  // The left step list starts hidden on the concepts step, so the code gets the room;
+  // the "Steps" button in the top bar shows or hides it at any time.
+  const [navOpen, setNavOpen] = useState(true);
+  const currentStep = draft?.step;
+  useEffect(() => { if (currentStep) setNavOpen(currentStep !== 'concepts'); }, [currentStep]);
 
   // ── Load: server copy, unless this device has unsaved changes on top of it ──
   useEffect(() => {
@@ -309,6 +314,7 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
   const step = STEPS[stepIdx] || STEPS[0];
   const missing = missingFor(step.id, draft);
   const props = { draft, edit, track, student, details, analysis, analysisState };
+  const pageWidth = !navOpen && step.id === 'concepts' ? 1320 : 1060;
 
   return (
     <div style={{ minHeight: '100vh', background: D.bgDeep, color: D.ink, fontFamily: FONT }}>
@@ -318,6 +324,7 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
         .rb-step:hover { background: ${D.surfaceRaised} !important; }
         .rb-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 24px; }
         .rb-steps { position: sticky; top: 76px; align-self: start; }
+        .rb-layout.rb-wide { grid-template-columns: minmax(0, 1fr); }
         @media (max-width: 820px) {
           .rb-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
           .rb-steps { position: static; display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
@@ -328,11 +335,15 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
 
       {/* Header */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: D.surface, borderBottom: `1px solid ${D.border}` }}>
-        <div style={{ maxWidth: 1060, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button onClick={backToDashboard} aria-label="Back to dashboard" title="Back to dashboard" style={{
             width: 34, height: 34, borderRadius: '50%', background: 'transparent', border: `1px solid ${D.border}`,
             color: D.inkSoft, cursor: 'pointer', fontSize: 16,
           }}>←</button>
+          <button onClick={() => setNavOpen(o => !o)} aria-expanded={navOpen} aria-controls="rb-step-list" title={navOpen ? 'Hide the list of steps' : 'Show the list of steps'} style={{
+            height: 34, borderRadius: 8, background: navOpen ? 'transparent' : D.surfaceRaised, border: `1px solid ${D.border}`,
+            color: D.inkSoft, cursor: 'pointer', fontSize: 13, padding: '0 12px', fontFamily: FONT, whiteSpace: 'nowrap',
+          }}>☰ Steps</button>
           <div style={{ flex: 1, minWidth: 160 }}>
             <div style={{ color: D.bronze, fontFamily: MONO, fontSize: 11, letterSpacing: 1 }}>MED23CL202 · MINI-PROJECT REPORT</div>
             <div style={{ fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -343,7 +354,7 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
         </div>
         {(save.state === 'conflict' || save.state === 'session') && (
           <div style={{ background: 'rgba(231,161,62,0.12)', borderTop: `1px solid ${D.amber}55` }}>
-            <div style={{ maxWidth: 1060, margin: '0 auto', padding: '10px 16px', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: 13.5 }}>
+            <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '10px 16px', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: 13.5 }}>
               {save.state === 'conflict' ? (
                 <>
                   <div style={{ flex: 1, minWidth: 220, color: D.ink }}>Your report was changed on another device{save.at ? ` at ${timeOf(save.at)}` : ''}. Your changes here are not saved yet.</div>
@@ -361,9 +372,9 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
         )}
       </div>
 
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '22px 16px 60px' }} className="rb-layout">
-        {/* Step list */}
-        <nav className="rb-steps" aria-label="Report steps">
+      <div style={{ maxWidth: pageWidth, margin: '0 auto', padding: '22px 16px 60px' }} className={`rb-layout${navOpen ? '' : ' rb-wide'}`}>
+        {/* Step list (hidden while tagging, see navOpen) */}
+        {navOpen && <nav className="rb-steps" id="rb-step-list" aria-label="Report steps">
           {STEPS.map((s, i) => {
             const st = stepStatus(s.id, draft);
             const active = s.id === step.id;
@@ -383,7 +394,7 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
               </button>
             );
           })}
-        </nav>
+        </nav>}
 
         {/* Current step */}
         <main>
