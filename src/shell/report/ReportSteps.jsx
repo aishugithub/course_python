@@ -73,7 +73,7 @@ export function TitleStep({ draft, edit, track, student, details }) {
   const rows = [
     ['Name', student.name],
     ['Register number', student.rollNo],
-    ['Batch', student.batch],
+    ...(String(student.batch || '').trim() && String(student.batch).trim().toLowerCase() !== 'self-registered' ? [['Batch', student.batch]] : []),
     ['Academic year', details.academicYear],
     ['Faculty in-charge', details.faculty],
   ];
