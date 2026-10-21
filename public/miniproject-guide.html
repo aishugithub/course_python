@@ -75,7 +75,8 @@
   .video .soon { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #C6CDD8; text-align: center; padding: 16px; }
   .video .soon b { color: #E7EAF0; font-size: 16px; }
   .video .soon span { font-size: 13.5px; }
-  .vtitle { font-family: var(--mono); font-size: 12.5px; color: var(--bronze); margin-top: 10px; }
+  .vtitle { font-family: var(--mono); font-size: 12.5px; color: var(--bronze); margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  .vtitle a.open { font-family: var(--font); font-size: 14px; font-weight: 600; text-decoration: none; color: var(--code-brown); border: 1.5px solid var(--border); background: var(--card); border-radius: 8px; padding: 4px 10px; }
 
   /* checklist */
   .check { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 8px; }
@@ -86,6 +87,9 @@
   .tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 14px; }
   .track { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 14.5px; color: var(--slate); }
   .track b { display: block; color: var(--navy); font-size: 15.5px; }
+  .track .twists { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; }
+  .track .twists li { margin: 2px 0; }
+  .track.own { border-style: dashed; }
 
   .must { margin-top: 12px; background: #FFF4E0; border: 1.5px solid var(--amber); border-radius: 10px; padding: 12px 14px; color: var(--navy); font-size: 15px; }
   .must b { color: #8A4B0C; }
@@ -145,7 +149,7 @@
   <section aria-labelledby="overview">
     <div class="kicker">Watch this first</div>
     <h2 id="overview">The whole process, explained</h2>
-    <p class="lead">This video walks you through everything on this page from start to finish. Watch it once, then use the step-by-step videos further down while you work.</p>
+    <p class="lead">This video walks you through everything on this page from start to finish. Watch it once, then use the step-by-step videos further down while you work. If a video doesn't play inside this page, use the <em>Open in Google Drive</em> button under it.</p>
     <div class="video" data-video="overview" data-title="The whole report-building process"></div>
     <div class="vtitle">Video · Python lab report building: the whole process</div>
   </section>
@@ -214,13 +218,23 @@ DATA_FILE = os.path.join(DATA_DIR, "vitals.csv")   <span class="c"># change the 
     </div>
 
     <div class="note" style="border-left: 4px solid var(--amber); border-radius: 0 10px 10px 0;">
-      <strong>Do not submit VitalCheck.</strong> It is a sample to learn from. Build <strong>your own project</strong> with your own objective: one of the four tracks below, or your own idea of a similar size.
+      <h3 style="margin-bottom:8px">Make it your own project</h3>
+      <p style="margin:0 0 8px">VitalCheck is only a sample to learn from, so please don't submit it. The four mini-project tracks you met in Foothold are <strong>starting points, not the finished idea</strong>. There are about 60 of you, and the presentations will be far more interesting if every project is a little different.</p>
+      <p style="margin:0 0 4px">So take a track you liked (or your own idea) and <strong>give it your own twist</strong>. Use a different setting, a different kind of data, a different rule, or one extra feature. Even one real change makes it yours, and it gives you something of your own to talk about in your viva.</p>
+      <p style="margin:12px 0 0"><strong>Some ideas to get you started:</strong></p>
       <div class="tracks">
-        <div class="track"><b>A · Patient Vitals Monitor</b>Record vitals, flag abnormal readings</div>
-        <div class="track"><b>B · Pharmacy Stock Manager</b>Dispense and restock, warn on low stock</div>
-        <div class="track"><b>C · Clinic Appointment Book</b>Book and cancel OPD slots, no double-booking</div>
-        <div class="track"><b>D · Health-Camp Screening</b>Classify visitors by BMI and BP</div>
+        <div class="track"><b>A · Patient Vitals Monitor</b>Record vitals, flag abnormal readings
+          <ul class="twists"><li>A diabetes clinic's blood-sugar log</li><li>A paediatric growth tracker (height and weight against age)</li><li>A dialysis unit's fluid-intake monitor</li></ul></div>
+        <div class="track"><b>B · Pharmacy Stock Manager</b>Dispense and restock, warn on low stock
+          <ul class="twists"><li>A blood bank's stock by blood group</li><li>A lab-reagent inventory that warns about expiry dates</li><li>A vaccine stock register</li></ul></div>
+        <div class="track"><b>C · Clinic Appointment Book</b>Book and cancel OPD slots, no double-booking
+          <ul class="twists"><li>A physiotherapy session planner</li><li>A dental-chair scheduler</li><li>Lab sample-collection slots</li></ul></div>
+        <div class="track"><b>D · Health-Camp Screening</b>Classify visitors by BMI and BP
+          <ul class="twists"><li>A school eye-screening analyser</li><li>An anaemia (haemoglobin) screening camp</li><li>A hearing-screening record</li></ul></div>
+        <div class="track own"><b>Your own idea</b>Anything of a similar size
+          <ul class="twists"><li>A hospital equipment maintenance log</li><li>A blood-donation camp register</li><li>A patient diet planner</li></ul></div>
       </div>
+      <p style="margin:12px 0 0">Whatever you choose, keep it about the same size as the sample, and use as many of the course concepts as fit naturally.</p>
     </div>
   </section>
 
@@ -335,6 +349,15 @@ DATA_FILE = os.path.join(DATA_DIR, "vitals.csv")   <span class="c"># change the 
       return;
     }
     const e = embedUrl(link);
+    // Some browsers block embedded Drive videos (third-party cookies), so every video
+    // also gets a plain link that always works.
+    const caption = box.nextElementSibling;
+    if (caption && caption.classList.contains('vtitle')) {
+      const open = document.createElement('a');
+      open.className = 'open'; open.target = '_blank'; open.rel = 'noopener';
+      open.href = link; open.textContent = /youtu/.test(link) ? 'Open on YouTube ↗' : 'Open in Google Drive ↗';
+      caption.appendChild(open);
+    }
     if (e.kind === 'iframe') {
       box.innerHTML = '<iframe loading="lazy" allow="autoplay; fullscreen" allowfullscreen title="' + title + '"></iframe>';
       box.querySelector('iframe').src = e.src;
