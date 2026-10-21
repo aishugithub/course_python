@@ -114,7 +114,11 @@ function codeTable(rows) {
 export async function buildReportPdf({ draft: d, student, analysis, lab, token, onProgress = () => {} }) {
   onProgress('Preparing the PDF…');
   const pdfMake = await getPdfMake();
-  const cfg = COURSE_CONFIG.miniProjectReport || {};
+  // Names never break across lines ("Ms." on one line and "Aishwarya S" on the next looks wrong):
+  // their spaces become non-breaking spaces.
+  const keep = (v) => String(v || '').trim().replace(/ +/g, '\u00A0');
+  const settings = COURSE_CONFIG.miniProjectReport || {};
+  const cfg = { ...settings, faculty: keep(settings.faculty), hod: keep(settings.hod) };
   const logo = await fetchImage(`${BASE}brand/sriher-logo.png`).catch(() => null);
   const signature = await fetchImage(`${BASE}brand/signature.png`).catch(() => null);
 
@@ -129,6 +133,7 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
 
   const title = filled(d.title) ? d.title.trim() : 'Untitled project';
   const regNo = student.rollNo;
+  const batch = realBatch(student.batch);
   const today = new Date();
   const monthYear = today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   let figNo = 0;
@@ -155,13 +160,14 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
   content.push(
     logo ? { image: logo, width: 380, alignment: 'center', margin: [0, 10, 0, 34] } : { text: 'SRI RAMACHANDRA INSTITUTE OF HIGHER EDUCATION AND RESEARCH', alignment: 'center', bold: true, margin: [0, 10, 0, 34] },
     { text: 'MED23CL202 · PYTHON PROGRAMMING LABORATORY', alignment: 'center', bold: true, fontSize: 13 },
-    { text: cfg.programme || 'B.Tech Computer Science and Medical Engineering (Artificial Intelligence and Data Analytics) · Semester III', alignment: 'center', fontSize: 10.5, margin: [30, 4, 30, 40], color: '#333333' },
+    { text: 'B.Tech Computer Science and Medical Engineering', alignment: 'center', fontSize: 10.5, margin: [0, 4, 0, 0], color: '#333333' },
+    { text: '(Artificial Intelligence and Data Analytics) · Semester III', alignment: 'center', fontSize: 10.5, margin: [0, 0, 0, 40], color: '#333333' },
     { text: 'MINI-PROJECT REPORT', alignment: 'center', bold: true, fontSize: 20, color: NAVY },
     { text: title, alignment: 'center', bold: true, fontSize: 16, margin: [20, 16, 20, 50] },
     { text: 'Submitted by', alignment: 'center', italics: true, margin: [0, 0, 0, 10] },
     {
       table: { widths: [150, '*'], body: [
-        ['Name', student.name || ''], ['Register number', regNo], ['Batch', student.batch || ''],
+        ['Name', student.name || ''], ['Register number', regNo], ...(batch ? [['Batch', batch]] : []),
         ['Academic year', cfg.academicYear || ''], ['Faculty in-charge', cfg.faculty || ''],
       ].map(([k, v]) => [{ text: k, bold: true }, { text: String(v) }]) },
       layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingTop: () => 5, paddingBottom: () => 5 }, margin: [60, 0, 40, 0],
@@ -175,7 +181,7 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
     logo ? { image: logo, width: 320, alignment: 'center', margin: [0, 0, 0, 26] } : { text: ' ' },
     { text: 'BONAFIDE CERTIFICATE', alignment: 'center', bold: true, fontSize: 16, color: NAVY, margin: [0, 0, 0, 24] },
     {
-      table: { widths: [130, '*'], body: [['Name', student.name || ''], ['Register number', regNo], ['Batch', student.batch || ''], ['Academic year', cfg.academicYear || '']].map(([k, v]) => [{ text: k, bold: true }, { text: ': ' + v }]) },
+      table: { widths: [130, '*'], body: [['Name', student.name || ''], ['Register number', regNo], ...(batch ? [['Batch', batch]] : []), ['Academic year', cfg.academicYear || '']].map(([k, v]) => [{ text: k, bold: true }, { text: ': ' + v }]) },
       layout: 'noBorders', margin: [0, 0, 0, 18],
     },
     P(['Certified that this is the bonafide record of the mini-project titled “', { text: title, bold: true }, '” carried out by the above student in the course ', { text: 'MED23CL202 – Python Programming Laboratory', bold: true }, ` during the academic year ${cfg.academicYear || '________'}.`], { alignment: 'justify', lineHeight: 1.5 }),
@@ -194,7 +200,7 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
   // Declaration + acknowledgement
   content.push(
     { text: 'DECLARATION', alignment: 'center', bold: true, fontSize: 15, color: NAVY, margin: [0, 0, 0, 16] },
-    P(`I, ${student.name || '________'} (Reg. No. ${regNo}), declare that this mini-project report titled “${title}” is my own work, done as part of MED23CL202 – Python Programming Laboratory under the guidance of ${cfg.faculty || 'my faculty in-charge'}. The program code and results in this report were written, run and tested by me. Any code, data or idea taken from another source is credited in the References.`, { alignment: 'justify', lineHeight: 1.5 }),
+    P(`I, ${keep(student.name) || '________'} (Reg.\u00A0No.\u00A0${regNo}), declare that this mini-project report titled “${title}” is my own work, done as part of MED23CL202 – Python Programming Laboratory under the guidance of ${cfg.faculty || 'my faculty in-charge'}. The program code and results in this report were written, run and tested by me. Any code, data or idea taken from another source is credited in the References.`, { alignment: 'justify', lineHeight: 1.5 }),
     { columns: [{ text: 'Place: Chennai\nDate: ______________' }, { text: '\n______________________\nSignature of the student', alignment: 'right' }], margin: [0, 30, 0, 0] },
   );
   if (filled(d.ack)) {
@@ -365,6 +371,12 @@ export async function buildReportPdf({ draft: d, student, analysis, lab, token, 
     }
   });
   return { blob, filename, figures: figNo };
+}
+
+// Self-registered accounts store "Self-registered" as their batch; that is not a batch to print.
+export function realBatch(b) {
+  const v = String(b || '').trim();
+  return v && v.toLowerCase() !== 'self-registered' ? v : '';
 }
 
 function certificatePage(lab, student, logo, signature, monthYear, cfg) {

@@ -78,7 +78,7 @@ export function checkConcept(d, conceptId, analysis) {
   });
 
   const hits = foundFor(analysis, conceptId).filter(h => inTags(h.fileId, h.line, h.end));
-  if (conceptId === 'custom_exc') return checkCustomException(hits, patternHits.length > 0);
+  if (conceptId === 'custom_exc') return checkCustomException(hits, patternHits.length > 0, !!analysis);
   if (conceptId === 'override_poly') {
     if (!hits.length && !patternHits.length) return { state: 'warn', message: 'We couldn’t confirm an overriding method or a polymorphic call in these lines.' };
     const kinds = new Set(hits.map(h => (h.label.includes(' overrides ') ? 'override' : 'poly')));
@@ -96,7 +96,7 @@ function describe(conceptId, hits) {
   return CONCEPT[conceptId].label.toLowerCase();
 }
 
-function checkCustomException(hits, patternOk) {
+function checkCustomException(hits, patternOk, parsed) {
   const parts = {
     defined: hits.some(h => h.label.startsWith('defines')),
     raised: hits.some(h => h.label.startsWith('raises')),
@@ -104,7 +104,7 @@ function checkCustomException(hits, patternOk) {
   };
   if (!parts.defined && !parts.raised && !parts.caught) {
     return patternOk
-      ? { state: 'ok', message: analysis ? 'Checked by Foothold (simple check, because Python couldn’t read this file).' : 'Checked by Foothold (simple check).', parts }
+      ? { state: 'ok', message: parsed ? 'Checked by Foothold (simple check, because Python couldn’t read this file).' : 'Checked by Foothold (simple check).', parts }
       : { state: 'warn', message: 'We couldn’t find your own exception class, or where it is raised or caught, in these lines.', parts };
   }
   const have = Object.entries(parts).filter(([, v]) => v).map(([k]) => k);

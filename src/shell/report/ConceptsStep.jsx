@@ -304,30 +304,40 @@ function CodeViewer({ draft, fileId, setFileId, active, onLine }) {
           {active ? `Tagging: ${CONCEPT[active].label}` : 'Pick a concept on the left'}
         </div>
       </div>
+      {/* Long lines scroll sideways; the line number and the other concepts' codes stay fixed on the left. */}
       <div style={{ maxHeight: '70vh', overflow: 'auto', padding: '6px 0' }}>
-        {lines.map((text, i) => {
-          const n = i + 1;
-          const on = activeLines.has(n);
-          const marks = others[n] || [];
-          return (
-            <div key={n} className="cs-line" role="button" tabIndex={0} aria-pressed={on}
-              aria-label={`Line ${n}${on ? ', tagged' : ''}`}
-              onClick={(e) => onLine(n, e.shiftKey)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLine(n, e.shiftKey); } }}
-              style={{
-                display: 'flex', cursor: active ? 'pointer' : 'default', fontFamily: MONO, fontSize: 12.5, lineHeight: '20px',
-                background: on ? color + '33' : undefined, borderLeft: `3px solid ${on ? color : 'transparent'}`, userSelect: 'none',
-              }}>
-              <span style={{ width: 38, flexShrink: 0, textAlign: 'right', paddingRight: 10, color: on ? color : D.inkMuted }}>{n}</span>
-              <span style={{ flex: 1, whiteSpace: 'pre', color: D.ink, overflow: 'hidden', textOverflow: 'ellipsis' }}>{text || ' '}</span>
-              <span style={{ flexShrink: 0, paddingRight: 8, display: 'flex', gap: 2 }}>
-                {marks.slice(0, 4).map(c => (
-                  <span key={c.id} title={c.label} style={{ fontSize: 9.5, color: colorOf(c.id), border: `1px solid ${colorOf(c.id)}88`, borderRadius: 3, padding: '0 3px', lineHeight: '14px', marginTop: 3 }}>{c.code}</span>
-                ))}
-              </span>
-            </div>
-          );
-        })}
+        <div style={{ minWidth: 'max-content' }}>
+          {lines.map((text, i) => {
+            const n = i + 1;
+            const on = activeLines.has(n);
+            const marks = others[n] || [];
+            return (
+              <div key={n} className="cs-line" role="button" tabIndex={0} aria-pressed={on}
+                aria-label={`Line ${n}${on ? ', tagged' : ''}`}
+                onClick={(e) => onLine(n, e.shiftKey)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLine(n, e.shiftKey); } }}
+                style={{
+                  display: 'flex', cursor: active ? 'pointer' : 'default', fontFamily: MONO, fontSize: 12.5, lineHeight: '20px',
+                  background: on ? color + '33' : undefined, userSelect: 'none',
+                }}>
+                <span style={{
+                  position: 'sticky', left: 0, zIndex: 1, flexShrink: 0, display: 'flex', alignItems: 'center',
+                  width: 96, background: on ? D.surfaceRaised : D.bgDeep, borderLeft: `3px solid ${on ? color : 'transparent'}`,
+                  borderRight: `1px solid ${D.borderSoft}`, marginRight: 10,
+                }}>
+                  <span style={{ width: 34, textAlign: 'right', paddingRight: 6, color: on ? color : D.inkMuted }}>{n}</span>
+                  <span style={{ display: 'flex', gap: 2, overflow: 'hidden' }}>
+                    {marks.slice(0, 2).map(c => (
+                      <span key={c.id} title={c.label} style={{ fontSize: 9.5, color: colorOf(c.id), border: `1px solid ${colorOf(c.id)}88`, borderRadius: 3, padding: '0 3px', lineHeight: '14px' }}>{c.code}</span>
+                    ))}
+                    {marks.length > 2 && <span title={marks.slice(2).map(c => c.label).join(', ')} style={{ fontSize: 9.5, color: D.inkMuted }}>+{marks.length - 2}</span>}
+                  </span>
+                </span>
+                <span style={{ whiteSpace: 'pre', color: D.ink, paddingRight: 16 }}>{text || ' '}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
