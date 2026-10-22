@@ -9,17 +9,21 @@ function doGet(e) {
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
-  lock.tryLock(10000);
+  const locked = lock.tryLock(10000);
   try {
     let body;
     try { body = JSON.parse(e.postData.contents); } catch { body = e.parameter; }
     body.__post = true; // report actions are refused unless they arrive as a POST (keeps tokens out of URLs)
-    const result = routeAction(body);
+    // A report save reads, compares and rewrites the student's draft, so it must
+    // never run beside another request. The browser tries again a little later.
+    const result = !locked && body.action === 'reportSave'
+      ? { success: false, busy: true, message: 'The server is busy. Your work is kept on this device and will be saved in a moment.' }
+      : routeAction(body);
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
   } finally {
-    lock.releaseLock();
+    if (locked) lock.releaseLock();
   }
 }
 
@@ -256,6 +260,7 @@ function setupSheets() {
 // Storage lives in Google Drive, not in Sheet cells (a cell holds at
 // most 50,000 characters, and a report with its code is bigger):
 //   Foothold Mini-Project Reports/<rollNo>/draft.json   the whole draft
+//   Foothold Mini-Project Reports/<rollNo>/draft.prev.json   the draft before the last save (backup)
 //   Foothold Mini-Project Reports/<rollNo>/img/         screenshots
 // The Reports sheet keeps one index row per student, and ReportSummary
 // gets one row per PDF download (the teacher's viva sheet).
@@ -330,23 +335,57 @@ function studentFolder(rollNo) {
   return childFolder(reportRootFolder(), String(rollNo).replace(/[^A-Za-z0-9@._-]/g, '_'));
 }
 
-function readDraftFile(folder) {
-  const it = folder.getFilesByName('draft.json');
-  if (!it.hasNext()) return { file: null, stored: null };
-  const file = it.next();
-  try { return { file, stored: JSON.parse(file.getBlob().getDataAsString()) }; }
-  catch (e) { return { file, stored: null }; }
+const DRAFT_FILE = 'draft.json';
+const BACKUP_FILE = 'draft.prev.json';
+const UNREADABLE_MESSAGE = 'Your saved report could not be read. Please tell your faculty, who can restore it. Nothing has been changed.';
+
+// DriveApp's name lookups include files in the trash, so skip those.
+function liveFile(folder, name) {
+  const it = folder.getFilesByName(name);
+  while (it.hasNext()) {
+    const file = it.next();
+    if (!file.isTrashed()) return file;
+  }
+  return null;
+}
+
+function readDraftFile(folder, name) {
+  const file = liveFile(folder, name);
+  if (!file) return { file: null, text: '', stored: null };
+  const text = file.getBlob().getDataAsString();
+  let stored = null;
+  try { stored = JSON.parse(text); } catch (e) { /* empty, or cut short by a failed write */ }
+  return { file, text, stored: stored && typeof stored === 'object' && stored.data ? stored : null };
+}
+
+// The latest readable draft: draft.json, or the backup made before the last
+// save when draft.json can't be read. `unreadable` means draft.json exists but
+// neither copy can be read, so it must be kept for the faculty to restore from
+// Drive's version history.
+function readDraft(folder) {
+  const main = readDraftFile(folder, DRAFT_FILE);
+  const backup = main.stored ? null : readDraftFile(folder, BACKUP_FILE);
+  const stored = main.stored || (backup && backup.stored) || null;
+  return { main, stored, unreadable: !!main.file && !stored };
+}
+
+function writeTextFile(folder, name, content) {
+  const file = liveFile(folder, name);
+  if (file) file.setContent(content);
+  else folder.createFile(name, content, MimeType.PLAIN_TEXT);
 }
 
 function handleReportLoad(body, rollNo) {
-  const { stored } = readDraftFile(studentFolder(rollNo));
+  const { stored, unreadable } = readDraft(studentFolder(rollNo));
+  if (unreadable) return { success: false, code: 'UNREADABLE', message: UNREADABLE_MESSAGE };
   if (!stored) return { success: true, draft: null, version: 0 };
   return { success: true, draft: stored.data, version: stored.version, savedAt: stored.savedAt };
 }
 
 // Saves only if the browser started from the latest saved version, so a
 // second device can't silently wipe newer work. body.force overrides that
-// after the student has been told.
+// after the student has been told, and lets this device's copy replace a
+// draft.json that can't be read.
 function handleReportSave(body, rollNo) {
   let draft = body.draft;
   if (typeof draft === 'string') { try { draft = JSON.parse(draft); } catch (e) { draft = null; } }
@@ -355,15 +394,24 @@ function handleReportSave(body, rollNo) {
   if (text.length > MAX_DRAFT_CHARS) return { success: false, message: 'This report is too large to save. Please shorten the pasted code or text.' };
 
   const folder = studentFolder(rollNo);
-  const { file, stored } = readDraftFile(folder);
+  const { main, stored, unreadable } = readDraft(folder);
+  if (unreadable && !body.force) return { success: false, code: 'UNREADABLE', message: UNREADABLE_MESSAGE };
   const current = stored ? Number(stored.version) || 0 : 0;
   if (!body.force && Number(body.baseVersion || 0) !== current) {
     return { success: false, conflict: true, serverVersion: current, savedAt: stored && stored.savedAt };
   }
   const savedAt = new Date().toISOString();
   const content = JSON.stringify({ version: current + 1, savedAt, data: draft });
-  if (file) file.setContent(content);
-  else folder.createFile('draft.json', content, MimeType.PLAIN_TEXT);
+  // Copy the last good draft aside first, so a write that fails halfway can't
+  // lose the report. A draft.json that can't be read is renamed, never
+  // overwritten, so its Drive version history stays available.
+  if (main.stored) {
+    writeTextFile(folder, BACKUP_FILE, main.text);
+    main.file.setContent(content);
+  } else {
+    if (main.file) main.file.setName('draft.unreadable-' + savedAt.replace(/[:.]/g, '-') + '.json');
+    folder.createFile(DRAFT_FILE, content, MimeType.PLAIN_TEXT);
+  }
 
   const index = sheetWithHeader('Reports', ['RollNo', 'Title', 'Step', 'Version', 'UpdatedAt']);
   const rows = index.getDataRange().getValues();

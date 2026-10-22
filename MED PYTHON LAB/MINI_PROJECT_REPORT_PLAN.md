@@ -116,5 +116,7 @@ A short "Where do my files go in Colab?" box for Experiment 5 of the lab manual:
 
 New sheets appear by themselves: `Sessions` (sign-in tokens), `Reports` (one row per student: title, step, last saved), `ReportSummary` (one row per PDF download: the viva sheet). Drafts and screenshots are in Drive under "Foothold Mini-Project Reports/<roll number>/".
 
+**Draft safety (2026-10-22, after one student's `draft.json` was left empty by a failed save):** every save first copies the previous draft to `draft.prev.json`, then rewrites `draft.json`. If `draft.json` can't be read, the app uses `draft.prev.json`. If neither can be read, the student's own browser copy is saved instead and the unreadable file is renamed `draft.unreadable-<time>.json` (never overwritten); on a device with no copy the student is told to ask the faculty. To restore a file by hand: right-click it in Drive → Manage versions. A save that can't get the script lock within 10 s is refused as "busy" and the browser retries it.
+
 ## Local testing (Claude)
 `.claude/mock_gas/` (gitignored): `dev.cjs` runs the real `Code.gs` against in-memory Sheets/Drive on port 8787 plus Vite on 5175 with `VITE_REPORT_OPEN=1`; test student E0125001 / test1 (9 of 15 e-Lab items done). `sink.cjs` receives a generated PDF for inspection.
