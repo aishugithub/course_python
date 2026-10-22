@@ -16,7 +16,8 @@ import { loadLabProgress } from './progress.js';
 // to the server a moment after the student stops typing. The server keeps a
 // version number; a save only succeeds from the latest version, so a second
 // device can't silently overwrite newer work (Code.gs handleReportSave). When
-// that happens the student chooses which version to keep.
+// that happens the student chooses which version to keep. If the server has no
+// readable copy, this device's copy is kept and sent, never replaced by a blank.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SAVE_DELAY_MS = 1500;
@@ -49,6 +50,7 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
   const latest = useRef(null);
   const timer = useRef(null);
   const saving = useRef(false);
+  const forceNext = useRef(false); // next save replaces a server copy that can't be read
   const stepStart = useRef(Date.now());
 
   // Python's check of the student's code (concepts step, and the PDF).
@@ -78,6 +80,11 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
       if (!r.success) {
         if (r.code === 'SESSION') { setPhase('error'); setLoadError('session'); return; }
         if (r.message === 'Unknown action') { setPhase('error'); setLoadError('server'); return; }
+        if (r.code === 'UNREADABLE' && cache?.draft) {   // server copy can't be read: this device's copy replaces it
+          forceNext.current = true;
+          start(upgradeDraft(cache.draft), 0, true);
+          return;
+        }
         if (cache?.draft) {        // offline: carry on from this device's copy
           start(upgradeDraft(cache.draft), cache.baseVersion || 0, !!cache.dirty);
           setSave({ state: 'offline', at: null, message: r.message });
@@ -87,6 +94,10 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
         return;
       }
       const serverVersion = r.version || 0;
+      if (!r.draft && cache?.draft) {   // nothing on the server: keep this device's copy, don't start blank
+        start(upgradeDraft(cache.draft), serverVersion, true);
+        return;
+      }
       if (cache?.dirty && cache.draft) {
         if ((cache.baseVersion || 0) === serverVersion) { start(upgradeDraft(cache.draft), serverVersion, true); return; }
         setChoice({ local: cache, server: { draft: r.draft, version: serverVersion, savedAt: r.savedAt } });
@@ -117,9 +128,10 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
     saving.current = true;
     const sent = latest.current;
     setSave(s => ({ ...s, state: 'saving' }));
-    const r = await saveReport(student.token, sent, baseVersion.current, force);
+    const r = await saveReport(student.token, sent, baseVersion.current, force || forceNext.current);
     saving.current = false;
     if (r.success) {
+      forceNext.current = false;
       baseVersion.current = r.version;
       if (latest.current === sent) dirty.current = false;
       writeCache(student.rollNo, { draft: latest.current, baseVersion: r.version, dirty: dirty.current, at: new Date().toISOString() });
@@ -129,6 +141,9 @@ export default function ReportBuilder({ student, onBack, onSignInAgain }) {
       setSave({ state: 'conflict', at: r.savedAt, message: '' });
     } else if (r.code === 'SESSION') {
       setSave({ state: 'session', at: null, message: r.message });
+    } else if (r.code === 'UNREADABLE') {   // server copy became unreadable: this device's copy replaces it
+      forceNext.current = true;
+      schedule();
     } else {
       setSave({ state: 'offline', at: null, message: r.message || 'Not saved yet.' });
       timer.current = setTimeout(() => flush(), RETRY_MS);
