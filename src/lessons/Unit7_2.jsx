@@ -1,457 +1,248 @@
-// Unit 7.2 — Lists (creating, indexing, mutating, looping)
+// Unit 7.2 — Lists (rebuilt on the typing-first lesson kit)
+// Why lists → index/len → changing lists (append insert remove pop extend
+// index count in) → loops over lists → ALIASING vs copy (name tags, Unit 4.2)
+// → 2-D lists → seat-booking make-task (a preview of mini-project track C).
+
 import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, MONO, tint } from "../kit/theme.js";
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
-};
+const pyList = (a) => "[" + a.map((x) => (typeof x === "string" ? `'${x}'` : String(x))).join(", ") + "]";
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-const insight = (color, children) => (
-  <div style={{ marginTop: 16, background: color + "18", border: `1px solid ${color}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-    🔑 {children}
-  </div>
-);
-
-// shared slot-row renderer for list visualizations
-function SlotRow({ items, highlight = -1, appended = -1, onClickSlot }) {
-  return (
-    <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-      {items.map((v, i) => (
-        <div key={i} onClick={onClickSlot ? () => onClickSlot(i) : undefined} style={{ textAlign: "center", cursor: onClickSlot ? "pointer" : "default" }}>
-          <div style={{ fontSize: 10, color: i === highlight ? C.accent : C.muted, fontWeight: 700, marginBottom: 3 }}>{i}</div>
-          <div style={{
-            minWidth: 46, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
-            borderRadius: 8, fontFamily: "monospace", fontSize: 15, fontWeight: 700, padding: "0 8px",
-            background: i === highlight ? C.accent + "26" : i === appended ? C.green + "1c" : C.surface,
-            color: i === highlight ? C.accent : i === appended ? C.green : C.text,
-            border: `2px solid ${i === highlight ? C.accent : i === appended ? C.green : C.teal + "66"}`,
-            transition: "all 0.25s",
-          }}>{String(v)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Widget 1: Need Comparison — 60 students, one variable each? ──
-function NeedWidget() {
-  const [n, setN] = useState(6);
-  const base = [72, 85, 91, 64, 78, 88, 69, 93, 57, 81];
-  const shown = Math.min(n, 4);
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Unit 6.4 ended with a promise: one score is a variable — but a whole class? Say you must store the
-        marks of every student and find the topper. Drag the slider to grow the class and watch the
-        variable-per-student plan collapse.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>students = <strong style={{ color: C.accent }}>{n}</strong></label>
-        <input type="range" min={3} max={60} value={n} onChange={(e) => setN(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>❌ ONE VARIABLE EACH</div>
-          <pre style={mono}>
-            {Array.from({ length: shown }, (_, i) => `mark${i + 1} = ${base[i % base.length]}`).join("\n")}
-            {n > shown ? `\n# ... ${n - shown} more lines 😬` : ""}
-            {`\n\n# find the topper?\n# compare ${n} variables BY HAND`}
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>✅ ONE LIST FOR ALL</div>
-          <pre style={mono}>
-            {`marks = [${base.slice(0, Math.min(n, 4)).join(", ")}${n > 4 ? ", ..." : ""}]`}
-            {`\n\nprint(len(marks)) `}<span style={{ color: C.green }}>{`# ${n}`}</span>
-            {`\n# one variable, ${n} values\n# and a loop can visit them all`}
-          </pre>
-        </div>
-      </div>
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>A list is one variable that holds many values.</strong> Strings
-        taught you the idea of a collection — but they only hold characters. A list holds numbers, strings,
-        anything — and it teams up perfectly with the loops you mastered in Module 6.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 2: Anatomy — list slots, indexing carries over, C contrast ──
-function AnatomyWidget() {
-  const marks = [72, 85, 91, 64, 78];
-  const [sel, setSel] = useState(2);
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Square brackets, values separated by commas — and in memory, the same picture as Unit 7.1's strings:
-        a row of numbered slots. Everything you learned there carries over. Click a slot.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 12px", marginBottom: 14 }}>
-        <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
-          marks = [72, 85, 91, 64, 78] &nbsp;·&nbsp; len(marks) → 5
-        </div>
-        <SlotRow items={marks} highlight={sel} onClickSlot={setSel} />
-      </div>
-
-      <div style={{ background: C.surface, border: `1.5px solid ${C.accent}55`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
-        <pre style={mono}>
-          {`marks[${sel}]   `}<span style={{ color: C.green }}>{`→ ${marks[sel]}`}</span>
-          {`     marks[${sel - marks.length}]   `}<span style={{ color: C.green }}>{`→ ${marks[sel]}`}</span>
-          {`\nmarks[1:3] `}<span style={{ color: C.green }}>→ [85, 91]</span>
-          <span style={{ color: C.muted }}>   # slicing works too — same stop-excluded rule!</span>
-        </pre>
-      </div>
-
-      <div style={{ background: C.card, border: `1px solid ${C.purple}44`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
-        <div style={{ color: C.purple, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>💜 AND IT HOLDS ANYTHING</div>
-        <pre style={mono}>
-          {`student = ["Priya", 19, 87.5, True]\n#           str    int  float  bool — all in ONE list`}
-        </pre>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.orange}55`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>⚙️ IN C</div>
-          <pre style={mono}>{`int marks[60];\n/* size 60 forever —\n   61st student? too bad.\n   only ints allowed */`}</pre>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.accent}55`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>🐍 IN PYTHON</div>
-          <pre style={mono}>{`marks = []\n# grows as you add,\n# shrinks as you remove,\n# holds any mix of types`}</pre>
-        </div>
-      </div>
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>Indexing and slicing are universal.</strong> <code style={{ color: C.teal }}>s[0]</code>,
-        <code style={{ color: C.teal }}> s[-1]</code>, <code style={{ color: C.teal }}>s[1:3]</code>, <code style={{ color: C.teal }}>len(s)</code> —
-        one set of rules for strings, lists, and (next unit) tuples. Learn once, use everywhere.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 3: Mutability — change a slot in place, append, contrast with strings ──
-function MutateWidget() {
-  const initial = [72, 85, 91, 64, 78];
-  const [items, setItems] = useState(initial);
+// ── Widget: a live list you can change ──
+const OPS = [
+  { code: "marks.append(50)", f: (m) => [[...m, 50], null] },
+  { code: "marks.insert(0, 99)", f: (m) => [[99, ...m], null] },
+  { code: "marks[1] = 77", f: (m) => (m.length > 1 ? [[m[0], 77, ...m.slice(2)], null] : [m, "IndexError: list assignment index out of range"]) },
+  { code: "marks.remove(85)", f: (m) => (m.includes(85) ? [(() => { const c = [...m]; c.splice(c.indexOf(85), 1); return c; })(), null] : [m, "ValueError: list.remove(x): x not in list"]) },
+  { code: "marks.pop()", f: (m) => (m.length ? [m.slice(0, -1), `→ returns ${m[m.length - 1]}`] : [m, "IndexError: pop from empty list"]) },
+  { code: "marks.extend([60, 70])", f: (m) => [[...m, 60, 70], null] },
+];
+function ListLab() {
+  const start = [72, 85, 64];
+  const [m, setM] = useState(start);
   const [log, setLog] = useState([]);
-  const [highlight, setHighlight] = useState(-1);
-  const [appended, setAppended] = useState(-1);
-
-  const changed = items[2] === 95;
-  const grew = items.length > 5;
-
-  const fix = () => {
-    if (changed) return;
-    const next = [...items]; next[2] = 95;
-    setItems(next); setHighlight(2); setAppended(-1);
-    setLog((l) => [...l, "marks[2] = 95      # re-totalled after correction ✔"]);
-  };
-  const add = () => {
-    if (grew) return;
-    setItems((p) => [...p, 88]); setAppended(items.length); setHighlight(-1);
-    setLog((l) => [...l, "marks.append(88)   # new admission joins the list ✔"]);
-  };
-  const reset = () => { setItems(initial); setLog([]); setHighlight(-1); setAppended(-1); };
-
+  const run = (op) => { const [next, note] = op.f(m); setM(next); setLog([...log, { code: op.code, note }].slice(-5)); };
   return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Here's the superpower strings don't have. A student's mark was totalled wrongly — it should be 95,
-        not 91. And a new admission just joined the class. With a string you'd rebuild from scratch
-        (Unit 7.1's gotcha). With a list? Just do it.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 12px", marginBottom: 14 }}>
-        <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
-          marks &nbsp;·&nbsp; SAME list the whole time — no copy made
+    <div className="fh-two">
+      <div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {OPS.map((op) => <button key={op.code} onClick={() => run(op)} style={{ fontFamily: CODE_FONT, fontSize: 13.5, padding: "7px 10px", borderRadius: 8, border: `1.5px solid ${T.border}`, background: T.card, cursor: "pointer" }}>{op.code}</button>)}
+          <button onClick={() => { setM(start); setLog([]); }} style={{ fontSize: 13, padding: "7px 10px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, cursor: "pointer", fontFamily: "inherit" }}>↺ reset</button>
         </div>
-        <SlotRow items={items} highlight={highlight} appended={appended} />
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <button onClick={fix} disabled={changed} style={{
-          padding: "9px 16px", borderRadius: 8, fontSize: 12.5, fontFamily: "monospace", fontWeight: 600,
-          background: changed ? C.card : C.accent + "22", color: changed ? C.muted : C.accent,
-          border: `1.5px solid ${changed ? C.border : C.accent}`, cursor: changed ? "default" : "pointer",
-        }}>marks[2] = 95</button>
-        <button onClick={add} disabled={grew} style={{
-          padding: "9px 16px", borderRadius: 8, fontSize: 12.5, fontFamily: "monospace", fontWeight: 600,
-          background: grew ? C.card : C.green + "22", color: grew ? C.muted : C.green,
-          border: `1.5px solid ${grew ? C.border : C.green}`, cursor: grew ? "default" : "pointer",
-        }}>marks.append(88)</button>
-        <button onClick={reset} style={{
-          padding: "9px 16px", borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-          background: C.card, color: C.muted, border: `1.5px solid ${C.border}`, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      {log.length > 0 && (
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, marginBottom: 14 }}>
-          <pre style={{ ...mono, color: C.green }}>{log.join("\n")}</pre>
-        </div>
-      )}
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>STRING (Unit 7.1)</div>
-          <pre style={mono}>{`word[0] = "H"`}{`\n`}<span style={{ color: C.red }}>TypeError ❌</span></pre>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>LIST (now!)</div>
-          <pre style={mono}>{`marks[2] = 95`}{`\n`}<span style={{ color: C.green }}>works ✅ — changed in place</span></pre>
+        <div style={{ marginTop: 10, fontFamily: CODE_FONT, fontSize: 13.5, color: T.slate }}>
+          {log.map((l, i) => <div key={i}>&gt;&gt;&gt; {l.code}{l.note && <span style={{ color: l.note.startsWith("→") ? T.blue : T.red }}>  {l.note}</span>}</div>)}
         </div>
       </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>Lists are mutable — strings are not.</strong> A list is changed
-        <em> in place</em>: same slots in memory, values overwritten or added at the end. No new list is
-        built, no relabelling — which is exactly what you want for data that keeps changing.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 4: Build It — class average with a for loop over the list ──
-function BuildWidget() {
-  const [m2, setM2] = useState(91);
-  const marks = [72, 85, m2, 64, 78];
-  const total = marks.reduce((a, b) => a + b, 0);
-  const avg = total / marks.length;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Now the payoff: Module 6's loops + a list. One new trick — <code style={{ color: C.accent }}>for m in marks</code> hands
-        you each value directly, no <code style={{ color: C.teal }}>range()</code> needed. This is the accumulate
-        pattern from Unit 6.2, walking a list. Drag the third student's mark.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>marks[2] = <strong style={{ color: C.accent }}>{m2}</strong></label>
-        <input type="range" min={0} max={100} value={m2} onChange={(e) => setM2(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>🐍 THE PROGRAM</div>
-          <pre style={mono}>
-            {`marks = [${marks.join(", ")}]\n\ntotal = 0\nfor m in marks:\n    total = total + m\n\naverage = total / len(marks)\nprint("Total:", total)\nprint("Average:", average)`}
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>▶ OUTPUT</div>
-          <pre style={{ ...mono, color: C.green }}>
-            {`Total: ${total}\nAverage: ${avg}`}
-          </pre>
-          <div style={{ marginTop: 14, fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
-            The loop visits {marks.length} slots, adding each mark into <code style={{ color: C.teal }}>total</code> —
-            create-before, update-inside, exactly like your Unit 6 counters.
-          </div>
-        </div>
-      </div>
-
-      {insight(C.green, <>
-        <strong style={{ color: C.green }}>for item in list — the pattern you'll use daily.</strong> Marks,
-        prices, names, sensor readings: store them in a list, walk them with a for loop, accumulate an
-        answer. Next unit turns this into a full toolkit: searching, sorting, finding the topper.
-      </>)}
-    </div>
-  );
-}
-
-// ── Quiz ──
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: 'marks = [10, 20, 30]\nprint(marks[1])\n\nWhat does this print?',
-      options: ["10", "20", "30", "IndexError"],
-      answer: 1,
-      explain: "Lists index from 0, just like strings: marks[0] is 10, marks[1] is 20.",
-    },
-    {
-      q: 'marks = [10, 20, 30]\nmarks[0] = 99\n\nWhat happens?',
-      options: ["TypeError — like strings", "marks becomes [99, 20, 30]", "A brand-new list is created", "Nothing changes"],
-      answer: 1,
-      explain: "Lists are MUTABLE — the value in slot 0 is overwritten in place. This is exactly where lists differ from strings.",
-    },
-    {
-      q: 'nums = [5, 10, 15, 20]\nprint(nums[1:3])\n\nWhat does this print?',
-      options: ["[10, 15, 20]", "[5, 10, 15]", "[10, 15]", "[15, 20]"],
-      answer: 2,
-      explain: "Same slice rule as strings and range(): start 1 included, stop 3 excluded → slots 1 and 2 → [10, 15].",
-    },
-    {
-      q: 'total = 0\nfor m in [2, 4, 6]:\n    total = total + m\nprint(total)\n\nWhat does this print?',
-      options: ["6", "12", "246", "3"],
-      answer: 1,
-      explain: "The loop hands m each value in turn: 2, then 4, then 6. total accumulates 0+2+4+6 = 12.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! Lists are officially in your toolkit." :
-            score >= 2 ? "Good work! If mutability tripped you up, replay 'Change It' — clicking the buttons makes it stick." :
-              "Worth a replay: 'List Anatomy' for indexing and 'Change It' for how lists differ from strings."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 7.2 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You can now store a whole class in one variable, reach any value by index, change values in
-            place, grow the list with append, and walk it with a for loop.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 7.3 — List Methods & Loop Patterns.</strong> Sort
-            the marks, find the topper, count the passes — the three loop patterns every programmer runs on
-            lists every single day.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("\n") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s", fontFamily: "monospace",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit7_2({ student, onUnitComplete }) {
-  const sections = [
-    { id: "need", label: "Why?" },
-    { id: "anatomy", label: "List Anatomy" },
-    { id: "mutate", label: "Change It" },
-    { id: "build", label: "Build It" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
-  ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Sixty Students, Sixty Variables?</h3><NeedWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>A List is a Row of Slots — For Anything</h3><AnatomyWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Change It In Place</h3><MutateWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Build It: Class Average</h3><BuildWidget /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions to check your understanding of Unit 7.2.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 7 › UNIT 7.2</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Lists</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
+      <div>
+        <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1.3, color: T.bronze, marginBottom: 6 }}>marks — len {m.length}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+          {m.map((v, i) => (
+            <div key={i} style={{ textAlign: "center", minWidth: 50 }}>
+              <div style={{ fontFamily: CODE_FONT, fontSize: 11, color: T.blue }}>{i}</div>
+              <div style={{ border: `1.5px solid ${T.teal}`, background: tint(T.teal, "12"), borderRadius: 8, padding: "10px 4px", fontFamily: CODE_FONT, fontWeight: 700, fontSize: 17 }}>{v}</div>
+            </div>
           ))}
         </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
+        <div style={{ fontFamily: CODE_FONT, fontSize: 14, marginTop: 8 }}>print(marks) → {pyList(m)}</div>
       </div>
     </div>
+  );
+}
+
+// ── Widget: two tags on one list ──
+function AliasDemo() {
+  const STEPS = [
+    { code: "a = [1, 2, 3]", lists: { L1: [1, 2, 3] }, tags: { a: "L1" }, note: "One list in memory, one tag a on it." },
+    { code: "b = a", lists: { L1: [1, 2, 3] }, tags: { a: "L1", b: "L1" }, note: "No copy! b is a second tag on the SAME list (Unit 4.2: = ties a name to a value)." },
+    { code: "b.append(4)", lists: { L1: [1, 2, 3, 4] }, tags: { a: "L1", b: "L1" }, note: "append changes the list itself. Both tags are on it, so print(a) shows 4 too." },
+    { code: "c = a.copy()", lists: { L1: [1, 2, 3, 4], L2: [1, 2, 3, 4] }, tags: { a: "L1", b: "L1", c: "L2" }, note: ".copy() builds a brand-new list with the same items. c is on the new one." },
+    { code: "c.append(5)", lists: { L1: [1, 2, 3, 4], L2: [1, 2, 3, 4, 5] }, tags: { a: "L1", b: "L1", c: "L2" }, note: "Only the copy changes. a and b are untouched." },
+  ];
+  const [i, setI] = useState(0);
+  const s = STEPS[i];
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {STEPS.map((st, k) => <button key={k} onClick={() => setI(k)} style={{ fontFamily: CODE_FONT, fontSize: 13.5, padding: "6px 10px", borderRadius: 7, cursor: "pointer", border: `1.5px solid ${k === i ? T.navy : T.border}`, background: k === i ? T.navy : T.card, color: k === i ? "#fff" : T.text }}>{k + 1}. {st.code}</button>)}
+      </div>
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        {Object.entries(s.lists).map(([id, arr]) => (
+          <div key={id}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 4, minHeight: 26 }}>
+              {Object.entries(s.tags).filter(([, l]) => l === id).map(([n]) => <span key={n} style={{ fontFamily: CODE_FONT, fontWeight: 700, color: "#fff", background: n === "c" ? T.orange : n === "b" ? T.purple : T.blue, borderRadius: 6, padding: "2px 8px" }}>🏷 {n}</span>)}
+            </div>
+            <div style={{ display: "flex", gap: 3, border: `1.5px solid ${T.teal}`, borderRadius: 10, padding: 6, background: tint(T.teal, "0C") }}>
+              {arr.map((v, k) => <div key={k} style={{ width: 36, textAlign: "center", fontFamily: CODE_FONT, fontWeight: 700, padding: "6px 0", background: T.card, borderRadius: 6 }}>{v}</div>)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 10, background: tint(T.purple, "10"), border: `1px solid ${tint(T.purple, "44")}`, borderRadius: 10, padding: "10px 14px", fontSize: 14.5, color: T.slate }}>{s.note}</div>
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const seatsRun = (inputs) => {
+  const seats = Array(10).fill(false); const out = [];
+  for (const s of inputs) {
+    out.push(`Seat: ${s}`); const n = Number(s);
+    if (n === 0) break;
+    if (n < 1 || n > 10) out.push("No such seat");
+    else if (seats[n - 1]) out.push(`Seat ${n} is taken`);
+    else { seats[n - 1] = true; out.push(`Booked ${n}`); }
+  }
+  const booked = seats.map((b, i) => (b ? i + 1 : null)).filter((x) => x !== null);
+  out.push(`Booked seats: ${pyList(booked)}`, `Free: ${10 - booked.length}`);
+  return out.join("\n");
+};
+const EX = {
+  make: {
+    id: "make", kind: "type", title: "Your first list",
+    task: <>Square brackets, items separated by commas. Indexing and <code>len</code> work just as with strings.</>,
+    show: "marks = [72, 85, 64, 90]\nprint(marks)\nprint(marks[0], marks[-1])\nprint(len(marks))\nprint(marks[1:3])",
+    tests: [{ expect: "[72, 85, 64, 90]\n72 90\n4\n[85, 64]" }],
+    hints: ["A slice of a list is a list."],
+    solution: "marks = [72, 85, 64, 90]\nprint(marks)\nprint(marks[0], marks[-1])\nprint(len(marks))\nprint(marks[1:3])",
+  },
+  methods: {
+    id: "methods", kind: "type", title: "Changing a list",
+    task: <>Trace each line on paper first — the list changes after every line. The last line has a surprise.</>,
+    show: 'marks = [72, 85, 64]\nmarks.append(90)\nmarks.insert(0, 55)\nmarks[2] = 88\nmarks.remove(64)\nlast = marks.pop()\nprint(marks)\nprint("Popped:", last)\nprint(85 in marks, marks.index(88), marks.count(72))',
+    minLines: 10,
+    tests: [{ expect: "[55, 72, 88]\nPopped: 90\nFalse 2 1" }],
+    hints: ["After insert(0, 55) the list is [55, 72, 85, 64, 90] — so marks[2] = 88 replaces 85."],
+    solution: 'marks = [72, 85, 64]\nmarks.append(90)\nmarks.insert(0, 55)\nmarks[2] = 88\nmarks.remove(64)\nlast = marks.pop()\nprint(marks)\nprint("Popped:", last)\nprint(85 in marks, marks.index(88), marks.count(72))',
+  },
+  shopping: {
+    id: "shopping", kind: "write", title: "Shopping list",
+    task: <>Start with an empty list <code>items = []</code>. Keep asking <code>Item: </code> and append each answer, until the user types <code>done</code>. Then print <code>You need 3 items: ['milk', 'bread', 'eggs']</code>.</>,
+    tests: [
+      { inputs: ["milk", "bread", "eggs", "done"], expect: "Item: milk\nItem: bread\nItem: eggs\nItem: done\nYou need 3 items: ['milk', 'bread', 'eggs']" },
+      { inputs: ["done"], expect: "Item: done\nYou need 0 items: []", hidden: true },
+      { inputs: ["rice", "done"], expect: "Item: rice\nItem: done\nYou need 1 items: ['rice']", hidden: true },
+    ],
+    requires: [{ call: "append" }, { node: "While" }],
+    hints: ["A sentinel loop, like Unit 6.1's “add until 0”.", 'while item != "done": items.append(item); item = input("Item: ")', 'print(f"You need {len(items)} items: {items}")'],
+    solution: 'items = []\nitem = input("Item: ")\nwhile item != "done":\n    items.append(item)\n    item = input("Item: ")\nprint(f"You need {len(items)} items: {items}")',
+  },
+  none: {
+    id: "none", kind: "fix", title: "Where did my list go?",
+    task: <>Run it. The list vanished and turned into <code>None</code>. Fix line 2.</>,
+    starter: "marks = [70, 80]\nmarks = marks.append(90)\nprint(marks)",
+    tests: [{ expect: "[70, 80, 90]" }],
+    hints: ["append changes the list in place and returns None. Storing its result replaces your list with None.", "Just write marks.append(90) on its own."],
+    solution: "marks = [70, 80]\nmarks.append(90)\nprint(marks)",
+  },
+  loop: {
+    id: "loop", kind: "write", title: "Loop over a list",
+    task: <>Given <code>marks = [72, 85, 64, 90]</code>, use <code>for m in marks:</code> to work out the average and how many marks are above 75. Print <code>Average: 77.75</code> and <code>Above 75: 2</code>. (No sum( ) yet — that's next unit.)</>,
+    tests: [{ expect: "Average: 77.75\nAbove 75: 2" }],
+    requires: [{ node: "For" }],
+    forbids: [{ call: "sum", msg: "Add them up with the loop — sum( ) comes in Unit 7.3." }, { text: "77.75", msg: "Let Python calculate it." }],
+    hints: ["total = 0 and count = 0 before the loop.", "Average: total / len(marks)"],
+    solution: 'marks = [72, 85, 64, 90]\ntotal = 0\nabove = 0\nfor m in marks:\n    total += m\n    if m > 75:\n        above += 1\nprint(f"Average: {total / len(marks)}")\nprint(f"Above 75: {above}")',
+  },
+  alias: {
+    id: "alias", kind: "type", title: "Two tags, one list",
+    task: <>The stepper above, as real code. Predict all three lines before running.</>,
+    show: "a = [1, 2, 3]\nb = a\nb.append(4)\nc = a.copy()\nc.append(5)\nprint(a)\nprint(b)\nprint(c)",
+    tests: [{ expect: "[1, 2, 3, 4]\n[1, 2, 3, 4]\n[1, 2, 3, 4, 5]" }],
+    hints: ["b = a does NOT copy; .copy() does."],
+    solution: "a = [1, 2, 3]\nb = a\nb.append(4)\nc = a.copy()\nc.append(5)\nprint(a)\nprint(b)\nprint(c)",
+  },
+  backup: {
+    id: "backup", kind: "fix", title: "The backup that wasn't",
+    task: <>The teacher keeps a backup before correcting a mark. Run it: the backup changed too. Fix it so the backup keeps the original marks.</>,
+    starter: 'marks = [70, 80, 90]\nbackup = marks\nmarks[0] = 0\nprint("Marks:", marks)\nprint("Backup:", backup)',
+    tests: [{ expect: "Marks: [0, 80, 90]\nBackup: [70, 80, 90]" }],
+    hints: ["backup = marks puts a second tag on the same list.", "backup = marks.copy()"],
+    solution: 'marks = [70, 80, 90]\nbackup = marks.copy()\nmarks[0] = 0\nprint("Marks:", marks)\nprint("Backup:", backup)',
+  },
+  grid: {
+    id: "grid", kind: "write", title: "A list of lists",
+    task: <>Each inner list is one student's marks in two subjects: <code>marks = [[70, 80], [65, 90], [88, 72]]</code>. <code>marks[1][0]</code> is student 2's first subject. Loop over the students and print <code>Student 1: 150</code>, <code>Student 2: 155</code>, <code>Student 3: 160</code>.</>,
+    tests: [{ expect: "Student 1: 150\nStudent 2: 155\nStudent 3: 160" }],
+    requires: [{ node: "For" }],
+    forbids: [{ text: "150", msg: "Let Python add them." }],
+    hints: ["for i in range(len(marks)): — then marks[i][0] + marks[i][1]", "Student numbers are i + 1."],
+    solution: 'marks = [[70, 80], [65, 90], [88, 72]]\nfor i in range(len(marks)):\n    total = marks[i][0] + marks[i][1]\n    print(f"Student {i + 1}: {total}")',
+  },
+  seats: {
+    id: "seats", kind: "make", title: "Seat booking",
+    task: <>A small hall has 10 seats. <code>seats = [False] * 10</code> makes a list of ten False values (False = free). Keep asking <code>Seat: </code> until 0. For 1–10: if free, mark it True and print <code>Booked 3</code>; if taken print <code>Seat 3 is taken</code>; anything else prints <code>No such seat</code>. Finally print <code>Booked seats: [3, 5]</code> (seat numbers, in order) and <code>Free: 8</code>. Seat 1 is at index 0!</>,
+    minLines: 18,
+    tests: [
+      { inputs: ["3", "5", "3", "0"], expect: seatsRun(["3", "5", "3", "0"]) },
+      { inputs: ["10", "1", "11", "0"], expect: seatsRun(["10", "1", "11", "0"]), hidden: true },
+      { inputs: ["0"], expect: seatsRun(["0"]), hidden: true },
+    ],
+    requires: [{ node: "While" }],
+    hints: ["Seat n lives at index n - 1.", "Build the booked list at the end: for i in range(10): if seats[i]: booked.append(i + 1)", "Free = 10 - len(booked)."],
+    solution: 'seats = [False] * 10\nn = int(input("Seat: "))\nwhile n != 0:\n    if n < 1 or n > 10:\n        print("No such seat")\n    elif seats[n - 1]:\n        print(f"Seat {n} is taken")\n    else:\n        seats[n - 1] = True\n        print(f"Booked {n}")\n    n = int(input("Seat: "))\nbooked = []\nfor i in range(10):\n    if seats[i]:\n        booked.append(i + 1)\nprint(f"Booked seats: {booked}")\nprint(f"Free: {10 - len(booked)}")',
+  },
+};
+
+export const EXERCISES = EX; // for src/kit/selfTest.js
+
+const QUIZ = [
+  { q: "marks = [10, 20, 30]. After marks[0] = 99, what is marks?", options: ["[10, 20, 30]", "[99, 20, 30]", "TypeError", "[99]"], answer: 1, explain: "Lists are mutable: you can replace an item in place. (Strings can't — Unit 7.1.)" },
+  { q: "What does [10, 15, 20, 25][1:3] give?", options: ["[10, 15]", "[15, 20]", "[15, 20, 25]", "[20]"], answer: 1, explain: "Index 1 included, 3 excluded." },
+  { q: "What is printed?", code: "a = [1, 2]\nb = a\nb.append(3)\nprint(a)", options: ["[1, 2]", "[1, 2, 3]", "[3]", "Error"], answer: 1, explain: "b = a is a second tag on the same list, so a sees the change." },
+  { q: "How do you make an independent copy of list x?", options: ["y = x", "y = x.copy()", "y == x", "copy(y, x)"], answer: 1, explain: ".copy() (or x[:]) makes a new list with the same items." },
+  { q: "What does marks = marks.append(5) leave in marks?", options: ["The list with 5 added", "None", "5", "Error"], answer: 1, explain: "append returns None. Call it on its own line." },
+  { q: "grid = [[1, 2], [3, 4]]. What is grid[1][0]?", options: ["1", "2", "3", "4"], answer: 2, explain: "grid[1] is [3, 4]; its index 0 is 3." },
+];
+
+export default function Unit7_2(props) {
+  const sections = [
+    {
+      label: "Why Lists?", kicker: "ONE NAME, MANY VALUES", title: "A list holds many values under one name",
+      blocks: [
+        <P>Sixty students' marks in sixty variables — <code>m1</code>, <code>m2</code>, … <code>m60</code> — and no loop could walk through them. A <strong>list</strong> keeps them all in one row of slots, under one name.</P>,
+        EX.make,
+      ],
+    },
+    {
+      label: "Change It", kicker: "MUTABLE", title: "Lists can change",
+      blocks: [
+        <P>Unlike strings, lists are <strong>mutable</strong>: you can replace, add and remove items in place. Click the operations and watch the slots:</P>,
+        <ListLab />,
+        EX.methods,
+        EX.shopping,
+        EX.none,
+        <KeyIdea>Methods that change a list (<code>append</code>, <code>insert</code>, <code>remove</code>, <code>sort</code>…) change it in place and return <code>None</code>. <code>pop()</code> is the exception: it also hands back the removed item.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Loop a List", kicker: "for item in list", title: "Walking through a list",
+      blocks: [<P><code>for m in marks:</code> gives you each item in turn — no index needed. Use <code>for i in range(len(marks))</code> only when you also need the position.</P>, EX.loop],
+    },
+    {
+      label: "Copy or Alias?", kicker: "NAME TAGS AGAIN", title: "b = a doesn't copy",
+      blocks: [
+        <P>Remember Unit 4.2: <code>=</code> ties a name to a value. With a list, two names can end up on the <em>same</em> list — and since lists can change, a change through one name shows up through the other. Step through:</P>,
+        <AliasDemo />,
+        EX.alias,
+        EX.backup,
+        <KeyIdea><code>x = 5</code> moves a tag. <code>a.append(4)</code> or <code>a[0] = 9</code> changes the list itself — every tag on that list sees it. Need an independent list? <code>a.copy()</code>.</KeyIdea>,
+      ],
+    },
+    {
+      label: "2-D Lists", kicker: "TABLES", title: "Lists inside lists",
+      blocks: [<P>A list can hold lists: a table of rows. <code>table[row][col]</code> picks one cell — you'll use this a lot in Computational Thinking II (matrices).</P>, EX.grid],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: seat booking",
+      blocks: [
+        <P>A list that changes as people book, a while loop, if/elif/else, and index arithmetic. (This is the heart of mini-project Track C, Event Seat Booking.)</P>,
+        EX.seats,
+      ],
+    },
+  ];
+  return (
+    <LessonShell {...props} unitId="Unit7_2" crumb="MODULE 7 › UNIT 7.2" title="Lists" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 7.3 — List Methods & Loop Patterns", text: "sum, min, max, sorted, split and join — and the classic best-so-far pattern." }} />
   );
 }

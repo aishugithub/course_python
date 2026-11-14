@@ -1,406 +1,109 @@
-// Unit 10.1 — Why Objects? (classes, instances, attributes)
-import { useState } from "react";
+// Unit 10.1 — Why Objects? (rebuilt, typing-first)
+// Parallel lists drift apart → a class is a blueprint, an object bundles its
+// own data → attributes → objects are independent; b = a still aliases (7.2)
+// → the attribute-typo silent bug → a contacts book of objects.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import { useState } from "react";
+import LessonShell, { P, KeyIdea, CodeBlock } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, MONO, tint } from "../kit/theme.js";
+
+// ── Widget: parallel lists drift, objects don't ──
+function Drift() {
+  const [broken, setBroken] = useState(false);
+  const names = broken ? ["PRIYA", "MEENA"] : ["PRIYA", "ARUN", "MEENA"];
+  const marks = [87, 62, 91];
+  return (
+    <div className="fh-two">
+      <div>
+        <CodeBlock title="three parallel lists" code={'names = ["PRIYA", "ARUN", "MEENA"]\nmarks = [87, 62, 91]\n' + (broken ? 'names.remove("ARUN")   # forgot marks!' : "")} />
+        <button onClick={() => setBroken(!broken)} style={{ marginTop: 8, padding: "8px 14px", borderRadius: 8, border: `1.5px solid ${broken ? T.red : T.border}`, background: broken ? tint(T.red, "12") : T.card, cursor: "pointer", fontFamily: "inherit", fontWeight: 700, color: broken ? T.red : T.text }}>{broken ? "↺ undo" : "Remove ARUN from names only ▶"}</button>
+      </div>
+      <div>
+        <div style={{ fontFamily: MONO, fontSize: 11, letterSpacing: 1.2, color: T.bronze, marginBottom: 6 }}>WHO HAS WHICH MARK?</div>
+        {marks.map((m, i) => (
+          <div key={i} style={{ fontFamily: CODE_FONT, fontSize: 15, padding: "4px 0", color: broken && i >= 1 ? T.red : T.text }}>
+            {names[i] ?? "???"} → {m} {broken && i === 1 && "  ← MEENA now has ARUN's mark!"}
+          </div>
+        ))}
+        <div style={{ fontSize: 14, color: T.slate, marginTop: 8 }}>Separate lists only stay correct if every change hits every list. An <strong>object</strong> keeps a student's name and mark together, so they can't drift apart.</div>
+      </div>
+    </div>
+  );
+}
+
+const EX = {
+  first: {
+    id: "first", kind: "type", title: "A class and two objects",
+    task: <><code>class Student:</code> defines a new type — a blueprint. <code>Student()</code> builds one object from it. <code>s1.name = …</code> gives that object an attribute (its own variable).</>,
+    show: 'class Student:\n    pass\n\ns1 = Student()\ns1.name = "Priya"\ns1.mark = 87\ns2 = Student()\ns2.name = "Arun"\ns2.mark = 62\nprint(s1.name, s1.mark)\nprint(s2.name, s2.mark)\nprint(type(s1))',
+    minLines: 12,
+    tests: [{ expect: "Priya 87\nArun 62\n<class '__main__.Student'>" }],
+    requires: [{ node: "ClassDef" }],
+    hints: ["pass means “empty for now”. Next unit, __init__ fills the attributes in automatically."],
+    solution: 'class Student:\n    pass\n\ns1 = Student()\ns1.name = "Priya"\ns1.mark = 87\ns2 = Student()\ns2.name = "Arun"\ns2.mark = 62\nprint(s1.name, s1.mark)\nprint(s2.name, s2.mark)\nprint(type(s1))',
+  },
+  books: {
+    id: "books", kind: "write", title: "A list of objects",
+    task: <>Define an empty class <code>Book</code>. Ask <code>Books: </code> (how many), then for each ask <code>Title: </code> and <code>Pages: </code>, make a Book object with <code>.title</code> and <code>.pages</code>, and append it to a list. Print each as <code>Wings of Fire (180 pages)</code>, then <code>Total pages: 560</code>.</>,
+    tests: [
+      { inputs: ["2", "Wings of Fire", "180", "Ignited Minds", "380"], expect: "Books: 2\nTitle: Wings of Fire\nPages: 180\nTitle: Ignited Minds\nPages: 380\nWings of Fire (180 pages)\nIgnited Minds (380 pages)\nTotal pages: 560" },
+      { inputs: ["1", "Godan", "312"], expect: "Books: 1\nTitle: Godan\nPages: 312\nGodan (312 pages)\nTotal pages: 312", hidden: true },
+    ],
+    requires: [{ node: "ClassDef" }],
+    hints: ["b = Book(); b.title = input(\"Title: \"); b.pages = int(input(\"Pages: \")); books.append(b)", "for b in books: print(f\"{b.title} ({b.pages} pages)\")"],
+    solution: 'class Book:\n    pass\n\nbooks = []\nn = int(input("Books: "))\nfor i in range(n):\n    b = Book()\n    b.title = input("Title: ")\n    b.pages = int(input("Pages: "))\n    books.append(b)\ntotal = 0\nfor b in books:\n    print(f"{b.title} ({b.pages} pages)")\n    total += b.pages\nprint(f"Total pages: {total}")',
+  },
+  alias: {
+    id: "alias", kind: "type", title: "Two names, one object",
+    task: <>Objects follow the name-tag rules of Unit 4.2 and 7.2: <code>b = a</code> doesn't copy an object, it adds a second tag. Predict before running.</>,
+    show: 'class Student:\n    pass\n\na = Student()\na.name = "Priya"\nb = a\nb.name = "Arun"\nc = Student()\nc.name = "Meena"\nprint(a.name, b.name, c.name)',
+    tests: [{ expect: "Arun Arun Meena" }],
+    hints: ["a and b are the same object; c is a separate one."],
+    solution: 'class Student:\n    pass\n\na = Student()\na.name = "Priya"\nb = a\nb.name = "Arun"\nc = Student()\nc.name = "Meena"\nprint(a.name, b.name, c.name)',
+  },
+  typo: {
+    id: "typo", kind: "fix", title: "The mark that didn't change",
+    task: <>Priya's re-evaluated mark is 91, but the report still says 87. No error — run it and look closely at line 7.</>,
+    starter: 'class Student:\n    pass\n\ns = Student()\ns.name = "Priya"\ns.mark = 87\ns.mrak = 91\nprint(s.name, s.mark)',
+    tests: [{ expect: "Priya 91" }],
+    hints: ["Assigning to a misspelt attribute silently creates a NEW attribute. Python can't know you meant mark."],
+    solution: 'class Student:\n    pass\n\ns = Student()\ns.name = "Priya"\ns.mark = 87\ns.mark = 91\nprint(s.name, s.mark)',
+  },
+  contacts: {
+    id: "contacts", kind: "make", title: "Contacts book",
+    task: <>Make an empty class <code>Contact</code>. Keep asking <code>Add (name phone): </code> until <code>done</code>; each line becomes a Contact with <code>.name</code> and <code>.phone</code> in a list. Then ask <code>Search: </code> and print <code>Arun: 91234 56789</code> or <code>Not found</code> (match names ignoring capitals). Finally <code>Contacts: 3</code>.</>,
+    minLines: 16,
+    tests: [
+      { inputs: ["Priya 98765", "Arun 91234", "Meena 99887", "done", "arun"], expect: "Add (name phone): Priya 98765\nAdd (name phone): Arun 91234\nAdd (name phone): Meena 99887\nAdd (name phone): done\nSearch: arun\nArun: 91234\nContacts: 3" },
+      { inputs: ["Ravi 1", "done", "kavya"], expect: "Add (name phone): Ravi 1\nAdd (name phone): done\nSearch: kavya\nNot found\nContacts: 1", hidden: true },
+    ],
+    requires: [{ node: "ClassDef" }],
+    hints: ["c = Contact(); c.name, c.phone = line.split()", "Search with a flag: compare c.name.lower() == wanted.lower()."],
+    solution: 'class Contact:\n    pass\n\ncontacts = []\nline = input("Add (name phone): ")\nwhile line != "done":\n    c = Contact()\n    c.name, c.phone = line.split()\n    contacts.append(c)\n    line = input("Add (name phone): ")\nwanted = input("Search: ")\nfound = False\nfor c in contacts:\n    if c.name.lower() == wanted.lower():\n        print(f"{c.name}: {c.phone}")\n        found = True\n        break\nif not found:\n    print("Not found")\nprint(f"Contacts: {len(contacts)}")',
+  },
 };
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-const insight = (color, children) => (
-  <div style={{ marginTop: 16, background: color + "18", border: `1px solid ${color}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-    🔑 {children}
-  </div>
-);
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-// ── Widget 1: The Need — parallel lists desync vs bundled objects ──
-function NeedWidget() {
-  const [deleted, setDeleted] = useState(false);
-  const base = [["Asha", 85], ["Ravi", 72], ["Meena", 91]];
-  const names = deleted ? ["Asha", "Meena"] : base.map((s) => s[0]);
-  const marks = deleted ? [85, 72, 91] : base.map((s) => s[1]);   // buggy: marks NOT updated
-  const objs = deleted ? [["Asha", 85], ["Meena", 91]] : base;
+const QUIZ = [
+  { q: "What's the difference between a class and an object?", options: ["None", "A class is the blueprint; an object is one thing built from it", "An object is the blueprint", "Classes hold numbers, objects hold text"], answer: 1, explain: "Student is the class; s1 and s2 are objects (instances)." },
+  { q: "Why are objects better than parallel lists for records?", options: ["Faster", "Each object keeps its own data together, so fields can't drift out of line", "Less typing", "They sort themselves"], answer: 1, explain: "One change can't accidentally break the pairing." },
+  { q: "After b = a and b.name = \"Arun\", what is a.name?", options: ["Unchanged", "\"Arun\" — a and b are the same object", "Error", "None"], answer: 1, explain: "= adds a tag; it doesn't copy the object." },
+  { q: "s.mrak = 91 (a typo) does what?", options: ["Raises AttributeError", "Silently creates a new attribute called mrak", "Updates mark", "Nothing"], answer: 1, explain: "Assignment always works; it's reading a missing attribute that errors." },
+];
 
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A student is really <em>one</em> thing — a name AND a mark that belong together. But so far you'd store
-        them in <strong style={{ color: C.text }}>separate lists</strong> (Unit 7.2). Watch what happens when
-        you delete "Ravi" from the names but forget the marks.
-      </p>
-
-      <button onClick={() => setDeleted((d) => !d)} style={{
-        padding: "9px 16px", borderRadius: 8, marginBottom: 16, cursor: "pointer", fontWeight: 600, fontSize: 13,
-        background: C.accentGlow, border: "none", color: "#fff",
-      }}>{deleted ? "↺ Reset" : "🗑 Delete Ravi (index 1)"}</button>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${deleted ? C.red : C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>❌ TWO PARALLEL LISTS</div>
-          <pre style={mono}>{`names = [${names.map((n) => `"${n}"`).join(", ")}]\nmarks = [${marks.join(", ")}]`}</pre>
-          <div style={{ marginTop: 10 }}>
-            {names.map((n, i) => (
-              <div key={i} style={{ fontFamily: "monospace", fontSize: 12.5, color: deleted && n === "Meena" ? C.red : C.text }}>
-                {n} → {marks[i]}{deleted && n === "Meena" ? "  ⚠ wrong!" : ""}
-              </div>
-            ))}
-          </div>
-          {deleted && <div style={{ color: C.red, fontSize: 11.5, marginTop: 8, lineHeight: 1.6 }}>Meena now shows 72 (Ravi's mark), and 91 is orphaned. The lists drifted out of sync.</div>}
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}55`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>✅ ONE OBJECT PER STUDENT</div>
-          <pre style={mono}>{`students = [\n${objs.map(([n, m]) => `  Student(${n}, ${m})`).join(",\n")}\n]`}</pre>
-          <div style={{ marginTop: 10 }}>
-            {objs.map(([n, m], i) => (
-              <div key={i} style={{ fontFamily: "monospace", fontSize: 12.5, color: C.text }}>{n} → {m} ✓</div>
-            ))}
-          </div>
-          {deleted && <div style={{ color: C.green, fontSize: 11.5, marginTop: 8, lineHeight: 1.6 }}>Deleting Ravi removed his name AND mark together. Meena keeps her 91. Nothing can drift.</div>}
-        </div>
-      </div>
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>An object bundles data that belongs together.</strong> Instead of a
-        name here and a mark there, one <code style={{ color: C.teal }}>Student</code> object carries both — so
-        they can never fall out of step. This unit builds your own kind of thing: a class.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 2: Anatomy — class + instance + attributes, C contrast ──
-function AnatomyWidget() {
-  const [sel, setSel] = useState(0);
-  const parts = [
-    { text: "class ", color: C.accent, title: "class — the keyword", body: "Announces you're defining a brand-new KIND of thing — a blueprint. Like def creates a function, class creates a type." },
-    { text: "Student", color: C.teal, title: "the class name", body: "You choose it. Convention: start with a Capital letter (Student, BankAccount) so classes stand out from variables and functions." },
-    { text: ":\n    pass", color: C.purple, title: "the body", body: "The indented block, same colon-and-indent rule as always. pass means 'empty for now' — soon this holds __init__ and methods." },
-    { text: "\n\ns1 = Student()", color: C.green, title: "making an instance", body: "Student() BUILDS one object from the blueprint — an 'instance'. s1 is now a real student object, ready to carry data." },
-    { text: '\ns1.name = "Asha"\ns1.mark = 85', color: C.orange, title: "attaching attributes", body: "s1.name creates an attribute on THIS object. Attributes are the object's own variables — its slots. (Next unit, __init__ sets these automatically.)" },
-  ];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Meet the <code style={{ color: C.accent }}>class</code>. Think blueprint vs building: the class is the
-        blueprint for a house; each <code style={{ color: C.green }}>Student()</code> builds one actual house
-        you can furnish. Click each part.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18, marginBottom: 14 }}>
-        <pre style={{ ...mono, fontSize: 14 }}>
-          {parts.map((p, i) => (
-            <span key={i} onClick={() => setSel(i)} style={{
-              color: p.color, cursor: "pointer", fontWeight: sel === i ? 800 : 600,
-              background: sel === i ? p.color + "26" : "transparent",
-              borderRadius: 4, transition: "all 0.2s",
-            }}>{p.text}</span>
-          ))}
-        </pre>
-      </div>
-
-      <div style={{ background: C.surface, border: `1.5px solid ${parts[sel].color}55`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
-        <div style={{ color: parts[sel].color, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{parts[sel].title}</div>
-        <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>{parts[sel].body}</div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.orange}55`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>⚙️ IN C — a struct</div>
-          <pre style={mono}>{`struct Student {\n    char name[20];\n    int mark;\n};\n/* holds DATA only.\n   the functions that work\n   on it live SEPARATELY */`}</pre>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.accent}55`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>🐍 IN PYTHON — a class</div>
-          <pre style={mono}>{`class Student:\n    pass\n\n# holds data too —\n# and soon, the behaviour\n# that belongs WITH it`}</pre>
-        </div>
-      </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>A class is a blueprint; an instance is a thing built from it.</strong> C's
-        struct bundles data; Python's class will bundle data <em>and</em> behaviour together (Unit 10.3). One
-        blueprint, as many independent instances as you like.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 3: See It — instances are independent ──
-function IndependenceWidget() {
-  const [ashaMark, setAshaMark] = useState(85);
-  const raviMark = 72;
-
-  const objCard = (name, mark, editable) => (
-    <div style={{ background: C.card, border: `1.5px solid ${C.teal}55`, borderRadius: 10, padding: 14, flex: 1 }}>
-      <div style={{ color: C.teal, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>OBJECT: {name.toLowerCase()}</div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 10, color: C.muted }}>.name</div>
-          <div style={{ border: `2px solid ${C.teal}`, borderRadius: 8, padding: "6px 4px", fontFamily: "monospace", fontSize: 12.5, background: C.surface }}>{name}</div>
-        </div>
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 10, color: C.muted }}>.mark</div>
-          <div style={{ border: `2px solid ${editable ? C.accent : C.teal}`, borderRadius: 8, padding: "6px 4px", fontFamily: "monospace", fontSize: 12.5, background: C.surface, color: editable ? C.accent : C.text, fontWeight: 700 }}>{mark}</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        One blueprint, but every instance gets its <strong style={{ color: C.text }}>own set of slots</strong> —
-        just like the memory slots from Unit 4.2, one cluster per object. Drag Asha's mark and watch: Ravi
-        doesn't budge.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>asha.mark = <strong style={{ color: C.accent }}>{ashaMark}</strong></label>
-        <input type="range" min={0} max={100} value={ashaMark} onChange={(e) => setAshaMark(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "flex", gap: 14, marginBottom: 12 }}>
-        {objCard("Asha", ashaMark, true)}
-        {objCard("Ravi", raviMark, false)}
-      </div>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
-        <pre style={mono}>{`class Student:\n    pass\n\nasha = Student()\nasha.name = "Asha"\nasha.mark = ${ashaMark}\n\nravi = Student()\nravi.name = "Ravi"\nravi.mark = 72   # untouched by changes to asha`}</pre>
-      </div>
-
-      {insight(C.teal, <>
-        <strong style={{ color: C.teal }}>Each instance has its own attribute slots.</strong> asha.mark and
-        ravi.mark are separate boxes in memory. Change one and the other is unaffected — that independence is
-        exactly why objects don't drift the way parallel lists do.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 4: Build It — a roster of objects ──
-function BuildWidget() {
-  const roster = [["Asha", 85], ["Ravi", 72], ["Meena", 91], ["Karthik", 68], ["Priya", 77]];
-  const [n, setN] = useState(3);
-  const shown = roster.slice(0, n);
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A real mini-program: turn raw pairs into a list of Student objects (your Module 6 loop + Module 7 tuple
-        unpacking, now building objects). Drag to change how many students.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>students = <strong style={{ color: C.accent }}>{n}</strong></label>
-        <input type="range" min={1} max={5} value={n} onChange={(e) => setN(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>🐍 THE PROGRAM</div>
-          <pre style={{ ...mono, fontSize: 11.5 }}>{`raw = [${shown.map(([nm, m]) => `("${nm}", ${m})`).join(", ")}]\nstudents = []\nfor name, mark in raw:\n    s = Student()\n    s.name = name\n    s.mark = mark\n    students.append(s)\n\nfor s in students:\n    print(s.name, "->", s.mark)`}</pre>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>▶ OUTPUT</div>
-          <pre style={{ ...mono, color: C.green }}>{shown.map(([nm, m]) => `${nm} -> ${m}`).join("\n")}</pre>
-        </div>
-      </div>
-
-      {insight(C.green, <>
-        <strong style={{ color: C.green }}>It works — but look how clunky that is:</strong> three lines
-        (<code>s.name=... s.mark=...</code>) to furnish every single student, and it's easy to forget one. There
-        has to be a way to build a fully-formed student in ONE line: <code style={{ color: C.teal }}>Student("Asha", 85)</code>.
-        That's <code style={{ color: C.accent }}>__init__</code> — the next unit.
-      </>)}
-    </div>
-  );
-}
-
-// ── Quiz ──
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "What is the difference between a class and an instance?",
-      options: ["They're two words for the same thing", "A class is a blueprint; an instance is one actual object built from it", "A class is faster; an instance is slower", "An instance is a blueprint; a class is the object"],
-      answer: 1,
-      explain: "class Student is the blueprint (the KIND of thing). Each Student() call builds one instance — an actual object with its own attribute slots.",
-    },
-    {
-      q: 'asha = Student()\nasha.mark = 85\nravi = Student()\nravi.mark = 72\nasha.mark = 100\n\nWhat is ravi.mark now?',
-      options: ["100", "72", "85", "Error"],
-      answer: 1,
-      explain: "Each instance has its own slots. Changing asha.mark touches only asha's box — ravi.mark stays 72. Independent objects don't share attributes.",
-    },
-    {
-      q: "Why is one Student object better than two parallel lists (names and marks)?",
-      options: ["Objects use less memory", "The name and mark are bundled, so they can't drift out of sync", "Lists are not allowed in OOP", "Objects run faster"],
-      answer: 1,
-      explain: "Parallel lists can desync (delete from one, forget the other). An object keeps related data glued together, so deleting a student removes name and mark as one unit.",
-    },
-    {
-      q: "What does Student() do (with the parentheses)?",
-      options: ["Defines the class", "Deletes an object", "Builds a new instance of the class", "Prints all students"],
-      answer: 2,
-      explain: "class Student: defines the blueprint; Student() (called like a function) builds and hands back a new instance. You can call it as many times as you want.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! You get the blueprint-vs-instance idea." :
-            score >= 2 ? "Good work! If independence tripped you, replay 'See It' — each object has its own slots." :
-              "Worth a replay: the Need widget and 'See It'. A class is a blueprint; each instance is its own bundle."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 10.1 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You can define a class, build instances with Student(), and attach attributes that stay bundled and
-            independent.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 10.2 — __init__ &amp; self.</strong> Furnishing each
-            object by hand is clunky. __init__ is a special method that builds a fully-formed object in one line:
-            Student("Asha", 85). Time to meet self.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("\n") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit10_1({ student, onUnitComplete }) {
+export default function Unit10_1(props) {
   const sections = [
-    { id: "need", label: "Why Objects?" },
-    { id: "anatomy", label: "class Anatomy" },
-    { id: "independence", label: "See It" },
-    { id: "build", label: "Build It" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "Why Objects?", kicker: "THE NEED", title: "Keep each record's data together",
+      blocks: [<P>Since Module 7 you've stored students as parallel lists or dictionaries. Watch what happens when one change misses one list:</P>, <Drift />, EX.first],
+    },
+    { label: "Many Objects", kicker: "A LIST OF OBJECTS", title: "Objects in a list", blocks: [EX.books] },
+    { label: "Tags Again", kicker: "SAME OBJECT OR NEW?", title: "Objects follow the name-tag rules", blocks: [EX.alias, EX.typo, <KeyIdea>Every object is its own value in memory. Names are tags on objects; <code>b = a</code> shares one. A misspelt attribute name silently creates a new attribute.</KeyIdea>] },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: contacts book", blocks: [EX.contacts] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>When Data Belongs Together</h3><NeedWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Anatomy of a class</h3><AnatomyWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Each Object, Its Own Slots</h3><IndependenceWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Build It: A Roster of Objects</h3><BuildWidget /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions to check your understanding of Unit 10.1.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.1</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Why Objects?</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit10_1" crumb="MODULE 10 › UNIT 10.1" title="Why Objects?" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 10.2 — __init__ & self", text: "Build complete objects in one line — and meet self." }} />
   );
 }

@@ -1,11 +1,11 @@
 import { useState } from "react";
 
 const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+  bg: "#F1EEE6", surface: "#FFFFFF", card: "#FAF8F3",
+  accent: "#1F5FAD", accentGlow: "#16294A",
+  green: "#1F7A4D", yellow: "#A86B12", purple: "#6D4BC4",
+  red: "#B0322F", orange: "#C2651A", teal: "#0E7C86",
+  text: "#16294A", muted: "#40506A", border: "#E7E0D2",
 };
 
 // ── Section 1: Two Ways to Run Python ────────────────────────────────────────
@@ -140,7 +140,7 @@ function InstallAndRepl() {
       </div>
 
       <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>▸ Try the REPL yourself (a mini simulation):</div>
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.teal}55`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 13 }}>
+      <div style={{ background: "#FFFDF8", border: `1px solid ${C.teal}55`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 13 }}>
         {log.map((entry, i) => (
           <div key={i} style={{ marginBottom: 6 }}>
             {entry.cmd !== null && <div style={{ color: C.text }}><span style={{ color: C.teal }}>&gt;&gt;&gt; </span>{entry.cmd}</div>}
@@ -204,7 +204,7 @@ function InteractiveVsScript() {
       </div>
 
       {mode === "repl" ? (
-        <div style={{ background: "#0A0E14", border: `1px solid ${C.teal}55`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, lineHeight: 1.9 }}>
+        <div style={{ background: "#FFFDF8", border: `1px solid ${C.teal}55`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, lineHeight: 1.9 }}>
           <div><span style={{ color: C.teal }}>&gt;&gt;&gt; </span>2 + 3</div>
           <div style={{ color: C.green }}>5</div>
           <div><span style={{ color: C.teal }}>&gt;&gt;&gt; </span>print("hi")</div>
@@ -217,7 +217,7 @@ function InteractiveVsScript() {
             <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 8 }}>📄 hello.py (saved file)</div>
             <pre style={{ fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`print("Hello!")\nprint(2 + 3)`}</pre>
           </div>
-          <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
+          <div style={{ background: "#FFFDF8", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
             <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 8 }}>▶ python hello.py</div>
             <pre style={{ fontFamily: "monospace", fontSize: 12.5, color: C.green, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`Hello!\n5`}</pre>
             <div style={{ color: C.muted, marginTop: 8, fontSize: 12 }}>Saved forever. Run it again tomorrow, share it, improve it.</div>

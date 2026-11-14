@@ -1,923 +1,326 @@
-// ============================================================================
-//  UNIT 4.1 — "Your First Program"
-// ----------------------------------------------------------------------------
-//  WHERE THIS FILE FITS IN THE APP
-//  --------------------------------
-//  This file lives at  src/lessons/Unit4_1.jsx  in the course_python project.
-//  It is never imported by hand anywhere — instead, src/shell/App.jsx builds
-//  a map of every file in src/lessons/ using Vite's `import.meta.glob`, and
-//  when the student clicks the "Your First Program" card on the Dashboard
-//  (rendered from the unit list in config/course.config.js), App.jsx looks up
-//  this exact file, dynamically imports it, and renders the default export
-//  below — passing it two props:
-//    • student        -> { name, rollNo }  (who is logged in right now)
-//    • onUnitComplete  -> a callback that MUST be called once, when the
-//                         learner finishes the unit. Calling it tells
-//                         App.jsx to save progress (via src/shell/api.js,
-//                         which talks to the Google Apps Script backend) and
-//                         return the student to the Dashboard, where this
-//                         unit's card will now show a green "done" tick.
-//  Because every lesson file is fully self-contained (its own colours, its
-//  own widgets, no shared imports), this file defines its OWN copy of the
-//  colour palette (the `C` object below) instead of importing one — that is
-//  the established convention in this codebase, and we follow it here too.
-// ============================================================================
+// Unit 4.1 — Your First Program (rebuilt on the typing-first lesson kit)
+// Every section: see the idea → type/write/fix a real program → checked by tests.
 
 import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
 
-// ----------------------------------------------------------------------------
-// COLOUR PALETTE
-// A single object holding every colour used in this lesson. Keeping colours
-// as named values (instead of hard-coded hex codes scattered everywhere)
-// means the whole lesson's theme can be changed by editing this one block.
-// These exact hex values match every other lesson file in the course, so the
-// app feels visually consistent no matter which unit the student opens.
-// ----------------------------------------------------------------------------
-const C = {
-  bg: "#0D1117",       // page background — near-black
-  surface: "#161B22",  // header / section-background one shade lighter than bg
-  card: "#1C2333",     // individual card background (buttons, boxes)
-  accent: "#58A6FF",   // primary blue — used for highlights and links
-  accentGlow: "#1F6FEB", // slightly deeper blue — used for solid buttons
-  green: "#3FB950",    // "correct" / "success" / "completed" colour
-  yellow: "#D29922",   // warnings / things to pay attention to
-  purple: "#BC8CFF",   // secondary accent — used for "key insight" boxes
-  red: "#F85149",       // errors / "incorrect" colour
-  orange: "#F0883E",   // tertiary accent for variety in cards
-  teal: "#39D0D8",     // used for terminal / output-related visuals
-  text: "#E6EDF3",     // main readable text colour (near-white)
-  muted: "#8B949E",    // secondary / de-emphasised text colour
-  border: "#30363D",   // subtle border colour used almost everywhere
-};
-
-// ============================================================================
-// WIDGET 0 — ShapeOfPython  ("No ; No { }")
-// ----------------------------------------------------------------------------
-//  WHY THIS WIDGET EXISTS (and why it comes FIRST)
-//  ----------------------------------------------
-//  Every student arriving at this course has already written C. In C, two
-//  pieces of punctuation carry the entire structure of a program:
-//      ;    -> "this statement is finished"
-//      { }  -> "these statements belong together as one block"
-//  Python throws BOTH away. If we teach print() before saying this out loud,
-//  the student silently assumes the C rules still apply, and then trips over
-//  IndentationError for weeks without understanding why. So this widget runs
-//  before any Python is taught: it takes ONE familiar C program and strips it
-//  down to Python in four visible steps, so the student SEES the punctuation
-//  die rather than being told about it.
-//
-//  Teaching order used here (deliberate): need first -> contrast with C ->
-//  then the rule. Same order used across the whole course.
-// ============================================================================
-
-// A tiny helper that renders one line of code made of coloured segments.
-// Each segment is { t: "text", k: kind } where kind decides the colour:
-//   ""  -> ordinary code            (normal text colour)
-//   "p" -> punctuation under the spotlight   (yellow — "look at me")
-//   "d" -> doomed: about to be deleted by Python (red + struck through)
-//   "g" -> the Python replacement that takes over the job (green)
-function CodeLine({ segs, num }) {
-  const colourFor = (k) =>
-    k === "d" ? C.red : k === "p" ? C.yellow : k === "g" ? C.green : C.text;
-  return (
-    <div style={{ display: "flex", gap: 10, fontFamily: "monospace", fontSize: 12.5, marginBottom: 3, whiteSpace: "pre" }}>
-      <span style={{ color: C.border, minWidth: 14, textAlign: "right" }}>{num}</span>
-      <span>
-        {segs.map((s, i) => (
-          <span
-            key={i}
-            style={{
-              color: colourFor(s.k),
-              textDecoration: s.k === "d" ? "line-through" : "none",
-              opacity: s.k === "d" ? 0.75 : 1,
-              fontWeight: s.k === "g" ? 700 : 400,
-              background: s.k === "g" ? C.green + "22" : "transparent",
-              transition: "all 0.3s",
-            }}
-          >
-            {s.t}
-          </span>
-        ))}
-      </span>
-    </div>
-  );
-}
-
+// ── Widget: C → Python, the punctuation disappears ──
 function ShapeOfPython() {
-  // Which of the four transformation steps is on screen (0-based).
   const [step, setStep] = useState(0);
-
-  // The SAME program, shown at four stages of being translated from C into
-  // Python. Writing all four out by hand (rather than computing them) keeps
-  // the teaching intent explicit and the highlighting exact.
   const stages = [
-    {
-      title: "1 · C, exactly as you already know it",
-      file: "hello.c",
-      lines: [
-        [{ t: "#include <stdio.h>" }],
-        [{ t: "int main() " }, { t: "{", k: "p" }],
-        [{ t: "    int marks = 72" }, { t: ";", k: "p" }],
-        [{ t: '    printf("Hello!\\n")' }, { t: ";", k: "p" }],
-        [{ t: "    if (marks > 40) " }, { t: "{", k: "p" }],
-        [{ t: '        printf("Pass\\n")' }, { t: ";", k: "p" }],
-        [{ t: "    ", }, { t: "}", k: "p" }],
-        [{ t: "    return 0" }, { t: ";", k: "p" }],
-        [{ t: "}", k: "p" }],
-      ],
-      caption:
-        "Look only at the yellow characters. They carry no meaning of their own — they are pure structure. The ; announces 'this statement has ended'. The { } announce 'these statements belong together'. The compiler genuinely needs them, because to C your program is one long stream of characters where newlines mean nothing at all.",
-    },
-    {
-      title: "2 · Python deletes every semicolon",
-      file: "hello.c → hello.py",
-      lines: [
-        [{ t: "#include <stdio.h>", k: "d" }],
-        [{ t: "int main() " }, { t: "{", k: "p" }],
-        [{ t: "    int marks = 72" }, { t: ";", k: "d" }],
-        [{ t: '    printf("Hello!\\n")' }, { t: ";", k: "d" }],
-        [{ t: "    if (marks > 40) " }, { t: "{", k: "p" }],
-        [{ t: '        printf("Pass\\n")' }, { t: ";", k: "d" }],
-        [{ t: "    " }, { t: "}", k: "p" }],
-        [{ t: "    return 0" }, { t: ";", k: "d" }],
-        [{ t: "}", k: "p" }],
-      ],
-      caption:
-        "In Python the statement delimiter is the NEWLINE itself. One line = one statement. You do not announce the end of an instruction — pressing Enter already announced it. (Python will technically still accept a ; between two statements on one line, but real Python code never does this. Treat it as not existing.)",
-    },
-    {
-      title: "3 · Python deletes every brace",
-      file: "hello.py",
-      lines: [
-        [{ t: "int main() " }, { t: "{", k: "d" }],
-        [{ t: "    int marks = 72" }],
-        [{ t: '    printf("Hello!\\n")' }],
-        [{ t: "    if (marks > 40) " }, { t: "{", k: "d" }],
-        [{ t: "        " , k: "g" }, { t: 'printf("Pass\\n")' }],
-        [{ t: "    " }, { t: "}", k: "d" }],
-        [{ t: "    return 0" }],
-        [{ t: "}", k: "d" }],
-      ],
-      caption:
-        "Here is the important part. Those 4 or 8 spaces on the left were ALWAYS there in your C code — you indented out of politeness, and the compiler ignored them completely. Python simply promotes that indentation to being the real thing. The green space is now doing the job the braces used to do: 'this line is inside the if'.",
-    },
-    {
-      title: "4 · What is left is Python",
-      file: "hello.py",
-      lines: [
-        [{ t: "marks = 72" }],
-        [{ t: 'print("Hello!")' }],
-        [{ t: "if marks > 40" }, { t: ":", k: "g" }],
-        [{ t: "    ", k: "g" }, { t: 'print("Pass")' }],
-      ],
-      caption:
-        "Nine lines became four, and nothing was lost. The colon : opens a block, the indentation holds it. Don't worry about what if does yet — that's Module 5. Right now only notice the SHAPE: no semicolons, no braces, no main(), no #include. This is what people mean when they call Python a 'high-level' language — the punctuation that existed for the compiler's benefit is gone, and what remains is close to what you would have written on paper anyway.",
-    },
+    { title: "1 · C, as you know it", lines: [["#include <stdio.h>"], ["int main() ", "{p"], ["    int marks = 72", ";p"], ['    printf("Hello!\\n")', ";p"], ["    if (marks > 40) ", "{p"], ['        printf("Pass\\n")', ";p"], ["    ", "}p"], ["}p"]],
+      caption: "Look at the amber characters. ; says “this statement ended”. { } say “these lines belong together”. The C compiler needs them because, to C, newlines mean nothing." },
+    { title: "2 · Python deletes every ;", lines: [["#include <stdio.h>d"], ["int main() ", "{p"], ["    int marks = 72", ";d"], ['    printf("Hello!\\n")', ";d"], ["    if (marks > 40) ", "{p"], ['        printf("Pass\\n")', ";d"], ["    ", "}p"], ["}p"]],
+      caption: "In Python, pressing Enter ends the statement. One line = one instruction." },
+    { title: "3 · Python deletes every { }", lines: [["int main() ", "{d"], ["    int marks = 72"], ['    printf("Hello!\\n")'], ["    if (marks > 40) ", "{d"], ["        g", 'printf("Pass\\n")'], ["    ", "}d"], ["}d"]],
+      caption: "The spaces on the left were always there — in C you indented to be polite. Python makes that indentation the real rule: the green space now means “inside the if”." },
+    { title: "4 · What's left is Python", lines: [["marks = 72"], ['print("Hello!")'], ["if marks > 40", ":g"], ["    g", 'print("Pass")']],
+      caption: "Eight lines became four. A colon : opens a block; indentation holds it. (if comes in Module 5 — today just notice the shape.)" },
   ];
-
   const s = stages[step];
-
+  const seg = (t, i) => {
+    const k = /[pdg]$/.test(t) && t.length > 1 && (t.endsWith("p") || t.endsWith("d") || t.endsWith("g")) && /^[;{}:#\s]/.test(t) ? t.slice(-1) : "";
+    const txt = k ? t.slice(0, -1) : t;
+    const color = k === "d" ? T.red : k === "p" ? T.amber : k === "g" ? T.green : T.text;
+    return <span key={i} style={{ color, textDecoration: k === "d" ? "line-through" : "none", fontWeight: k ? 700 : 400, background: k === "g" ? tint(T.green, "22") : "transparent" }}>{txt}</span>;
+  };
   return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Before you write a single line of Python, you need to unlearn two habits
-        from C. In C, structure is made of punctuation. In Python, structure is
-        made of <strong style={{ color: C.accent }}>layout</strong>. Step through
-        the same program below and watch the punctuation disappear.
-      </p>
-
-      {/* Step indicator — four dots showing where we are in the transformation. */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-        {stages.map((_, i) => (
-          <div key={i} style={{
-            flex: 1, height: 4, borderRadius: 2,
-            background: i <= step ? C.accent : C.border, transition: "background 0.3s",
-          }} />
-        ))}
-      </div>
-
-      <div style={{ color: C.accent, fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{s.title}</div>
-
-      {/* The code pane, re-rendered for whichever stage we're on. */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
-        <div style={{ padding: "8px 12px", background: C.surface, borderBottom: `1px solid ${C.border}`, fontSize: 11, color: C.muted, letterSpacing: 1 }}>
-          {s.file}
+    <div className="fh-two" style={{ alignItems: "start" }}>
+      <div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+          {stages.map((_, i) => <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= step ? T.blue : T.border }} />)}
         </div>
-        <div style={{ padding: "12px 14px", minHeight: 150 }}>
-          {s.lines.map((segs, i) => <CodeLine key={i} segs={segs} num={i + 1} />)}
+        <div style={{ color: T.blue, fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{s.title}</div>
+        <pre style={{ margin: 0, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 14px", fontFamily: CODE_FONT, fontSize: 14, lineHeight: 1.65, minHeight: 210 }}>
+          {s.lines.map((l, i) => <div key={i}><span style={{ color: T.muted, marginRight: 12 }}>{i + 1}</span>{l.map(seg)}</div>)}
+        </pre>
+      </div>
+      <div>
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10, padding: "14px 16px", fontSize: 14.5, color: T.slate, lineHeight: 1.7, minHeight: 120, marginTop: 30 }}>{s.caption}</div>
+        <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, color: step ? T.text : T.muted, fontWeight: 600, cursor: step ? "pointer" : "default", fontFamily: "inherit" }}>◀ Back</button>
+          <button onClick={() => setStep(Math.min(3, step + 1))} disabled={step === 3} style={{ flex: 2, padding: 10, borderRadius: 8, border: "none", background: step === 3 ? T.green : T.navy, color: "#fff", fontWeight: 700, cursor: step === 3 ? "default" : "pointer", fontFamily: "inherit" }}>{step === 3 ? "That's the whole idea ✓" : "Next step ▶"}</button>
         </div>
-      </div>
-
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12, minHeight: 92 }}>
-        {s.caption}
-      </div>
-
-      {/* Back / Next controls for stepping through the transformation. */}
-      <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={() => setStep((v) => Math.max(0, v - 1))} disabled={step === 0} style={{
-          flex: 1, padding: "10px", borderRadius: 8, background: C.card,
-          border: `1.5px solid ${C.border}`, color: step === 0 ? C.border : C.text,
-          fontWeight: 600, fontSize: 13, cursor: step === 0 ? "not-allowed" : "pointer",
-        }}>◀ Back</button>
-        <button onClick={() => setStep((v) => Math.min(stages.length - 1, v + 1))} disabled={step === stages.length - 1} style={{
-          flex: 2, padding: "10px", borderRadius: 8,
-          background: step === stages.length - 1 ? C.border : C.accentGlow,
-          border: "none", color: "#fff", fontWeight: 600, fontSize: 13,
-          cursor: step === stages.length - 1 ? "not-allowed" : "pointer",
-        }}>
-          {step === stages.length - 1 ? "That's the whole idea ✓" : "Next step ▶"}
-        </button>
-      </div>
-
-      {/* --- The two rules, stated plainly once the animation has made the point. --- */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 18 }}>
-        <div style={{ background: C.accent + "14", border: `1px solid ${C.accent}44`, borderRadius: 10, padding: "12px 14px" }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Rule 1 — the delimiter</div>
-          <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>
-            C ends a statement with <code style={{ color: C.yellow }}>;</code>.<br />
-            Python ends a statement with a <strong style={{ color: C.text }}>new line</strong>.
-          </div>
-        </div>
-        <div style={{ background: C.purple + "14", border: `1px solid ${C.purple}44`, borderRadius: 10, padding: "12px 14px" }}>
-          <div style={{ color: C.purple, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Rule 2 — the block</div>
-          <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>
-            C groups statements with <code style={{ color: C.yellow }}>{"{ }"}</code>.<br />
-            Python groups them with <strong style={{ color: C.text }}>indentation</strong>.
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 14, background: C.red + "14", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 14px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        ⚠️ <strong style={{ color: C.red }}>The consequence students always miss:</strong> in C, indentation
-        is a <em>style</em> choice — you could write your whole program on one line and it would still compile.
-        In Python, indentation is <em>syntax</em>. Move a line four spaces to the right and you have changed
-        what the program means. Delete the spaces and the program stops running at all
-        (<code style={{ color: C.red }}>IndentationError</code>). Whitespace is no longer invisible.
-      </div>
-
-      <div style={{ marginTop: 12, background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 14px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Key idea:</strong> Python did not invent a new way to lay out code —
-        it just made the layout you were <em>already</em> using the official one. That is the trade: you give up the
-        freedom to format however you like, and in exchange every Python program on earth looks readable,
-        and you type far less punctuation. This is the single biggest reason Python "feels" higher level than C.
       </div>
     </div>
   );
 }
 
-// ============================================================================
-// WIDGET 1 — CodeRunner
-// A simulated "editor + terminal" so the learner can press a Run button and
-// watch Python execute their program line by line, exactly like it would in
-// a real IDE — without needing an actual Python interpreter in the browser.
-// This mirrors the step-reveal animation pattern already used in Unit 3.3's
-// BytecodeDive widget, so returning students recognise the interaction.
-// ============================================================================
-function CodeRunner() {
-  // The "source code" the student is looking at, shown in the editor pane.
-  // Each entry is one line of Python exactly as it would appear in a .py file.
-  const codeLines = [
-    'print("Hello, Aishu!")',
-    'print("Welcome to Python.")',
-    "print(2 + 3)",
-  ];
-
-  // The terminal output that each line of code above produces when it runs.
-  // Index-matched to codeLines: codeLines[i] produces outputLines[i].
-  const outputLines = ["Hello, Aishu!", "Welcome to Python.", "5"];
-
-  // How many output lines have been "printed" to the terminal so far.
-  // Starts at 0 (nothing printed yet); climbs to outputLines.length once the
-  // whole program has finished running.
-  const [shown, setShown] = useState(0);
-
-  // Whether the program is currently "executing" — used to disable the Run
-  // button and show a "Running…" label while the reveal animation plays.
-  const [running, setRunning] = useState(false);
-
-  // run() simulates executing the program from top to bottom. Real Python
-  // would do this in microseconds; we deliberately slow it down with
-  // setTimeout so the learner can SEE each print() statement fire in order —
-  // that's the whole teaching point of this widget.
-  const run = () => {
-    if (running) return; // ignore repeat clicks while already running
-    setRunning(true);
-    setShown(0); // reset the terminal to empty before the "re-run"
-    outputLines.forEach((_, i) => {
-      // Each line appears (i+1) * 700ms after the button was clicked, so
-      // line 0 appears first, line 1 shortly after, and so on.
-      setTimeout(() => {
-        setShown((s) => s + 1);
-        // Once the last line has appeared, wait a moment then unlock the
-        // Run button again so the student can replay the animation.
-        if (i === outputLines.length - 1) {
-          setTimeout(() => setRunning(false), 500);
-        }
-      }, (i + 1) * 700);
-    });
-  };
-
+// ── Widget: quotes or no quotes? ──
+function QuoteToggle() {
+  const [quoted, setQuoted] = useState(true);
   return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Below is a real, tiny Python program. In Module 3 you learned WHY the
-        Python Virtual Machine can run this. Now let's actually run it —
-        click <strong style={{ color: C.accent }}>▶ Run</strong> and watch the
-        output appear in the terminal, one <code style={{ color: C.accent }}>print()</code> at a time.
-      </p>
-
-      {/* Two-column layout: code editor on the left, terminal output on the right. */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        {/* --- Editor pane --- */}
-        <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-          <div style={{ padding: "8px 12px", background: C.surface, borderBottom: `1px solid ${C.border}`, fontSize: 11, color: C.muted, letterSpacing: 1 }}>
-            hello.py
-          </div>
-          <div style={{ padding: "12px 14px" }}>
-            {/* One row per line of source code, numbered like a real editor. */}
-            {codeLines.map((line, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, fontFamily: "monospace", fontSize: 12, marginBottom: 4 }}>
-                <span style={{ color: C.border, minWidth: 14, textAlign: "right" }}>{i + 1}</span>
-                <span style={{ color: shown > i ? C.green : C.text }}>{line}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* --- Terminal pane --- */}
-        <div style={{ background: "#010409", borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-          <div style={{ padding: "8px 12px", background: C.surface, borderBottom: `1px solid ${C.border}`, fontSize: 11, color: C.muted, letterSpacing: 1 }}>
-            TERMINAL
-          </div>
-          <div style={{ padding: "12px 14px", minHeight: 88 }}>
-            {/* Only render as many output lines as have "printed" so far. */}
-            {outputLines.slice(0, shown).map((line, i) => (
-              <div key={i} style={{ fontFamily: "monospace", fontSize: 12, color: C.teal, marginBottom: 4 }}>
-                &gt; {line}
-              </div>
-            ))}
-            {/* A blinking-style cursor placeholder while nothing has run yet. */}
-            {shown === 0 && <div style={{ color: C.border, fontFamily: "monospace", fontSize: 12 }}>$ _</div>}
-          </div>
-        </div>
-      </div>
-
-      {/* Run button — triggers the run() function defined above. */}
-      <button onClick={run} disabled={running} style={{
-        width: "100%", padding: "11px", borderRadius: 8, border: "none",
-        background: running ? C.border : C.accentGlow, color: "#fff",
-        fontWeight: 600, fontSize: 14, cursor: running ? "not-allowed" : "pointer",
-      }}>
-        {running ? "Running…" : "▶ Run hello.py"}
-      </button>
-
-      <div style={{ marginTop: 16, background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.purple }}>Key idea:</strong> <code style={{ color: C.accent }}>print()</code> is a
-        built-in Python <em>function</em> — a ready-made instruction that displays whatever you place
-        inside its parentheses on the screen. Every single line runs top to bottom, in order.
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// WIDGET 2 — SyntaxChallenge ("Will it run, or will it error?")
-// A short guessing game: the learner is shown a print() statement and must
-// predict whether Python will run it successfully or throw an error, THEN
-// see the real result plus a plain-English explanation. This targets the
-// most common first-week mistakes: missing quotes, unmatched brackets, and
-// Python's case sensitivity.
-// ============================================================================
-function SyntaxChallenge() {
-  // Each snippet: the code shown to the student, whether it is valid Python,
-  // and the explanation revealed after they guess.
-  const snippets = [
-    { code: 'print("Good morning")', valid: true, reason: "Text is wrapped in quotes, so Python treats it as a literal string. The parentheses are matched. This runs perfectly." },
-    { code: "print(Good morning)", valid: false, reason: 'Without quotes, Python assumes "Good" and "morning" are variable names it should already know about. Since neither exists, this raises a NameError.' },
-    { code: 'print("Good morning"', valid: false, reason: "The closing parenthesis ) is missing. Python cannot tell where the instruction ends, so this raises a SyntaxError." },
-    { code: 'Print("Good morning")', valid: false, reason: "Python is case-sensitive. print (lowercase) is the built-in function; Print (capital P) does not exist, so this raises a NameError." },
-    { code: "print(10 + 5)", valid: true, reason: "print() can display the RESULT of a calculation, not just text. Python computes 10 + 5 first, then prints 15." },
-  ];
-
-  // Which snippet (0-based index) the student is currently looking at.
-  const [current, setCurrent] = useState(0);
-  // The student's guess for the current snippet: null (no guess yet), true, or false.
-  const [guess, setGuess] = useState(null);
-  // Running tally of correct guesses, shown at the end.
-  const [score, setScore] = useState(0);
-
-  // Called when the student clicks "Will Run" or "Will Error".
-  const choose = (guessValid) => {
-    if (guess !== null) return; // one guess per snippet
-    setGuess(guessValid);
-    if (guessValid === snippets[current].valid) setScore((s) => s + 1);
-  };
-
-  // Move to the next snippet and reset the guess state for it.
-  const next = () => {
-    setCurrent((c) => Math.min(c + 1, snippets.length - 1));
-    setGuess(null);
-  };
-
-  const s = snippets[current];
-  const isLast = current === snippets.length - 1;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Python is strict about small details. For each line below, predict:
-        will it run successfully, or will Python raise an error?
-      </p>
-
-      <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>
-        Snippet {current + 1} of {snippets.length} · Score so far: {score}
-      </div>
-
-      {/* The code snippet under test, shown in a monospace "code" box. */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px", marginBottom: 14, fontFamily: "monospace", fontSize: 14, color: C.text }}>
-        {s.code}
-      </div>
-
-      {/* Two guess buttons — disabled after a guess has been made for this snippet. */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-        <button onClick={() => choose(true)} disabled={guess !== null} style={{
-          flex: 1, padding: "10px", borderRadius: 8, cursor: guess !== null ? "default" : "pointer",
-          background: guess !== null ? (s.valid ? C.green + "22" : C.card) : C.card,
-          border: `1.5px solid ${guess !== null && s.valid ? C.green : C.border}`,
-          color: guess !== null && s.valid ? C.green : C.text, fontWeight: 600, fontSize: 13,
-        }}>✅ Will Run</button>
-        <button onClick={() => choose(false)} disabled={guess !== null} style={{
-          flex: 1, padding: "10px", borderRadius: 8, cursor: guess !== null ? "default" : "pointer",
-          background: guess !== null ? (!s.valid ? C.red + "22" : C.card) : C.card,
-          border: `1.5px solid ${guess !== null && !s.valid ? C.red : C.border}`,
-          color: guess !== null && !s.valid ? C.red : C.text, fontWeight: 600, fontSize: 13,
-        }}>❌ Will Error</button>
-      </div>
-
-      {/* Explanation box, only shown once the student has guessed. */}
-      {guess !== null && (
-        <div style={{
-          background: (guess === s.valid ? C.green : C.red) + "18",
-          border: `1px solid ${(guess === s.valid ? C.green : C.red)}44`,
-          borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.muted, marginBottom: 12,
-        }}>
-          {guess === s.valid ? "✓ Correct! " : "✗ Not quite. "}
-          💡 {s.reason}
-        </div>
-      )}
-
-      {/* Next button, only shown after guessing, hidden once we're on the last snippet. */}
-      {guess !== null && !isLast && (
-        <button onClick={next} style={{
-          width: "100%", padding: "10px", borderRadius: 8, background: C.accentGlow,
-          border: "none", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer",
-        }}>Next Snippet →</button>
-      )}
-
-      {/* Final tally, shown once the student has guessed on the last snippet. */}
-      {guess !== null && isLast && (
-        <div style={{ textAlign: "center", padding: "12px 20px", borderRadius: 8, background: C.green + "22", border: `1px solid ${C.green}`, color: C.green, fontWeight: 600 }}>
-          You got {score} / {snippets.length} right — nice eye for detail!
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// WIDGET 3 — CommentDemo
-// Demonstrates that Python completely ignores anything after a `#` on a
-// line. The toggle switches between "your view" (comments visible, in a
-// muted colour) and "Python's view" (comments physically removed) so the
-// learner sees, very concretely, that comments never affect execution.
-// ============================================================================
-function CommentDemo() {
-  // Whether we are currently showing "what Python actually sees" (comments
-  // stripped out) versus the normal editor view (comments visible in green).
-  const [pythonView, setPythonView] = useState(false);
-
-  // Each line of the little demo program, tagged with whether it's a full
-  // comment line, or ordinary code that happens to have a trailing comment.
-  const lines = [
-    { code: "# This program says hello", isComment: true },
-    { code: 'print("Hello!")', trailing: "  # greets the user", isComment: false },
-    { code: "# print(\"This never runs\")", isComment: true },
-    { code: 'print("Goodbye!")', isComment: false },
-  ];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A <strong style={{ color: C.accent }}>comment</strong> starts with a{" "}
-        <code style={{ color: C.yellow }}>#</code> symbol. It's a note written for humans —
-        Python skips it completely when running the program. Toggle the switch below to see it.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", marginBottom: 14, fontFamily: "monospace", fontSize: 13 }}>
-        {lines.map((l, i) => {
-          // In "Python's view", full comment lines are struck-through and
-          // faded to show they are effectively erased before running.
-          const hide = pythonView && l.isComment;
-          return (
-            <div key={i} style={{
-              marginBottom: 6,
-              color: l.isComment ? C.green : C.text,
-              opacity: hide ? 0.3 : 1,
-              textDecoration: hide ? "line-through" : "none",
-              transition: "all 0.3s",
-            }}>
-              {l.code}
-              {l.trailing && (
-                <span style={{ color: C.green, opacity: pythonView ? 0.3 : 1, textDecoration: pythonView ? "line-through" : "none" }}>{l.trailing}</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Toggle button that flips the pythonView boolean state. */}
-      <button onClick={() => setPythonView((v) => !v)} style={{
-        width: "100%", padding: "10px", borderRadius: 8,
-        background: pythonView ? C.purple + "22" : C.card,
-        border: `1.5px solid ${pythonView ? C.purple : C.border}`,
-        color: pythonView ? C.purple : C.text, fontWeight: 600, fontSize: 13, cursor: "pointer",
-      }}>
-        {pythonView ? "◀ Show My View (with comments)" : "▶ Show What Python Actually Sees"}
-      </button>
-
-      <div style={{ marginTop: 14, background: C.yellow + "18", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.yellow }}>Key idea:</strong> Comments cost nothing to Python — they exist purely
-        to help YOU (and your teammates) understand the code later. Good programmers comment generously.
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// WIDGET 4 — Quiz
-// The standard closing quiz used in every unit of this course. Only THIS
-// component's onComplete callback is wired to onUnitComplete (see the main
-// export below) — finishing the quiz is what marks the whole unit as done.
-// ============================================================================
-function Quiz({ onComplete }) {
-  const questions = [
-    // The first two questions test the C→Python structural shift taught in the
-    // "No ; No { }" section. They come first deliberately: this is the idea the
-    // rest of the course silently depends on.
-    {
-      q: "In Python, what marks the END of a statement?",
-      options: [
-        "A semicolon ;",
-        "A closing brace }",
-        "The end of the line — a new line means a new statement",
-        "A full stop .",
-      ],
-      answer: 2,
-      explain: "C needs a ; because to the compiler your program is one long stream of characters where newlines carry no meaning. Python treats the newline itself as the delimiter, so one line = one statement and the ; is unnecessary.",
-    },
-    {
-      q: "In Python, what decides which statements belong together as a block?",
-      options: [
-        "Curly braces { }",
-        "How far the lines are indented",
-        "The keywords BEGIN and END",
-        "Nothing — Python has no blocks",
-      ],
-      answer: 1,
-      explain: "Python replaces { } with indentation. In C you indented for readability and the compiler ignored it; in Python that same indentation IS the syntax. Change the indentation and you change what the program means — which is why IndentationError exists.",
-    },
-    {
-      q: 'What does print("Hi there") do?',
-      options: [
-        "Saves the text to a file named Hi there",
-        "Displays the text Hi there on the screen",
-        "Deletes the text Hi there",
-        "Asks the user to type Hi there",
-      ],
-      answer: 1,
-      explain: "print() is Python's built-in function for displaying output. Whatever is inside the parentheses (here, the text in quotes) appears on the screen.",
-    },
-    {
-      q: "Why does print(Hello) (no quotes) usually cause an error?",
-      options: [
-        "Python thinks Hello is the name of a variable, and no such variable exists",
-        "print() only accepts numbers",
-        "Hello is a reserved Python keyword",
-        "print() must always be written in capital letters",
-      ],
-      answer: 0,
-      explain: "Without quotes, Python assumes you're referring to something already defined — a variable. Since Hello was never created, Python raises a NameError.",
-    },
-    {
-      q: "What happens when Python runs a line starting with #?",
-      options: [
-        "It prints the line exactly as written",
-        "It runs the line twice",
-        "It skips the entire line — comments are ignored completely",
-        "It causes a SyntaxError",
-      ],
-      answer: 2,
-      explain: "Lines (or parts of lines) starting with # are comments. Python's interpreter ignores them entirely; they exist only for humans reading the code.",
-    },
-    {
-      q: 'Is Print("Hi") (capital P) valid Python?',
-      options: [
-        "Yes, Python doesn't care about capitalisation",
-        "No — Python is case-sensitive, and the real function is print (lowercase)",
-        "Yes, but only inside comments",
-        "No, because Hi should not be in quotes",
-      ],
-      answer: 1,
-      explain: "Python is case-sensitive. print and Print are treated as two completely different names, and only the lowercase print is the built-in function.",
-    },
-  ];
-
-  // current: which question (0-based) is on screen.
-  // selected: index of the option the student clicked for THIS question (null = not yet answered).
-  // score: running count of correct answers across the whole quiz.
-  // done: true once the student has answered the final question.
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  // Record the student's answer choice and update the score if correct.
-  const choose = (i) => {
-    if (selected !== null) return; // lock in only the first click
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-
-  // Advance to the next question, or — on the last question — mark the quiz
-  // done and call onComplete(), which the parent Unit4_1 component uses to
-  // fire onUnitComplete and persist progress for this student.
-  const next = () => {
-    if (current < questions.length - 1) {
-      setCurrent((c) => c + 1);
-      setSelected(null);
-    } else {
-      setDone(true);
-      onComplete && onComplete();
-    }
-  };
-
-  if (done) {
-    // final score also accounts for the very last answer just chosen.
-    const final = score + (selected === questions[current].answer ? 1 : 0);
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{final >= 4 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>
-          You scored {final} / {questions.length}
-        </div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {final === questions.length
-            ? "Perfect! You can now read and predict simple Python programs with confidence."
-            : final >= 3
-            ? "Good work — revisit the Spot the Bug section to sharpen your eye for syntax."
-            : "No worries — go through the Run and Comment sections again, then retry."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 4.1 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You've written and mentally run your first Python programs.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 4.2 — Variables & Memory.</strong> We'll open up the
-            computer's memory itself and see exactly where your data lives.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16 }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          // Colour logic: once answered, correct option turns green, the
-          // student's (wrong) pick turns red, everything else stays neutral.
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// MAIN EXPORT — Unit4_1
-// This is the component App.jsx dynamically loads and renders. It owns the
-// "shell" every unit shares: header, progress bar, section tabs, content
-// card, and the "Mark Complete & Continue" navigation button.
-// ============================================================================
-export default function Unit4_1({ student, onUnitComplete }) {
-  // The list of tabs across the top of the lesson. `label` is what's shown;
-  // the array's ORDER also defines which widget renders for which index —
-  // see the `content` array further down, which must stay in the same order.
-  const sections = [
-    { id: "intro", label: "From Concept to Code" },
-    { id: "shape", label: "No ; No { }" },
-    { id: "run", label: "print() — Run It" },
-    { id: "bugs", label: "Spot the Bug" },
-    { id: "comments", label: "Comments" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
-  ];
-
-  // Which tab/section index is currently visible.
-  const [activeSection, setActiveSection] = useState(0);
-  // Which section indices the student has visited/finished — drives both the
-  // ✓ ticks on the tabs and the "X / Y done" counter in the header.
-  const [completed, setCompleted] = useState([]);
-
-  // Mark a section index as completed (only adds it once, even if re-visited).
-  const markComplete = (idx) => {
-    if (!completed.includes(idx)) setCompleted((p) => [...p, idx]);
-  };
-
-  // "Mark Complete & Continue" button handler: marks the CURRENT section
-  // done, then advances to the next tab (capped so it never overflows).
-  const goNext = () => {
-    markComplete(activeSection);
-    setActiveSection((s) => Math.min(sections.length - 1, s + 1));
-  };
-
-  // The actual JSX rendered for each tab, in the SAME order as `sections`
-  // above. Index 0 is written inline (mostly static intro copy); indices
-  // 1-3 delegate to the interactive widgets defined earlier in this file;
-  // index 4 is the closing Quiz, whose onComplete both marks this last
-  // section done AND calls the onUnitComplete prop passed in from App.jsx —
-  // this is the one line in the whole file that actually saves progress.
-  const content = [
-    // 0 — Intro: bridges from Module 3's ending ("Next up: Module 4...") into
-    // this unit, and sets expectations for what "your first program" means.
-    <div>
-      <div style={{
-        background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-        border: `1px solid ${C.accent}44`, borderRadius: 12, padding: "24px 20px",
-        marginBottom: 20, textAlign: "center",
-      }}>
-        <div style={{ fontSize: 52, marginBottom: 10 }}>🐍</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-          From Concept to Code
-        </div>
-        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
-          In Module 3 you learned WHY Python can run on any computer — bytecode, the PVM,
-          the whole hybrid pipeline. Now it's time to actually use it. In this unit you'll
-          write your very first real Python instructions and watch them run.
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-        {[
-          { icon: "📝", title: "Source File", desc: "You'll type Python instructions into a plain text file ending in .py" },
-          { icon: "▶️", title: "Run It", desc: "The PVM (from Module 3!) reads your file and executes it, line by line" },
-          { icon: "🖥️", title: "See Output", desc: "Whatever your program prints appears in a terminal window" },
-          { icon: "🐞", title: "Fix Mistakes", desc: "Typos and small errors are completely normal — even experts make them daily" },
-        ].map((c, i) => (
-          <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 12px" }}>
-            <div style={{ fontSize: 24 }}>{c.icon}</div>
-            <div style={{ color: C.accent, fontWeight: 600, fontSize: 13, marginTop: 6 }}>{c.title}</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>{c.desc}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ background: C.yellow + "18", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.yellow }}>Key idea:</strong> Every large Python program — even one with
-        millions of lines — is built the same way: one small, correct instruction at a time. Today, your
-        program will have just one job: talk back to you on the screen.
-        <br /><br />
-        But first — a warning for anyone coming from C. Python does not use{" "}
-        <code style={{ color: C.red }}>;</code> and does not use{" "}
-        <code style={{ color: C.red }}>{"{ }"}</code>. Before you write a line of it, spend two minutes on
-        the next section and see exactly what replaced them.
-      </div>
-    </div>,
-
-    // 1 — ShapeOfPython: the C→Python punctuation strip. This MUST come before
-    // the print() section, because everything after it silently relies on the
-    // student having accepted that newline = delimiter and indent = block.
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>No Semicolons. No Braces.</h3>
-      <ShapeOfPython />
-    </div>,
-
-    // 2 — the CodeRunner widget: simulated editor + terminal.
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>print() — Your First Instruction</h3>
-      <CodeRunner />
-    </div>,
-
-    // 3 — the SyntaxChallenge widget: predict run vs error.
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Spot the Bug</h3>
-      <SyntaxChallenge />
-    </div>,
-
-    // 4 — the CommentDemo widget: comments are ignored by Python.
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Comments — Notes Python Ignores</h3>
-      <CommentDemo />
-    </div>,
-
-    // 5 — the closing Quiz. Note the onComplete callback: it marks THIS
-    // section (index 5) as done for the progress bar, and separately calls
-    // the onUnitComplete prop, which is what actually persists completion
-    // of Unit 4.1 back in App.jsx / the Google Apps Script backend.
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-        6 questions to check your understanding of Unit 4.1.
-      </p>
-      <Quiz onComplete={() => { markComplete(5); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
-  return (
-    // Full-page dark background matching every other lesson in the course.
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-
-      {/* ---------- Header: module/unit breadcrumb + live progress count ---------- */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 4 › UNIT 4.1</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Your First Program</div>
-        </div>
-        {/* completed.length updates live as the student works through the tabs */}
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      {/* ---------- Thin animated progress bar under the header ---------- */}
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-
-        {/* ---------- Tab strip: click any tab to jump straight to that section ---------- */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {/* Green tick shown once a section has been visited/completed */}
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
+    <div className="fh-two" style={{ marginBottom: 6 }}>
+      <div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          {[true, false].map((q) => (
+            <button key={String(q)} onClick={() => setQuoted(q)} style={{ padding: "8px 14px", borderRadius: 8, border: `1.5px solid ${quoted === q ? T.navy : T.border}`, background: quoted === q ? T.navy : T.card, color: quoted === q ? "#fff" : T.slate, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              {q ? 'with quotes "…"' : "without quotes"}
             </button>
           ))}
         </div>
-
-        {/* ---------- Main content card: renders whichever widget matches activeSection ---------- */}
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
+        <pre style={{ margin: 0, fontFamily: CODE_FONT, fontSize: 16, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "14px 16px" }}>
+          <span style={{ color: T.fn }}>print</span>({quoted ? <span style={{ color: T.str }}>"7 * 6"</span> : <span style={{ color: T.num }}>7 * 6</span>})
+        </pre>
+      </div>
+      <div>
+        <div style={{ fontSize: 12, color: T.muted, margin: "10px 0 6px" }}>OUTPUT</div>
+        <pre style={{ margin: 0, fontFamily: CODE_FONT, fontSize: 16, background: T.termBg, color: T.termText, borderRadius: 10, padding: "14px 16px" }}>{quoted ? "7 * 6" : "42"}</pre>
+        <div style={{ fontSize: 14, color: T.slate, marginTop: 8, lineHeight: 1.6 }}>
+          {quoted ? "Inside quotes it's text: Python shows it exactly, character by character." : "Without quotes it's an expression: Python calculates it first, then prints the answer."}
         </div>
-
-        {/* ---------- "Mark Complete & Continue" button ----------
-             Hidden on the very last tab (the quiz), because the quiz itself
-             provides its own progression buttons ("Next Question" / "See
-             Results") and calls onUnitComplete when finished. */}
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
       </div>
     </div>
+  );
+}
+
+// ── Widget: will it run? (predict before you fix) ──
+function WillItRun() {
+  const items = [
+    { code: 'print("Good morning")', ok: true, why: "Quotes around the text, brackets matched. Runs." },
+    { code: 'Print("Good morning")', ok: false, why: "Capital P. Python is case-sensitive — Print doesn't exist. NameError." },
+    { code: 'print("Good morning"', ok: false, why: "The closing ) is missing. SyntaxError." },
+    { code: "print(Good morning)", ok: false, why: "No quotes, so Python reads Good and morning as names. SyntaxError." },
+    { code: "print(10 + 5)", ok: true, why: "A calculation, no quotes needed. Prints 15." },
+  ];
+  const [ans, setAns] = useState({});
+  const score = Object.entries(ans).filter(([i, v]) => items[i].ok === v).length;
+  return (
+    <div style={{ display: "grid", gap: 8, maxWidth: 900 }}>
+      {items.map((it, i) => {
+        const a = ans[i];
+        const right = a !== undefined && a === it.ok;
+        return (
+          <div key={i} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, background: T.card, border: `1.5px solid ${a === undefined ? T.border : right ? T.green : T.red}`, borderRadius: 10, padding: "10px 12px" }}>
+            <code style={{ fontSize: 15, minWidth: 240 }}>{it.code}</code>
+            {a === undefined ? (
+              <span style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+                <button onClick={() => setAns({ ...ans, [i]: true })} style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${T.border}`, background: T.surface, cursor: "pointer", fontFamily: "inherit", color: T.text }}>✅ runs</button>
+                <button onClick={() => setAns({ ...ans, [i]: false })} style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${T.border}`, background: T.surface, cursor: "pointer", fontFamily: "inherit", color: T.text }}>❌ error</button>
+              </span>
+            ) : (
+              <span style={{ fontSize: 13.5, color: right ? T.green : T.red, marginLeft: "auto", maxWidth: 520 }}>{right ? "✓" : "✗"} <span style={{ color: T.slate }}>{it.why}</span></span>
+            )}
+          </div>
+        );
+      })}
+      {Object.keys(ans).length === items.length && <div style={{ fontWeight: 700, color: T.green }}>You predicted {score} / {items.length}. Now fix the broken ones for real ↓</div>}
+    </div>
+  );
+}
+
+// ── Widget: what Python sees ──
+function CommentView() {
+  const [py, setPy] = useState(false);
+  const lines = [
+    { c: "# This program says hello", com: true },
+    { c: 'print("Hello!")', tail: "   # greets the user" },
+    { c: '# print("This never runs")', com: true },
+    { c: 'print("Goodbye!")' },
+  ];
+  return (
+    <div style={{ maxWidth: 760 }}>
+      <pre style={{ margin: "0 0 10px", fontFamily: CODE_FONT, fontSize: 14.5, lineHeight: 1.8, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 16px" }}>
+        {lines.map((l, i) => (
+          <div key={i} style={{ color: l.com ? T.com : T.text, opacity: py && l.com ? 0.25 : 1, textDecoration: py && l.com ? "line-through" : "none" }}>
+            {l.c}{l.tail && <span style={{ color: T.com, opacity: py ? 0.25 : 1, textDecoration: py ? "line-through" : "none" }}>{l.tail}</span>}
+          </div>
+        ))}
+      </pre>
+      <button onClick={() => setPy(!py)} style={{ padding: "9px 16px", borderRadius: 8, border: `1.5px solid ${T.purple}`, background: py ? tint(T.purple, "18") : T.card, color: T.purple, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+        {py ? "◀ Show my view" : "▶ Show what Python actually sees"}
+      </button>
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const lines = (s) => s.replace(/\r/g, "").split("\n").map((l) => l.trimEnd()).filter((l, i, a) => !(i === a.length - 1 && l === ""));
+
+const EX = {
+  c2py: {
+    id: "c2py", kind: "fix", title: "Translate C into Python",
+    task: <>This is a line of C. Turn it into Python so it prints <code>Hello!</code>. Run it first and read what Python says.</>,
+    starter: 'printf("Hello!\\n");',
+    tests: [{ expect: "Hello!" }],
+    forbids: [{ text: ";", msg: "Python lines don't end with ; — remove it." }, { text: "\\n", msg: "print already moves to a new line by itself; \\n isn't needed." }],
+    hints: ["Python's function is called print, not printf.", "Delete the ; at the end and the \\n inside the text."],
+    solution: 'print("Hello!")',
+  },
+  hello: {
+    id: "hello", kind: "type", title: "Hello, World!",
+    task: <>The traditional first program. Type it exactly — capital H, comma, capital W, exclamation mark.</>,
+    show: 'print("Hello, World!")',
+    tests: [{ expect: "Hello, World!" }],
+    hints: ["Check the quotes: the text must start and end with \".", "Capitals and punctuation count: Hello, World!"],
+    solution: 'print("Hello, World!")',
+  },
+  intro: {
+    id: "intro", kind: "write", title: "Introduce yourself",
+    task: <>Write a program that prints <strong>two lines</strong>:<br />line 1 starts with <code>My name is</code> followed by your name,<br />line 2 starts with <code>I study</code> followed by your branch or college.</>,
+    starter: "",
+    tests: [{
+      check: (out) => {
+        const l = lines(out);
+        if (l.length !== 2) return `Expected exactly 2 lines, your program printed ${l.length}. Use one print( ) per line.`;
+        if (!l[0].startsWith("My name is ")) return 'Line 1 should start with "My name is " followed by your name.';
+        if (!l[1].startsWith("I study ")) return 'Line 2 should start with "I study " followed by your branch.';
+        return null;
+      },
+    }],
+    requires: [{ call: "print", min: 2, msg: "Use two print( ) lines." }],
+    hints: ["Two lines of output means two print( ) statements, one under the other.", 'print("My name is Priya")'],
+    solution: 'print("My name is Priya")\nprint("I study CSE at SRET")',
+  },
+  textnum: {
+    id: "textnum", kind: "type", title: "Text vs calculation",
+    task: <>Type both lines and run. Predict the output <em>before</em> you press Run.</>,
+    show: 'print("12 + 8")\nprint(12 + 8)',
+    tests: [{ expect: "12 + 8\n20" }],
+    hints: ["Line 1 has quotes, line 2 doesn't."],
+    solution: 'print("12 + 8")\nprint(12 + 8)',
+  },
+  hours: {
+    id: "hours", kind: "write", title: "Hours in a year",
+    task: <>A year has 365 days and each day has 24 hours. Print the number of hours in a year — but <strong>let Python do the multiplication</strong>. In Python, × is written <code>*</code>.</>,
+    tests: [{ expect: "8760" }],
+    requires: [{ node: "BinOp", msg: "Put the calculation inside print( ) — e.g. print(365 * 24)." }],
+    forbids: [{ constant: "8760", msg: "Don't type 8760 yourself — let Python calculate it." }, { constant: "'8760'", msg: "\"8760\" in quotes is text, not a calculation." }],
+    hints: ["No quotes — you want Python to calculate, not to copy text.", "print(365 * 24)"],
+    solution: "print(365 * 24)",
+  },
+  bill: {
+    id: "bill", kind: "write", title: "The cinema bill",
+    task: <>Three friends buy tickets at ₹150 each. Print exactly <code>Total: 450</code>.<br />print can take <strong>several items separated by commas</strong> — it puts one space between them: <code>print("Age:", 18)</code> shows <code>Age: 18</code>. Use one text item and one calculation.</>,
+    tests: [{ expect: "Total: 450" }],
+    requires: [{ node: "BinOp", msg: "Let Python calculate 3 * 150." }],
+    forbids: [{ text: "450", msg: "Let Python calculate the total — don't type 450." }],
+    hints: ['Item 1 is the text "Total:" and item 2 is the calculation.', 'print("Total:", 3 * 150)'],
+    solution: 'print("Total:", 3 * 150)',
+  },
+  fixCase: { id: "fixCase", kind: "fix", title: "Bug 1: the capital letter", task: <>Run it, read the coach, fix it.</>, starter: 'Print("Good morning")', tests: [{ expect: "Good morning" }], hints: ["Python is case-sensitive."], solution: 'print("Good morning")' },
+  fixParen: { id: "fixParen", kind: "fix", title: "Bug 2: the missing bracket", task: <>Run it, read the coach, fix it.</>, starter: 'print("Good morning"', tests: [{ expect: "Good morning" }], hints: ["Every ( needs a )."], solution: 'print("Good morning")' },
+  fixQuotes: { id: "fixQuotes", kind: "fix", title: "Bug 3: text without quotes", task: <>Run it, read the coach, fix it.</>, starter: "print(Good morning)", tests: [{ expect: "Good morning" }], hints: ["Text must be inside quotes."], solution: 'print("Good morning")' },
+  fixIndent: {
+    id: "fixIndent", kind: "fix", title: "Bug 4: the sneaky spaces",
+    task: <>Remember the C → Python section: indentation is part of the grammar. Fix this program.</>,
+    starter: 'print("Roll no: 22CS1042")\n  print("Branch: CSE")',
+    tests: [{ expect: "Roll no: 22CS1042\nBranch: CSE" }],
+    hints: ["Line 2 starts with two spaces. Why would Python object?", "Both lines are at the top level — neither should be indented."],
+    solution: 'print("Roll no: 22CS1042")\nprint("Branch: CSE")',
+  },
+  tea: {
+    id: "tea", kind: "modify", title: "Tea without sugar",
+    task: <>Your friend doesn't take sugar. <strong>Without deleting any line</strong>: (1) turn the step-3 line into a comment so it doesn't run, and (2) add a comment as a new first line saying what the program is.</>,
+    starter: 'print("Step 1: Boil water")\nprint("Step 2: Add tea leaves")\nprint("Step 3: Add sugar")\nprint("Step 4: Pour and enjoy")',
+    tests: [{ expect: "Step 1: Boil water\nStep 2: Add tea leaves\nStep 4: Pour and enjoy" }],
+    validate: (code) => {
+      const ls = code.split("\n").filter((l) => l.trim());
+      if (!ls[0]?.trim().startsWith("#")) return "Add a comment (a line starting with #) as the very first line.";
+      if (!ls.some((l) => l.trim().startsWith("#") && l.includes("Step 3"))) return "Keep the step-3 line, but put # in front of it.";
+      return null;
+    },
+    hints: ["A # at the start of a line makes Python skip the whole line.", "# My tea recipe — as line 1. Then put # in front of print(\"Step 3: Add sugar\")."],
+    solution: '# Tea recipe\nprint("Step 1: Boil water")\nprint("Step 2: Add tea leaves")\n# print("Step 3: Add sugar")\nprint("Step 4: Pour and enjoy")',
+  },
+  ticket: {
+    id: "ticket", kind: "make", title: "Print a cinema ticket",
+    task: <>Recreate this ticket exactly. Two new tricks: <code>print()</code> with nothing inside prints an <strong>empty line</strong>, and the total must be <strong>calculated</strong> (3 seats × ₹150) using a comma, as in the cinema-bill exercise. Start with a comment.</>,
+    minLines: 10,
+    tests: [{ expect: "==========================\n     FOOTHOLD CINEMAS\n==========================\nMovie: Python Returns\nSeats: 3\nTotal: Rs 450\n\nEnjoy the show!" }],
+    requires: [{ node: "BinOp", msg: "Calculate the total with 3 * 150." }, { text: "#", msg: "Start your program with a comment describing it." }],
+    forbids: [{ text: "450", msg: "Let Python calculate 450." }],
+    hints: ["Count the spaces before FOOTHOLD CINEMAS — there are five.", 'The total line: print("Total: Rs", 3 * 150)', "The empty line before Enjoy the show! is just print()."],
+    solution: '# My cinema ticket\nprint("==========================")\nprint("     FOOTHOLD CINEMAS")\nprint("==========================")\nprint("Movie: Python Returns")\nprint("Seats: 3")\nprint("Total: Rs", 3 * 150)\nprint()\nprint("Enjoy the show!")',
+  },
+};
+
+export const EXERCISES = EX; // for src/kit/selfTest.js
+
+const QUIZ = [
+  { q: "In Python, what marks the END of a statement?", options: ["A semicolon ;", "A closing brace }", "The end of the line", "A full stop ."], answer: 2,
+    explain: "Python uses the newline itself as the delimiter: one line, one statement. C needs ; because to the compiler newlines carry no meaning." },
+  { q: "What decides which lines belong together as a block?", options: ["Curly braces { }", "How far the lines are indented", "BEGIN and END", "Nothing"], answer: 1,
+    explain: "Indentation is the syntax in Python. That's why the stray spaces in Bug 4 caused an IndentationError." },
+  { q: "What does this print?", code: 'print("5 + 5")\nprint(5 + 5)', options: ["10 then 10", "5 + 5 then 10", "5 + 5 then 5 + 5", "An error"], answer: 1,
+    explain: "Quotes make text, shown exactly. Without quotes Python evaluates the expression first." },
+  { q: "What does this print?", code: 'print("Total:", 4 * 25)', options: ["Total:100", "Total: 100", "Total: 4 * 25", "Total:, 100"], answer: 1,
+    explain: "print separates its comma-separated items with one space, and calculates 4 * 25 first." },
+  { q: "Why does print(Hello) usually cause an error?", options: ["Python reads Hello as a variable name, and none exists", "print only accepts numbers", "Hello is a keyword", "print must be in capitals"], answer: 0,
+    explain: "Without quotes Python looks for something already named Hello — a NameError when there isn't one." },
+  { q: "What happens to a line starting with # ?", options: ["It's printed", "It runs twice", "Python skips it — it's a comment", "SyntaxError"], answer: 2,
+    explain: "Comments are notes for humans. That's how you switched off the sugar step without deleting it." },
+  { q: "Is Print(\"Hi\") valid?", options: ["Yes", "No — Python is case-sensitive; it's print", "Only in comments", "No — Hi shouldn't have quotes"], answer: 1,
+    explain: "print and Print are different names, and only lowercase print exists." },
+];
+
+export default function Unit4_1(props) {
+  const sections = [
+    {
+      label: "No ; No { }", kicker: "FROM C TO PYTHON", title: "No semicolons. No braces.",
+      blocks: [
+        <Note color={T.blue} icon="✍️"><strong>How every lesson works now:</strong> you'll write real Python in every section. It runs right here in your browser. Paste is switched off — type everything yourself. Errors are normal; the coach explains each one.</Note>,
+        <div style={{ height: 14 }} />,
+        <P>In C, structure is made of punctuation. In Python, it's made of <strong>layout</strong>. Step through one program and watch the punctuation disappear.</P>,
+        <ShapeOfPython />,
+        <KeyIdea>Python ends a statement with a <strong>new line</strong> (not <code>;</code>) and groups lines with <strong>indentation</strong> (not <code>{"{ }"}</code>). Indentation is grammar, not decoration.</KeyIdea>,
+        EX.c2py,
+      ],
+    },
+    {
+      label: "print()", kicker: "YOUR FIRST INSTRUCTION", title: "print() — make the computer talk",
+      blocks: [
+        <P><code>print( )</code> is a built-in <em>function</em>: a ready-made instruction that shows whatever you put inside the brackets. Text goes inside quotes. Lines run top to bottom, one after another.</P>,
+        EX.hello,
+        EX.intro,
+      ],
+    },
+    {
+      label: "Text vs Numbers", kicker: "QUOTES MATTER", title: "Text or calculation?",
+      blocks: [
+        <P>Quotes are a switch. With them, Python treats what's inside as text and shows it exactly. Without them, Python treats it as an <em>expression</em> and calculates it. Flip the switch:</P>,
+        <QuoteToggle />,
+        EX.textnum,
+        EX.hours,
+        EX.bill,
+        <KeyIdea>Quotes = text, shown exactly. No quotes = Python works it out. Commas inside print( ) separate items, and Python puts one space between them.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Fix the Bugs", kicker: "ERRORS ARE CLUES", title: "Spot it, then fix it",
+      blocks: [
+        <P>First predict: will each line run, or crash? Then fix the broken ones for real. Run each one <em>before</em> fixing it — learning to read Python's error message is the skill.</P>,
+        <WillItRun />,
+        EX.fixCase, EX.fixParen, EX.fixQuotes, EX.fixIndent,
+        <KeyIdea>An error message says <em>what</em> went wrong and <em>which line</em>. Read the last line first. Every programmer sees dozens a day — the skill is fixing them calmly.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Comments", kicker: "NOTES FOR HUMANS", title: "Comments — notes Python ignores",
+      blocks: [
+        <P>Anything after a <code>#</code> is a <strong>comment</strong>. Python skips it completely. Comments explain your code to other people — and they let you switch a line off without deleting it.</P>,
+        <CommentView />,
+        EX.tea,
+      ],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your first real program",
+      blocks: [
+        <P>Everything from this unit in one program: print, text, a calculation with commas, an empty line, and a comment. No starter code — a blank editor, like a real exam.</P>,
+        EX.ticket,
+      ],
+    },
+  ];
+  return (
+    <LessonShell
+      {...props}
+      unitId="Unit4_1"
+      crumb="MODULE 4 › UNIT 4.1"
+      title="Your First Program"
+      sections={sections}
+      quiz={QUIZ}
+      next={{ title: "Unit 4.2 — Variables & Memory", text: "Your programs start remembering things — and you'll see exactly where they live in memory." }}
+    />
   );
 }

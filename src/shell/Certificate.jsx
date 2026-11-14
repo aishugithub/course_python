@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BRAND as B, DARK as D, FONT, MONO } from './brand.js';
+import { BRAND as B, LIGHT as D, FONT, MONO } from './brand.js';
 import { getProgress } from './api.js';
 import { certificateStatus } from './completion.js';
 import COURSE_CONFIG from '../../config/course.config.js';
@@ -79,7 +79,7 @@ export default function Certificate({ student, onBack }) {
     return (
       <Notice onBack={onBack}>
         🔒 The certificate is issued from your saved progress on the server, so it’s only
-        available when you’re <b style={{ color: D.amber }}>signed in</b>. Sign in (or create a
+        available when you’re <b style={{ color: D.amberSoft }}>signed in</b>. Sign in (or create a
         free account) and finish the Crucibles and feedback to earn it.
       </Notice>
     );
@@ -91,8 +91,8 @@ export default function Certificate({ student, onBack }) {
       <Notice onBack={onBack}>
         You’re almost there. The server shows:
         <div style={{ marginTop: 14, display: 'inline-block', textAlign: 'left', color: D.ink }}>
-          <div>{status.allCrucibles ? '✅' : '🔥'} Crucibles cleared: <b style={{ color: D.amber }}>{status.cruciblesDone}/{status.cruciblesTotal}</b></div>
-          <div style={{ marginTop: 6 }}>{status.feedbackDone ? '✅' : '📝'} Course feedback submitted: <b style={{ color: D.amber }}>{status.feedbackDone ? 'yes' : 'not yet'}</b></div>
+          <div>{status.allCrucibles ? '✅' : '🔥'} Crucibles cleared: <b style={{ color: D.amberSoft }}>{status.cruciblesDone}/{status.cruciblesTotal}</b></div>
+          <div style={{ marginTop: 6 }}>{status.feedbackDone ? '✅' : '📝'} Course feedback submitted: <b style={{ color: D.amberSoft }}>{status.feedbackDone ? 'yes' : 'not yet'}</b></div>
         </div>
         <div style={{ marginTop: 14, color: D.inkSoft }}>Finish both and your certificate unlocks automatically.</div>
       </Notice>

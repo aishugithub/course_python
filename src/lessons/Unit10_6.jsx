@@ -1,379 +1,104 @@
-import { useState } from "react";
+// Unit 10.6 — User-Defined Exceptions (rebuilt, typing-first)
+// class InvalidMarkError(Exception) → raise and catch your own type →
+// why it beats ValueError (no false catches) → a family of exceptions with a
+// shared parent → library lending make-task.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, CodeBlock } from "../kit/Lesson.jsx";
+import { T } from "../kit/theme.js";
+
+const lib = (lines) => {
+  const avail = { python101: true, "wings-of-fire": true, godan: false };
+  const loans = {}; const out = [];
+  for (const l of lines) {
+    out.push(`Borrow (member book): ${l}`); if (l === "done") break;
+    const [m, b] = l.split(" ");
+    if (!(b in avail)) out.push(`Refused: no book called ${b}`);
+    else if (!avail[b]) out.push(`Refused: ${b} is already lent out`);
+    else if ((loans[m] || 0) >= 2) out.push(`Refused: ${m} already has 2 books`);
+    else { avail[b] = false; loans[m] = (loans[m] || 0) + 1; out.push(`${m} borrowed ${b}`); }
+  }
+  return out.join("\n");
 };
 
-// ── Section 1: The Need ──────────────────────────────────────────────────────
-function TheNeed() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        In Module 9 you caught Python's built-in errors — <code style={{ color: C.orange }}>ValueError</code>,{" "}
-        <code style={{ color: C.orange }}>KeyError</code>. But some problems are yours, not Python's. A mark of 150
-        isn't a syntax or type error — it's <em>your</em> rule being broken. You want an error that says exactly that.
-      </p>
+const EX = {
+  define: {
+    id: "define", kind: "type", title: "Your own exception type",
+    task: <>An exception is a class. Inherit from <code>Exception</code> and you have a new error type with a name that explains your problem. <code>pass</code> is enough — the parent does the rest.</>,
+    show: 'class InvalidMarkError(Exception):\n    pass\n\ndef set_mark(mark):\n    if not 0 <= mark <= 100:\n        raise InvalidMarkError(f"{mark} is not between 0 and 100")\n    return mark\n\nfor m in [87, 150]:\n    try:\n        print("Saved", set_mark(m))\n    except InvalidMarkError as e:\n        print("Rejected:", e)',
+    minLines: 14,
+    tests: [{ expect: "Saved 87\nRejected: 150 is not between 0 and 100" }],
+    requires: [{ node: "ClassDef" }, { node: "Raise" }],
+    hints: ["The message you pass when raising is what print(e) shows."],
+    solution: 'class InvalidMarkError(Exception):\n    pass\n\ndef set_mark(mark):\n    if not 0 <= mark <= 100:\n        raise InvalidMarkError(f"{mark} is not between 0 and 100")\n    return mark\n\nfor m in [87, 150]:\n    try:\n        print("Saved", set_mark(m))\n    except InvalidMarkError as e:\n        print("Rejected:", e)',
+  },
+  precise: {
+    id: "precise", kind: "fix", title: "Catching the wrong problem",
+    task: <>Typing <code>eighty</code> should say <code>Not a number</code>, but it says <code>Mark out of range</code> — both problems raise ValueError, so one except can't tell them apart. Define <code>InvalidMarkError(Exception)</code>, raise <em>it</em> for the range check, and give each problem its own except.</>,
+    starter: 'def read_mark(text):\n    mark = int(text)\n    if not 0 <= mark <= 100:\n        raise ValueError("out of range")\n    return mark\n\ntry:\n    print("Saved", read_mark(input("Mark: ")))\nexcept ValueError:\n    print("Mark out of range")',
+    tests: [
+      { inputs: ["eighty"], expect: "Mark: eighty\nNot a number" },
+      { inputs: ["150"], expect: "Mark: 150\nMark out of range", hidden: true },
+      { inputs: ["75"], expect: "Mark: 75\nSaved 75", hidden: true },
+    ],
+    requires: [{ node: "ClassDef" }, { node: "ExceptHandler", min: 2 }],
+    hints: ["except InvalidMarkError: print(\"Mark out of range\") — then except ValueError: print(\"Not a number\")", "InvalidMarkError inherits from Exception, not from ValueError, so the two never get confused."],
+    solution: 'class InvalidMarkError(Exception):\n    pass\n\ndef read_mark(text):\n    mark = int(text)\n    if not 0 <= mark <= 100:\n        raise InvalidMarkError("out of range")\n    return mark\n\ntry:\n    print("Saved", read_mark(input("Mark: ")))\nexcept InvalidMarkError:\n    print("Mark out of range")\nexcept ValueError:\n    print("Not a number")',
+  },
+  funds: {
+    id: "funds", kind: "write", title: "InsufficientFundsError",
+    task: <>Write <code>InsufficientFundsError(Exception)</code> and a <code>Wallet(balance)</code> class whose <code>spend(amount)</code> raises it with the message <code>need Rs 500, have Rs 300</code> when there isn't enough. Main code: a wallet with 300, try to spend 120 and print <code>Left: Rs 180</code>; then try to spend 500 and print <code>Declined: need Rs 500, have Rs 180</code>.</>,
+    minLines: 16,
+    tests: [{ expect: "Left: Rs 180\nDeclined: need Rs 500, have Rs 180" }],
+    post: "_w = Wallet(10)\ntry:\n    _w.spend(11)\n    raise AssertionError('spend should raise InsufficientFundsError')\nexcept InsufficientFundsError:\n    pass\nassert _w.balance == 10",
+    requires: [{ node: "ClassDef", min: 2 }, { node: "Raise" }],
+    hints: ['raise InsufficientFundsError(f"need Rs {amount}, have Rs {self.balance}")', "Only subtract after the check passes."],
+    solution: 'class InsufficientFundsError(Exception):\n    pass\n\nclass Wallet:\n    def __init__(self, balance):\n        self.balance = balance\n    def spend(self, amount):\n        if amount > self.balance:\n            raise InsufficientFundsError(f"need Rs {amount}, have Rs {self.balance}")\n        self.balance -= amount\n\nw = Wallet(300)\nfor amount in [120, 500]:\n    try:\n        w.spend(amount)\n        print(f"Left: Rs {w.balance}")\n    except InsufficientFundsError as e:\n        print(f"Declined: {e}")',
+  },
+  family: {
+    id: "family", kind: "write", title: "A family of errors",
+    task: <>Make a parent <code>BookingError(Exception)</code> and two children: <code>SeatTakenError(BookingError)</code> and <code>NoSuchSeatError(BookingError)</code>. Write <code>book(seats, n)</code> (seats is a list of 10 bools) raising the right one. Book seats 3, 3 and 12 — each in its own try with a <strong>single</strong> <code>except BookingError as e</code> — printing <code>Booked 3</code>, <code>Problem: seat 3 is taken</code>, <code>Problem: there is no seat 12</code>.</>,
+    minLines: 20,
+    tests: [{ expect: "Booked 3\nProblem: seat 3 is taken\nProblem: there is no seat 12" }],
+    post: "assert issubclass(SeatTakenError, BookingError) and issubclass(NoSuchSeatError, BookingError)",
+    requires: [{ node: "ClassDef", min: 3 }],
+    hints: ["class SeatTakenError(BookingError): pass", "One except BookingError catches both children — that's what the shared parent is for."],
+    solution: 'class BookingError(Exception):\n    pass\n\nclass SeatTakenError(BookingError):\n    pass\n\nclass NoSuchSeatError(BookingError):\n    pass\n\ndef book(seats, n):\n    if n < 1 or n > len(seats):\n        raise NoSuchSeatError(f"there is no seat {n}")\n    if seats[n - 1]:\n        raise SeatTakenError(f"seat {n} is taken")\n    seats[n - 1] = True\n\nseats = [False] * 10\nfor n in [3, 3, 12]:\n    try:\n        book(seats, n)\n        print(f"Booked {n}")\n    except BookingError as e:\n        print(f"Problem: {e}")',
+  },
+  library: {
+    id: "library", kind: "make", title: "Library lending",
+    task: <>Books: <code>python101</code> and <code>wings-of-fire</code> are available, <code>godan</code> is already lent out. A member may hold at most 2 books. Define <code>LibraryError</code> and three children — <code>NoSuchBookError</code>, <code>NotAvailableError</code>, <code>LimitReachedError</code> — and a <code>Library</code> class with <code>borrow(member, book)</code> that raises them with messages <code>no book called X</code>, <code>X is already lent out</code>, <code>M already has 2 books</code>. Read <code>Borrow (member book): </code> lines until <code>done</code>; print <code>Priya borrowed python101</code> or <code>Refused: …</code>.</>,
+    minLines: 32,
+    tests: [
+      { inputs: ["Priya python101", "Arun godan", "Arun gita", "Priya wings-of-fire", "Priya python101", "done"], expect: lib(["Priya python101", "Arun godan", "Arun gita", "Priya wings-of-fire", "Priya python101", "done"]) },
+      { inputs: ["Ravi python101", "Meena python101", "done"], expect: lib(["Ravi python101", "Meena python101", "done"]), hidden: true },
+    ],
+    requires: [{ node: "ClassDef", min: 5 }, { node: "Raise", min: 3 }],
+    hints: ["self.available = {\"python101\": True, \"wings-of-fire\": True, \"godan\": False}; self.loans = {} (member → count).", "Check in order: unknown book, not available, member limit.", "The main loop catches LibraryError as e and prints f\"Refused: {e}\"."],
+    solution: 'class LibraryError(Exception):\n    pass\n\nclass NoSuchBookError(LibraryError):\n    pass\n\nclass NotAvailableError(LibraryError):\n    pass\n\nclass LimitReachedError(LibraryError):\n    pass\n\nclass Library:\n    def __init__(self):\n        self.available = {"python101": True, "wings-of-fire": True, "godan": False}\n        self.loans = {}\n\n    def borrow(self, member, book):\n        if book not in self.available:\n            raise NoSuchBookError(f"no book called {book}")\n        if not self.available[book]:\n            raise NotAvailableError(f"{book} is already lent out")\n        if self.loans.get(member, 0) >= 2:\n            raise LimitReachedError(f"{member} already has 2 books")\n        self.available[book] = False\n        self.loans[member] = self.loans.get(member, 0) + 1\n\nlib = Library()\nline = input("Borrow (member book): ")\nwhile line != "done":\n    member, book = line.split()\n    try:\n        lib.borrow(member, book)\n        print(f"{member} borrowed {book}")\n    except LibraryError as e:\n        print(f"Refused: {e}")\n    line = input("Borrow (member book): ")',
+  },
+};
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.yellow}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.yellow, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>🙂 Built-in errors</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>Great for generic problems — bad conversion, missing key. But "mark out of range" isn't any of them.</div>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>🎯 Your own error</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>InvalidMarkError names the problem precisely, and callers can catch just that.</div>
-        </div>
-      </div>
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-      <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>A custom exception is just a class</strong> that inherits from{" "}
-        <code style={{ color: C.purple }}>Exception</code>. This is Module 10's inheritance meeting Module 9's
-        raise/except — the two ideas click together here.
-      </div>
-    </div>
-  );
-}
+const QUIZ = [
+  { q: "How do you create your own exception type?", options: ["def MyError():", "class MyError(Exception): pass", "raise MyError", "import MyError"], answer: 1, explain: "Exceptions are classes; inherit from Exception." },
+  { q: "Why is InvalidMarkError better than reusing ValueError?", options: ["It's shorter", "Its name explains the problem, and you can catch it without accidentally catching unrelated ValueErrors", "It's faster", "No difference"], answer: 1, explain: "Precise catches, readable tracebacks." },
+  { q: "except BookingError catches…", options: ["Only BookingError itself", "BookingError and every class that inherits from it", "All exceptions", "Nothing"], answer: 1, explain: "One handler for the whole family." },
+  { q: "What does print(e) show for raise MyError(\"seat 3 is taken\")?", options: ["MyError", "seat 3 is taken", "Nothing", "e"], answer: 1, explain: "The message you passed when raising." },
+];
 
-// ── Section 2: Defining one ──────────────────────────────────────────────────
-function Defining() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        Defining a custom exception is often a one-liner: a class that inherits from{" "}
-        <code style={{ color: C.teal }}>Exception</code> and adds nothing new. That's enough to give it a name and a
-        type you can raise and catch.
-      </p>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 12, lineHeight: 1.85, whiteSpace: "pre" }}>
-        <span style={{ color: C.teal }}>class InvalidMarkError(Exception):</span>{"   "}<span style={{ color: C.muted }}># inherits everything from Exception</span>{"\n"}
-        {"    "}pass{"                             "}<span style={{ color: C.muted }}># nothing extra needed</span>{"\n\n"}
-        def set_mark(mark):{"\n"}
-        {"    "}if mark &lt; 0 or mark &gt; 100:{"\n"}
-        {"        "}<span style={{ color: C.orange }}>raise InvalidMarkError</span>({'"mark must be 0..100, got " + str(mark)'}){"\n"}
-        {"    "}return mark
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.teal}44`, borderRadius: 8, padding: 12 }}>
-          <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>(Exception)</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>Inheriting from Exception makes it a real, raisable error — Python treats it like its own.</div>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.orange}44`, borderRadius: 8, padding: 12 }}>
-          <div style={{ color: C.orange, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>raise</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>You throw it yourself when your rule is broken — the message explains what went wrong.</div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 14, background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.teal }}>The name IS the documentation.</strong> A stack trace ending in{" "}
-        <code style={{ color: C.teal }}>InvalidMarkError</code> tells you far more than a generic ValueError ever could.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 3: Try it — raise & catch ────────────────────────────────────────
-function TryIt() {
-  const [mark, setMark] = useState(85);
-  const valid = mark >= 0 && mark <= 100;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        The caller wraps <code style={{ color: C.accent }}>set_mark()</code> in a try/except that catches{" "}
-        <em>only</em> your error type. Drag the mark to see it accept or reject.
-      </p>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 12, lineHeight: 1.8, whiteSpace: "pre" }}>{`# uses InvalidMarkError and set_mark() from the previous tab
-try:
-    m = set_mark(${mark})
-    print("Accepted:", m)
-except InvalidMarkError as e:
-    print("Rejected:", e)`}</div>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>mark = <strong style={{ color: valid ? C.green : C.red }}>{mark}</strong></label>
-        <input type="range" min={-20} max={150} value={mark} onChange={(e) => setMark(Number(e.target.value))} style={{ width: "100%", accentColor: valid ? C.green : C.red }} />
-      </div>
-
-      <div style={{ background: (valid ? C.green : C.red) + "12", border: `1.5px solid ${(valid ? C.green : C.red)}55`, borderRadius: 10, padding: 16 }}>
-        <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 8 }}>CONSOLE OUTPUT</div>
-        <div style={{ fontFamily: "monospace", fontSize: 13.5, color: valid ? C.green : C.red }}>
-          {valid
-            ? `Accepted: ${mark}`
-            : `Rejected: mark must be 0..100, got ${mark}`}
-        </div>
-        <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10, lineHeight: 1.6 }}>
-          {valid
-            ? "The mark passed the check, so set_mark returned it and the try block finished normally."
-            : "set_mark raised InvalidMarkError; the except caught that specific type and reported it — no crash."}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 14, background: C.purple + "15", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Catching by type is the payoff.</strong> Because it's its own class,
-        you can catch <code style={{ color: C.purple }}>InvalidMarkError</code> separately from a{" "}
-        <code>ValueError</code> or a <code>KeyError</code> and handle each differently.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 4: Why bother ────────────────────────────────────────────────────
-function WhyBother() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Three concrete wins from defining your own exception types:
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-        {[
-          ["🎯", "Precise catching", "except InvalidMarkError catches only your rule-breaks, not unrelated ValueErrors that might hide real bugs."],
-          ["📖", "Self-documenting", "The error name explains the domain problem. Anyone reading the traceback instantly knows what went wrong."],
-          ["🌳", "Grouping with a base", "Make a base like class MarksError(Exception), then InvalidMarkError(MarksError) and DuplicateStudentError(MarksError) — one except MarksError catches the whole family."],
-        ].map(([icon, title, body], i) => (
-          <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, display: "flex", gap: 12 }}>
-            <div style={{ fontSize: 20 }}>{icon}</div>
-            <div>
-              <div style={{ color: C.text, fontWeight: 600, fontSize: 13, marginBottom: 3 }}>{title}</div>
-              <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>{body}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>An exception hierarchy — a family tree of your errors:</div>
-        <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`class MarksError(Exception):
-    pass
-
-class InvalidMarkError(MarksError):
-    pass
-
-class DuplicateStudentError(MarksError):
-    pass
-
-# one except catches the whole family:
-except MarksError as e:
-    print("Marks problem:", e)`}</pre>
-      </div>
-
-      <div style={{ background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.green }}>This is the same inheritance tree idea from Unit 10.4</strong> — just
-        applied to errors. Because Python's own exceptions are a hierarchy too, catching a parent catches all its
-        children.
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "How do you define a custom exception in Python?",
-      options: [
-        "def InvalidMarkError():",
-        "class InvalidMarkError(Exception): pass",
-        "raise InvalidMarkError",
-        "import InvalidMarkError",
-      ],
-      answer: 1,
-      explain: "A custom exception is a class that inherits from Exception. Often the body is just  pass  — inheriting is enough to make it raisable and catchable.",
-    },
-    {
-      q: "Why prefer InvalidMarkError over a plain ValueError for an out-of-range mark?",
-      options: [
-        "It runs faster",
-        "It names the exact domain problem and can be caught separately from unrelated ValueErrors",
-        "ValueError doesn't exist",
-        "Custom errors can't have messages",
-      ],
-      answer: 1,
-      explain: "A specific type makes tracebacks self-documenting and lets you catch your rule-breaks precisely, without also swallowing unrelated ValueErrors that could be real bugs.",
-    },
-    {
-      q: "What does  raise InvalidMarkError(\"...\")  do?",
-      options: [
-        "Defines the exception",
-        "Throws the exception, interrupting normal flow so an except can handle it",
-        "Catches the exception",
-        "Prints a warning and continues",
-      ],
-      answer: 1,
-      explain: "raise throws the exception (just like Python's built-ins). Execution jumps to the nearest matching except block, or crashes if none catches it.",
-    },
-    {
-      q: "If InvalidMarkError inherits from MarksError, what does  except MarksError  catch?",
-      options: [
-        "Only MarksError, not its children",
-        "MarksError and any exception that inherits from it, including InvalidMarkError",
-        "Every exception in Python",
-        "Nothing",
-      ],
-      answer: 1,
-      explain: "Catching a parent type catches all its subclasses — the same inheritance rule from Unit 10.4, applied to errors. One except handles the whole family.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You can design your own error types like a pro." :
-            score >= 2 ? "Good — replay Try It to watch raise and except in action." :
-              "Revisit Defining and Try It, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 10.6 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You can raise and catch your own named error types — Module 9's exceptions plus Module 10's classes,
-            working together.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 10.7 — Capstone: Marks Manager 3.0.</strong> Every OOP idea
-            from this module comes together in one working app.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function Unit10_6({ student, onUnitComplete }) {
+export default function Unit10_6(props) {
   const sections = [
-    { id: "need", label: "The Need" },
-    { id: "define", label: "Defining One" },
-    { id: "try", label: "Raise & Catch" },
-    { id: "why", label: "Why Bother" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    { label: "Your Own Errors", kicker: "EXCEPTIONS × CLASSES", title: "An exception is just a class", blocks: [<P>Module 9 raised built-in errors like ValueError. Module 10 taught classes. Put them together: your own error types, named after your own problems.</P>, EX.define] },
+    { label: "Precise Catches", kicker: "WHY BOTHER", title: "Catch exactly what you mean", blocks: [EX.precise, EX.funds] },
+    {
+      label: "Families", kicker: "INHERITANCE AGAIN", title: "A family of related errors",
+      blocks: [<div style={{ maxWidth: 640 }}><CodeBlock title="the shape" code={"class BookingError(Exception): pass         # the family\nclass SeatTakenError(BookingError): pass    # one member\nclass NoSuchSeatError(BookingError): pass   # another\n\nexcept BookingError:     # catches any of them"} /></div>, EX.family, <KeyIdea>A shared parent lets callers choose: catch one specific error, or the whole family at once.</KeyIdea>],
+    },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: library lending", blocks: [EX.library] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>When Built-in Errors Aren't Enough</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Defining Your Own Exception</h3><Defining /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Raise It, Catch It</h3><TryIt /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Why Bother — and Hierarchies</h3><WhyBother /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on user-defined exceptions.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🚨</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.6</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>User-Defined Exceptions</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit10_6" crumb="MODULE 10 › UNIT 10.6" title="User-Defined Exceptions" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 10.7 — Capstone: Marks Manager 3.0", text: "Student and Classroom classes — the Marks Manager's final form." }} />
   );
 }

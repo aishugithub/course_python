@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DARK as D, FONT } from './brand.js';
+import { LIGHT as D, FONT } from './brand.js';
 import { getProgress } from './api.js';
 import { labCertificateStatus } from './labCompletion.js';
 import COURSE_CONFIG from '../../config/course.config.js';
@@ -79,7 +79,7 @@ export default function LabCertificate({ student, onBack }) {
     return (
       <Notice onBack={onBack}>
         🔒 The lab certificate is issued from your saved progress on the server, so it’s only
-        available when you’re <b style={{ color: D.amber }}>signed in</b> with your roll number.
+        available when you’re <b style={{ color: D.amberSoft }}>signed in</b> with your roll number.
         Sign in, then finish all ten experiments, all five mini-project crucibles and the feedback to earn it.
       </Notice>
     );
@@ -92,9 +92,9 @@ export default function LabCertificate({ student, onBack }) {
       <Notice onBack={onBack}>
         You’re almost there. The server shows:
         <div style={{ marginTop: 14, display: 'inline-block', textAlign: 'left', color: D.ink }}>
-          <div>🧪 Experiments completed: <b style={{ color: D.amber }}>{status.experimentsDone}/{status.experimentsTotal}</b></div>
-          <div style={{ marginTop: 6 }}>🔥 Mini-project crucibles completed: <b style={{ color: D.amber }}>{status.cruciblesDone}/{status.cruciblesTotal}</b></div>
-          <div style={{ marginTop: 6 }}>📝 Feedback: <b style={{ color: D.amber }}>{status.feedbackDone ? 'submitted' : 'pending'}</b></div>
+          <div>🧪 Experiments completed: <b style={{ color: D.amberSoft }}>{status.experimentsDone}/{status.experimentsTotal}</b></div>
+          <div style={{ marginTop: 6 }}>🔥 Mini-project crucibles completed: <b style={{ color: D.amberSoft }}>{status.cruciblesDone}/{status.cruciblesTotal}</b></div>
+          <div style={{ marginTop: 6 }}>📝 Feedback: <b style={{ color: D.amberSoft }}>{status.feedbackDone ? 'submitted' : 'pending'}</b></div>
           {status.missing.length > 0 && (
             <div style={{ marginTop: 10, color: D.inkSoft, fontSize: 13.5 }}>
               Still to do: {status.missing.join(' · ')}

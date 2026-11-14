@@ -1,400 +1,118 @@
+// Unit CT2.2 — Searching: Linear & Binary (rebuilt, typing-first)
+// Linear search with a -1 sentinel → all positions → binary search on a
+// sorted list, counting steps → compare the two → directory lookup make-task.
+// No functions yet (CT II sits before Module 8).
+
 import { useState } from "react";
+import LessonShell, { P, KeyIdea } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
-};
+const comments = (min) => ({ text: "#", min, msg: `Write your algorithm first, as at least ${min} # comment lines.` });
 
-const SORTED = [12, 23, 45, 67, 89, 91, 103];
-
-// ── Section 1: The Need — membership & position ──────────────────────────────
-function TheNeed() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Scanning gave you a <em>summary</em> (max, sum…). Searching answers a different question:{" "}
-        <strong style={{ color: C.text }}>"is this value in the list — and where?"</strong> Think roll-number lookup,
-        a patient ID in a register, a name in a contact list.
-      </p>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
-        <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Two honest answers a search must give:</div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 200, background: C.green + "14", border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12 }}>
-            <div style={{ color: C.green, fontWeight: 700, fontSize: 12.5 }}>✅ Found → its index</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>"67 is at position 3."</div>
-          </div>
-          <div style={{ flex: 1, minWidth: 200, background: C.red + "12", border: `1px solid ${C.red}44`, borderRadius: 8, padding: 12 }}>
-            <div style={{ color: C.red, fontWeight: 700, fontSize: 12.5 }}>❌ Absent → a sentinel, -1</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>"50 isn't here" → return -1, a value no real index can be.</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Two strategies, huge difference.</strong> Linear search works on{" "}
-        <em>any</em> list. Binary search is dramatically faster — but demands a <strong style={{ color: C.text }}>sorted</strong> list.
-        You'll build both.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 2: Linear search anatomy ─────────────────────────────────────────
-function LinearAnatomy() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        The obvious way: check each slot in turn. It's the flag/verdict pattern (Unit CT-I.3) with a twist —{" "}
-        <code style={{ color: C.orange }}>break</code> the moment you find it, so you don't waste time.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16, fontFamily: "monospace", fontSize: 12.5, lineHeight: 2, whiteSpace: "pre" }}>
-        target = 67{"\n"}
-        <span style={{ color: C.teal }}>found = -1</span>{"                     # assume absent\n"}
-        for i in range(len(data)):{"\n"}
-        {"    "}<span style={{ color: C.orange }}>if data[i] == target:</span>{"\n"}
-        {"        "}found = i{"              # remember WHERE\n"}
-        {"        "}<span style={{ color: C.purple }}>break</span>{"                  # stop — no need to look further\n"}
-        print(found){"                   # index, or -1 if never set"}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.teal}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.teal, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>Why found = -1?</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>Indices are 0, 1, 2… -1 can never be a real position, so it cleanly means "not here."</div>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.purple}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.purple, fontWeight: 700, fontSize: 12, marginBottom: 6 }}>Why break?</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.6 }}>Once found, more looking is wasted work. Worst case (absent), linear search still touches all N items.</div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 14, background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.teal }}>Linear search: up to N checks.</strong> A million-row register could
-        cost a million comparisons. That's the price we'll cut next.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 3: Binary search step-through ────────────────────────────────────
-const BIN_STEPS = (() => {
-  const target = 67;
-  const steps = [];
-  let low = 0, high = SORTED.length - 1, found = -1;
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    if (SORTED[mid] === target) {
-      found = mid;
-      steps.push({ low, high, mid, found, desc: `data[${mid}] = ${SORTED[mid]} == target → FOUND at index ${mid}.` });
-      break;
-    } else if (SORTED[mid] < target) {
-      steps.push({ low, high, mid, found: -1, desc: `data[${mid}] = ${SORTED[mid]} < 67 → target is to the RIGHT. low = ${mid + 1}.` });
-      low = mid + 1;
-    } else {
-      steps.push({ low, high, mid, found: -1, desc: `data[${mid}] = ${SORTED[mid]} > 67 → target is to the LEFT. high = ${mid - 1}.` });
-      high = mid - 1;
-    }
-  }
-  return steps;
-})();
-
+// ── Widget: binary search, step by step ──
+const DATA = [3, 8, 12, 19, 23, 31, 45, 52, 67, 74, 88, 91, 103];
 function BinaryStepper() {
-  const [step, setStep] = useState(0);
-  const s = BIN_STEPS[step];
-
+  const [target, setTarget] = useState(67);
+  const steps = []; let lo = 0, hi = DATA.length - 1;
+  while (lo <= hi) { const mid = Math.floor((lo + hi) / 2); steps.push({ lo, hi, mid }); if (DATA[mid] === target) break; if (DATA[mid] < target) lo = mid + 1; else hi = mid - 1; }
+  const [k, setK] = useState(0);
+  const s = steps[Math.min(k, steps.length - 1)];
+  const found = DATA[s.mid] === target;
   return (
     <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 12, lineHeight: 1.7 }}>
-        Binary search on a <strong style={{ color: C.text }}>sorted</strong> list. Look at the middle: too small?
-        throw away the left half. Too big? throw away the right. Each step <strong>halves</strong> what's left.
-        Searching for <code style={{ color: C.accent }}>67</code>.
-      </p>
-
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        <button onClick={() => setStep((x) => Math.min(BIN_STEPS.length - 1, x + 1))} disabled={step === BIN_STEPS.length - 1} style={{
-          flex: 1, padding: "10px", borderRadius: 8, background: step === BIN_STEPS.length - 1 ? C.card : C.accentGlow,
-          border: "none", color: step === BIN_STEPS.length - 1 ? C.muted : "#fff", fontWeight: 600, fontSize: 13,
-          cursor: step === BIN_STEPS.length - 1 ? "default" : "pointer",
-        }}>Step ▶ ({step + 1} / {BIN_STEPS.length})</button>
-        <button onClick={() => setStep(0)} style={{
-          padding: "10px 18px", borderRadius: 8, background: C.card, border: `1.5px solid ${C.border}`,
-          color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer",
-        }}>↺ Reset</button>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <label style={{ fontFamily: CODE_FONT }}>target = <select value={target} onChange={(e) => { setTarget(Number(e.target.value)); setK(0); }} style={{ fontFamily: CODE_FONT, fontSize: 15, padding: 4 }}>{[...DATA, 50].map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
+        <button onClick={() => setK(Math.max(0, k - 1))} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, cursor: "pointer" }}>◀</button>
+        <button onClick={() => setK(Math.min(steps.length - 1, k + 1))} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: T.navy, color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Next step ▶</button>
+        <span style={{ fontSize: 13.5, color: T.slate }}>Step {Math.min(k, steps.length - 1) + 1} of {steps.length}</span>
       </div>
-
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 8, flexWrap: "wrap" }}>
-        {SORTED.map((v, i) => {
-          const inRange = i >= s.low && i <= s.high;
-          const isMid = i === s.mid;
-          const isFound = s.found === i;
-          let bg = C.surface, border = C.border, col = C.muted;
-          if (inRange) { col = C.text; border = C.border; }
-          if (isMid) { bg = C.accent + "22"; border = C.accent; col = C.accent; }
-          if (isFound) { bg = C.green + "22"; border = C.green; col = C.green; }
+      <div style={{ display: "flex", gap: 3, overflowX: "auto" }}>
+        {DATA.map((v, i) => {
+          const inRange = i >= s.lo && i <= s.hi;
           return (
-            <div key={i} style={{ textAlign: "center", opacity: inRange ? 1 : 0.3 }}>
-              <div style={{ minWidth: 40, borderRadius: 8, padding: "8px 4px", background: bg, border: `1.5px solid ${border}` }}>
-                <div style={{ color: col, fontFamily: "monospace", fontSize: 15, fontWeight: 700 }}>{v}</div>
-              </div>
-              <div style={{ color: isMid ? C.accent : C.muted, fontSize: 9, marginTop: 2 }}>{isMid ? "mid" : i}</div>
+            <div key={i} style={{ textAlign: "center", minWidth: 46 }}>
+              <div style={{ fontFamily: CODE_FONT, fontSize: 11, color: T.blue }}>{i}</div>
+              <div style={{ padding: "9px 0", borderRadius: 7, fontFamily: CODE_FONT, fontWeight: 700, border: `1.5px solid ${i === s.mid ? (found ? T.green : T.amber) : inRange ? T.teal : T.border}`, background: i === s.mid ? tint(found ? T.green : T.amber, "22") : inRange ? tint(T.teal, "10") : T.deep, color: inRange ? T.text : T.muted }}>{v}</div>
+              <div style={{ fontSize: 11, color: T.muted }}>{i === s.lo ? "low" : ""}{i === s.hi ? " high" : ""}</div>
             </div>
           );
         })}
       </div>
-
-      <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 12 }}>
-        {[["low", s.low, C.teal], ["mid", s.mid, C.accent], ["high", s.high, C.orange]].map(([lbl, val, clr]) => (
-          <div key={lbl} style={{ background: C.card, border: `2px solid ${clr}`, borderRadius: 8, padding: "6px 16px", textAlign: "center" }}>
-            <div style={{ color: clr, fontSize: 10, letterSpacing: 1 }}>{lbl}</div>
-            <div style={{ color: C.text, fontSize: 18, fontWeight: 700, fontFamily: "monospace" }}>{val}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ background: C.accent + "12", border: `1px solid ${C.accent}33`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.text, minHeight: 44 }}>
-        {s.desc}
-      </div>
-
-      <div style={{ marginTop: 14, background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.green }}>Halving is powerful.</strong> 7 items → at most 3 checks. A million
-        items → only ~20. That's the payoff for keeping the list sorted.
+      <div style={{ fontSize: 14.5, color: T.slate, marginTop: 8 }}>
+        mid = ({s.lo} + {s.hi}) // 2 = {s.mid} → data[{s.mid}] is {DATA[s.mid]}. {found ? "Found it!" : DATA[s.mid] < target ? "Too small: throw away the left half (low = mid + 1)." : "Too big: throw away the right half (high = mid - 1)."}
+        {!found && k >= steps.length - 1 && " low passed high — it isn't in the list."}
       </div>
     </div>
   );
 }
 
-// ── Section 4: Compare — linear vs binary ────────────────────────────────────
-function Compare() {
-  const [n, setN] = useState(1000);
-  const linear = n;
-  const binary = Math.ceil(Math.log2(n + 1));
+const binSteps = (arr, t) => { let lo = 0, hi = arr.length - 1, st = 0; while (lo <= hi) { st++; const m = Math.floor((lo + hi) / 2); if (arr[m] === t) return [m, st]; if (arr[m] < t) lo = m + 1; else hi = m - 1; } return [-1, st]; };
+const NAMES = ["Arun", "Divya", "Kavya", "Meena", "Priya", "Ravi", "Sanjay", "Uma", "Vikram", "Zoya"];
+const dir = (name) => { const [i, st] = binSteps(NAMES, name); return `Search: ${name}\n${i >= 0 ? `${name} is at position ${i + 1}` : `${name} is not in the directory`}\nSteps: ${st}`; };
 
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Worst-case comparisons to search a list of <strong style={{ color: C.text }}>N</strong> items. Drag N and
-        watch the gap explode.
-      </p>
+const EX = {
+  linear: {
+    id: "linear", kind: "write", title: "Linear search",
+    task: <>Ask <code>Rolls: </code> (one line) and <code>Find: </code>. Check each roll in turn; print <code>Found at position 3</code> (from 1), or <code>Not found</code>. Use a <strong>sentinel</strong>: <code>pos = -1</code> before the loop means “not found yet” — -1 can never be a real index. No <code>.index()</code> or <code>in</code>.</>,
+    tests: [
+      { inputs: ["1001 1042 1003 1050", "1003"], expect: "Rolls: 1001 1042 1003 1050\nFind: 1003\nFound at position 3" },
+      { inputs: ["1 2 3", "9"], expect: "Rolls: 1 2 3\nFind: 9\nNot found", hidden: true },
+      { inputs: ["5 5 5", "5"], expect: "Rolls: 5 5 5\nFind: 5\nFound at position 1", hidden: true },
+    ],
+    requires: [comments(3), { node: "Break" }],
+    forbids: [{ call: "index", msg: "Write the search yourself." }, { text: " in rolls", msg: "Write the search yourself with a loop and indexes." }],
+    hints: ["for i in range(len(rolls)): if rolls[i] == target: pos = i; break", "After the loop: if pos == -1: Not found"],
+    solution: '# 1. pos = -1 (not found yet)\n# 2. check each position in order\n# 3.     a match: remember it, stop\n# 4. print the result\nrolls = input("Rolls: ").split()\ntarget = input("Find: ")\npos = -1\nfor i in range(len(rolls)):\n    if rolls[i] == target:\n        pos = i\n        break\nif pos == -1:\n    print("Not found")\nelse:\n    print(f"Found at position {pos + 1}")',
+  },
+  allpos: {
+    id: "allpos", kind: "write", title: "Every position",
+    task: <>Ask <code>Marks: </code> and <code>Find: </code>. Print every position (from 1) where the mark appears, as a list, and how many: <code>Positions: [2, 5] (2 times)</code>.</>,
+    tests: [{ inputs: ["72 91 64 38 91", "91"], expect: "Marks: 72 91 64 38 91\nFind: 91\nPositions: [2, 5] (2 times)" }, { inputs: ["1 2", "3"], expect: "Marks: 1 2\nFind: 3\nPositions: [] (0 times)", hidden: true }],
+    requires: [comments(2)],
+    hints: ["No break this time — you need every match.", "enumerate(marks, start=1) gives positions from 1 (Unit 7.4)."],
+    solution: '# 1. an empty list of positions\n# 2. scan everything, collecting every match (no break)\nmarks = input("Marks: ").split()\ntarget = input("Find: ")\nfound = []\nfor i, m in enumerate(marks, start=1):\n    if m == target:\n        found.append(i)\nprint(f"Positions: {found} ({len(found)} times)")',
+  },
+  binary: {
+    id: "binary", kind: "write", title: "Binary search",
+    task: <>The list is <strong>sorted</strong>: <code>data = [3, 8, 12, 19, 23, 31, 45, 52, 67, 74, 88, 91, 103]</code>. Ask <code>Find: </code> and run the halving search from the stepper, counting the steps. Print <code>Found at index 8</code> (or <code>Not found</code>) and <code>Steps: 3</code>.</>,
+    tests: [
+      { inputs: ["67"], expect: `Find: 67\nFound at index ${binSteps(DATA, 67)[0]}\nSteps: ${binSteps(DATA, 67)[1]}` },
+      { inputs: ["3"], expect: `Find: 3\nFound at index 0\nSteps: ${binSteps(DATA, 3)[1]}`, hidden: true },
+      { inputs: ["50"], expect: `Find: 50\nNot found\nSteps: ${binSteps(DATA, 50)[1]}`, hidden: true },
+    ],
+    requires: [comments(4), { node: "While" }, { text: "// 2" }],
+    hints: ["low = 0, high = len(data) - 1; while low <= high: mid = (low + high) // 2", "Count a step at the top of each round.", "data[mid] < target → low = mid + 1; bigger → high = mid - 1; equal → pos = mid, break"],
+    solution: '# 1. low and high bracket the part still possible\n# 2. while something is left: look at the middle (count a step)\n# 3.     equal -> found; too small -> drop the left half; too big -> drop the right half\n# 4. print result and steps\ndata = [3, 8, 12, 19, 23, 31, 45, 52, 67, 74, 88, 91, 103]\ntarget = int(input("Find: "))\nlow = 0\nhigh = len(data) - 1\npos = -1\nsteps = 0\nwhile low <= high:\n    steps += 1\n    mid = (low + high) // 2\n    if data[mid] == target:\n        pos = mid\n        break\n    elif data[mid] < target:\n        low = mid + 1\n    else:\n        high = mid - 1\nif pos == -1:\n    print("Not found")\nelse:\n    print(f"Found at index {pos}")\nprint(f"Steps: {steps}")',
+  },
+  directory: {
+    id: "directory", kind: "make", title: "Directory lookup",
+    task: <>The class directory is sorted alphabetically: <code>Arun Divya Kavya Meena Priya Ravi Sanjay Uma Vikram Zoya</code>. Ask <code>Search: </code> and binary-search it (strings compare alphabetically, Unit 5.1). Print <code>Priya is at position 5</code> or <code>Gopal is not in the directory</code>, then <code>Steps: 3</code>. A linear search would need up to 10 steps; binary never needs more than 4.</>,
+    minLines: 18,
+    tests: [{ inputs: ["Priya"], expect: dir("Priya") }, { inputs: ["Gopal"], expect: dir("Gopal"), hidden: true }, { inputs: ["Zoya"], expect: dir("Zoya"), hidden: true }],
+    requires: [comments(4), { node: "While" }],
+    forbids: [{ call: "index" }],
+    hints: ["Exactly the binary search from before — < and > work on strings too."],
+    solution: '# 1. low/high bracket the sorted names\n# 2. look at the middle name, counting steps\n# 3.     match -> done; earlier in the alphabet -> go right; later -> go left\n# 4. print result and steps\nnames = "Arun Divya Kavya Meena Priya Ravi Sanjay Uma Vikram Zoya".split()\nwanted = input("Search: ")\nlow = 0\nhigh = len(names) - 1\npos = -1\nsteps = 0\nwhile low <= high:\n    steps += 1\n    mid = (low + high) // 2\n    if names[mid] == wanted:\n        pos = mid\n        break\n    elif names[mid] < wanted:\n        low = mid + 1\n    else:\n        high = mid - 1\nif pos == -1:\n    print(f"{wanted} is not in the directory")\nelse:\n    print(f"{wanted} is at position {pos + 1}")\nprint(f"Steps: {steps}")',
+  },
+};
 
-      <div style={{ marginBottom: 18 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>N = <strong style={{ color: C.accent }}>{n.toLocaleString()}</strong> items</label>
-        <input type="range" min={10} max={1000000} step={10} value={n} onChange={(e) => setN(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
-        <div style={{ background: C.card, border: `2px solid ${C.orange}`, borderRadius: 10, padding: 16, textAlign: "center" }}>
-          <div style={{ color: C.orange, fontSize: 12, letterSpacing: 1, marginBottom: 6 }}>LINEAR (any list)</div>
-          <div style={{ color: C.text, fontSize: 30, fontWeight: 800, fontFamily: "monospace" }}>{linear.toLocaleString()}</div>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>checks — one per item</div>
-        </div>
-        <div style={{ background: C.card, border: `2px solid ${C.green}`, borderRadius: 10, padding: 16, textAlign: "center" }}>
-          <div style={{ color: C.green, fontSize: 12, letterSpacing: 1, marginBottom: 6 }}>BINARY (sorted list)</div>
-          <div style={{ color: C.text, fontSize: 30, fontWeight: 800, fontFamily: "monospace" }}>{binary}</div>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>checks — about log₂(N)</div>
-        </div>
-      </div>
+const QUIZ = [
+  { q: "Why is -1 a good “not found” sentinel?", options: ["It's negative", "It can never be a real index, so it clearly means absent", "Python requires it", "It's small"], answer: 1, explain: "Real positions are 0 or more." },
+  { q: "What must be true before binary search works?", options: ["The list is short", "The list is sorted", "No duplicates", "Only numbers"], answer: 1, explain: "Throwing away half only makes sense if the order tells you which half." },
+  { q: "About how many steps does binary search need for 1,000,000 sorted items?", options: ["1,000,000", "500,000", "About 20", "1"], answer: 2, explain: "Halving 20 times: 2²⁰ ≈ 1,000,000." },
+  { q: "Why no break when collecting every position?", options: ["Style", "break would stop at the first match", "Error otherwise", "To save time"], answer: 1, explain: "First match → break; all matches → full scan." },
+];
 
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" }}>{`data = [12, 23, 45, 67, 89, 91, 103]   # must be SORTED\ntarget = 67\n\nlow = 0\nhigh = len(data) - 1\nfound = -1\nwhile low <= high:\n    mid = (low + high) // 2\n    if data[mid] == target:\n        found = mid\n        break\n    elif data[mid] < target:\n        low = mid + 1\n    else:\n        high = mid - 1\nprint("found at index", found)`}</pre>
-
-      <div style={{ marginTop: 16, background: C.red + "12", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        ⚠️ <strong style={{ color: C.red }}>Binary's catch:</strong> it only works if the list is already sorted.
-        On an unsorted list it gives wrong answers. So sorting — the next unit — is what unlocks fast search.
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "Why start  found = -1  in linear search?",
-      options: [
-        "It's the first index",
-        "-1 can never be a real index, so it cleanly signals 'not found'",
-        "To make the loop stop",
-        "Python requires it",
-      ],
-      answer: 1,
-      explain: "Real indices are 0, 1, 2… A sentinel of -1 is unmistakably 'absent', and if the loop never overwrites it, the caller knows the target wasn't there.",
-    },
-    {
-      q: "What MUST be true of a list before binary search works?",
-      options: ["It must be short", "It must be sorted", "It must contain the target", "It must have no duplicates"],
-      answer: 1,
-      explain: "Binary search decides which half to discard by comparing to the middle — that logic is only valid if the data is in order.",
-    },
-    {
-      q: "Roughly how many checks does binary search need for 1,000,000 sorted items?",
-      options: ["1,000,000", "1,000", "About 20", "About 100,000"],
-      answer: 2,
-      explain: "Each step halves the range: log₂(1,000,000) ≈ 20. Linear search would need up to a million. That's the power of halving.",
-    },
-    {
-      q: "On a small UNSORTED list, which search is the safe choice?",
-      options: ["Binary — it's always faster", "Linear — it makes no ordering assumption", "Neither works", "Both give the same wrong answer"],
-      answer: 1,
-      explain: "Binary search would misbehave on unsorted data. Linear search checks every item and works regardless of order — the right tool when you can't guarantee sorting.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You know when to scan and when to halve." :
-            score >= 2 ? "Good — replay the Binary Stepper to feel the halving." :
-              "Revisit Linear Anatomy and the Binary Stepper, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 CT II · Unit 2 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Linear search works anywhere; binary search halves a sorted list.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 3 — Sorting.</strong> The very thing binary search
-            depends on. You'll watch bubble, selection and insertion sort put a list in order, step by step.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function UnitCT2_2({ student, onUnitComplete }) {
+export default function UnitCT2_2(props) {
   const sections = [
-    { id: "need", label: "The Need" },
-    { id: "linear", label: "Linear Search" },
-    { id: "binary", label: "Binary Stepper" },
-    { id: "compare", label: "Linear vs Binary" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    { label: "Linear", kicker: "ONE BY ONE", title: "Linear search", blocks: [<P>The simplest search: check every item until you find it. Works on any list, but a list of n items can take n checks.</P>, EX.linear, EX.allpos] },
+    { label: "Binary", kicker: "HALVE IT", title: "Binary search", blocks: [<P>If the list is <strong>sorted</strong>, look at the middle: one comparison tells you which half to throw away. Pick a target and step through:</P>, <BinaryStepper />, EX.binary, <KeyIdea>Linear search: up to n steps. Binary search: about log₂ n steps — 13 items need at most 4; a million need about 20. But the data must be sorted first.</KeyIdea>] },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: directory lookup", blocks: [EX.directory] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Is It Here — and Where?</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Linear Search</h3><LinearAnatomy /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Binary Search, Step by Step</h3><BinaryStepper /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Linear vs Binary</h3><Compare /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on searching.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🧠</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>COMPUTATIONAL THINKING II › UNIT 2</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Searching: Linear &amp; Binary</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="UnitCT2_2" crumb="COMPUTATIONAL THINKING II › 2" title="Searching: Linear & Binary" sections={sections} quiz={QUIZ}
+      next={{ title: "CT II · 3 — Sorting", text: "Bubble, selection and insertion: watch chaos become order, swap by swap." }} />
   );
 }

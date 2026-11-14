@@ -1,471 +1,182 @@
-import { useState } from "react";
+// Unit 5.4 — Capstone: Exam Result Analyzer (rebuilt on the typing-first lesson kit)
+// Capstone arc: The Mission → Version 1 → Version 2 → Version 3 → Play It
+// → Make It (electricity bill with slab rates, a classic exam problem).
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
+
+const slider = { width: "100%", accentColor: T.navy };
+
+function evaluate(avg, att) {
+  if (!(avg >= 0 && avg <= 100 && att >= 0 && att <= 100)) return ["Invalid input"];
+  const out = [`Result: ${avg >= 40 ? "Pass" : "Fail"}`];
+  out.push(`Grade: ${avg >= 90 ? "A" : avg >= 75 ? "B" : avg >= 60 ? "C" : avg >= 40 ? "D" : "F"}`);
+  if (avg >= 85 && att >= 75) {
+    out.push("Scholarship: Yes");
+    if (att >= 90) out.push("Honor Roll: Yes");
+  } else out.push("Scholarship: No");
+  return out;
+}
+
+// ── Widget: the mission checklist ──
+function Mission() {
+  const rows = [
+    ["Read two numbers (average, attendance)", "input + float/int", "4.3"],
+    ["Pass or fail", "comparison, if / else", "5.1, 5.2"],
+    ["Letter grade A–F", "if / elif / else chain", "5.2"],
+    ["Scholarship: two conditions at once", "and", "5.3"],
+    ["Honor Roll: only asked for scholars", "nested if", "5.3"],
+    ["Reject impossible numbers", "0 <= x <= 100, not", "5.3"],
+  ];
+  return (
+    <div style={{ border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden", maxWidth: 900 }}>
+      {rows.map(([need, tool, unit], i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1.4fr 70px", gap: 10, padding: "10px 14px", background: i % 2 ? T.surface : T.card, fontSize: 14.5, alignItems: "center" }}>
+          <span>{need}</span><code style={{ justifySelf: "start" }}>{tool}</code><span style={{ color: T.bronze, fontWeight: 700 }}>{unit}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Widget: play with the finished program ──
+function PlayIt() {
+  const [avg, setAvg] = useState(88);
+  const [att, setAtt] = useState(92);
+  const out = evaluate(avg, att);
+  return (
+    <div className="fh-two">
+      <div>
+        <label style={{ fontFamily: CODE_FONT }}>average = <strong>{avg}</strong></label>
+        <input type="range" min={-5} max={105} value={avg} onChange={(e) => setAvg(Number(e.target.value))} style={slider} />
+        <label style={{ fontFamily: CODE_FONT }}>attendance = <strong>{att}</strong></label>
+        <input type="range" min={-5} max={105} value={att} onChange={(e) => setAtt(Number(e.target.value))} style={slider} />
+        <div style={{ fontSize: 13.5, color: T.slate, marginTop: 8 }}>Find inputs that give each possible output. Can you get Honor Roll without Grade A? (Yes — how?)</div>
+      </div>
+      <pre style={{ margin: 0, fontFamily: CODE_FONT, fontSize: 15, lineHeight: 1.7, background: T.termBg, color: T.termText, borderRadius: 10, padding: "12px 14px", minHeight: 140 }}>{out.join("\n")}</pre>
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const head = (a, b) => `Average marks: ${a}\nAttendance %: ${b}\n`;
+const V1 = 'average = float(input("Average marks: "))\nattendance = int(input("Attendance %: "))\nif average >= 40:\n    print("Result: Pass")\nelse:\n    print("Result: Fail")\nif average >= 90:\n    grade = "A"\nelif average >= 75:\n    grade = "B"\nelif average >= 60:\n    grade = "C"\nelif average >= 40:\n    grade = "D"\nelse:\n    grade = "F"\nprint(f"Grade: {grade}")';
+const V2 = V1 + '\nif average >= 85 and attendance >= 75:\n    print("Scholarship: Yes")\nelse:\n    print("Scholarship: No")';
+const V3 = 'average = float(input("Average marks: "))\nattendance = int(input("Attendance %: "))\nif not (0 <= average <= 100 and 0 <= attendance <= 100):\n    print("Invalid input")\nelse:\n    if average >= 40:\n        print("Result: Pass")\n    else:\n        print("Result: Fail")\n    if average >= 90:\n        grade = "A"\n    elif average >= 75:\n        grade = "B"\n    elif average >= 60:\n        grade = "C"\n    elif average >= 40:\n        grade = "D"\n    else:\n        grade = "F"\n    print(f"Grade: {grade}")\n    if average >= 85 and attendance >= 75:\n        print("Scholarship: Yes")\n        if attendance >= 90:\n            print("Honor Roll: Yes")\n    else:\n        print("Scholarship: No")';
+
+const EX = {
+  v1: {
+    id: "v1", kind: "write", title: "Version 1 — Pass and grade",
+    task: <>Ask <code>Average marks: </code> (decimal) and <code>Attendance %: </code> (whole number). Print <code>Result: Pass</code> (40 or more) or <code>Result: Fail</code>, then the grade: <code>A</code> ≥ 90, <code>B</code> ≥ 75, <code>C</code> ≥ 60, <code>D</code> ≥ 40, else <code>F</code>, as <code>Grade: B</code>. Attendance isn't used yet — Version 2 needs it.</>,
+    minLines: 18,
+    tests: [
+      { inputs: ["88", "92"], expect: head(88, 92) + "Result: Pass\nGrade: B" },
+      { inputs: ["39.5", "80"], expect: head(39.5, 80) + "Result: Fail\nGrade: F", hidden: true },
+      { inputs: ["40", "50"], expect: head(40, 50) + "Result: Pass\nGrade: D", hidden: true },
+      { inputs: ["90", "10"], expect: head(90, 10) + "Result: Pass\nGrade: A", hidden: true },
+      { inputs: ["60", "60"], expect: head(60, 60) + "Result: Pass\nGrade: C", hidden: true },
+    ],
+    requires: [{ text: "elif", min: 3, msg: "Five grades → if, three elifs, else." }],
+    hints: ["Two separate decisions: first pass/fail (if/else), then the grade (a chain).", "Store the grade in a variable inside the chain and print it once afterwards with an f-string."],
+    solution: V1,
+  },
+  v2: {
+    id: "v2", kind: "modify", title: "Version 2 — Add the scholarship",
+    task: <>Your Version 1 is loaded below. Add one more decision at the end: a scholarship needs an average of <strong>85 or more and</strong> attendance of <strong>75 or more</strong>. Print <code>Scholarship: Yes</code> or <code>Scholarship: No</code>.</>,
+    starter: V1,
+    minLines: 22,
+    tests: [
+      { inputs: ["88", "92"], expect: head(88, 92) + "Result: Pass\nGrade: B\nScholarship: Yes" },
+      { inputs: ["88", "70"], expect: head(88, 70) + "Result: Pass\nGrade: B\nScholarship: No", hidden: true },
+      { inputs: ["85", "75"], expect: head(85, 75) + "Result: Pass\nGrade: B\nScholarship: Yes", hidden: true },
+      { inputs: ["84.9", "99"], expect: head(84.9, 99) + "Result: Pass\nGrade: B\nScholarship: No", hidden: true },
+    ],
+    requires: [{ text: " and ", msg: "Both conditions in one if with and." }],
+    hints: ["Add the new if/else at the very end, at the left edge.", "if average >= 85 and attendance >= 75:"],
+    solution: V2,
+  },
+  v3: {
+    id: "v3", kind: "modify", title: "Version 3 — Honor Roll and bad input",
+    task: <>Two upgrades. (1) A scholarship winner with attendance of <strong>90 or more</strong> also gets <code>Honor Roll: Yes</code>, printed right after <code>Scholarship: Yes</code> — a nested if, asked only for scholars. (2) If the average or the attendance is outside 0–100, print only <code>Invalid input</code>. Hint: wrap the whole report in an else, and indent it one level.</>,
+    starter: V2,
+    minLines: 28,
+    tests: [
+      { inputs: ["95", "92"], expect: head(95, 92) + "Result: Pass\nGrade: A\nScholarship: Yes\nHonor Roll: Yes" },
+      { inputs: ["88", "80"], expect: head(88, 80) + "Result: Pass\nGrade: B\nScholarship: Yes", hidden: true },
+      { inputs: ["101", "90"], expect: head(101, 90) + "Invalid input", hidden: true },
+      { inputs: ["50", "-5"], expect: head(50, -5) + "Invalid input", hidden: true },
+      { inputs: ["60", "95"], expect: head(60, 95) + "Result: Pass\nGrade: C\nScholarship: No", hidden: true },
+    ],
+    requires: [{ node: "If", min: 5 }],
+    hints: ["Select every report line and press Tab to indent them all at once.", "if not (0 <= average <= 100 and 0 <= attendance <= 100): print(\"Invalid input\"), else: … the whole report …", "Inside the scholarship branch, add: if attendance >= 90: print(\"Honor Roll: Yes\")"],
+    solution: V3,
+  },
+  ebill: {
+    id: "ebill", kind: "make", title: "Electricity bill (slab rates)",
+    task: <>A favourite exam problem. Ask <code>Units used: </code>. The first 100 units cost <strong>Rs 1.50</strong> each; units 101–200 cost <strong>Rs 2.50</strong> each; every unit above 200 costs <strong>Rs 4.00</strong>. Add a fixed charge of <strong>Rs 50</strong>. Print <code>Bill: Rs 325.00</code> (2 decimals). 150 units → 100 × 1.50 + 50 × 2.50 + 50 = 325.00.</>,
+    minLines: 12,
+    tests: [
+      { inputs: ["150"], expect: "Units used: 150\nBill: Rs 325.00" },
+      { inputs: ["80"], expect: "Units used: 80\nBill: Rs 170.00", hidden: true },
+      { inputs: ["100"], expect: "Units used: 100\nBill: Rs 200.00", hidden: true },
+      { inputs: ["200"], expect: "Units used: 200\nBill: Rs 450.00", hidden: true },
+      { inputs: ["250"], expect: "Units used: 250\nBill: Rs 650.00", hidden: true },
+      { inputs: ["0"], expect: "Units used: 0\nBill: Rs 50.00", hidden: true },
+    ],
+    requires: [{ node: "If" }],
+    hints: ["Work out the energy charge in three cases: up to 100, up to 200, above 200.", "Up to 200: 100 * 1.5 + (units - 100) * 2.5", "Above 200: 100 * 1.5 + 100 * 2.5 + (units - 200) * 4"],
+    solution: 'units = int(input("Units used: "))\nif units <= 100:\n    charge = units * 1.5\nelif units <= 200:\n    charge = 100 * 1.5 + (units - 100) * 2.5\nelse:\n    charge = 100 * 1.5 + 100 * 2.5 + (units - 200) * 4\nbill = charge + 50\nprint(f"Bill: Rs {bill:.2f}")',
+  },
 };
 
-// Shared decision logic used by every widget in this unit, so the whole
-// capstone stays consistent: average marks + attendance % decide pass/fail,
-// letter grade, scholarship eligibility, and honor roll.
-function evaluate(average, attendance) {
-  const pass = average >= 40;
-  let grade;
-  if (average >= 90) grade = "A";
-  else if (average >= 75) grade = "B";
-  else if (average >= 60) grade = "C";
-  else if (average >= 40) grade = "D";
-  else grade = "F";
-  const scholarship = pass && average >= 85 && attendance >= 75;
-  const honorRoll = scholarship && attendance >= 90;
-  return { pass, grade, scholarship, honorRoll };
-}
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-// ── Intro ─────────────────────────────────────────────────────────────────────
-function CapstoneIntro() {
-  return (
-    <div>
-      <div style={{
-        background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-        border: `1px solid ${C.accent}44`, borderRadius: 12, padding: "24px 20px",
-        marginBottom: 20, textAlign: "center",
-      }}>
-        <div style={{ fontSize: 52, marginBottom: 10 }}>📋</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-          One Program, Many Decisions
-        </div>
-        <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
-          Real programs rarely make just one decision. Let's build an Exam Result Analyzer that decides four
-          things from the same two inputs — using everything from Module 5 at once.
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {[
-          { icon: "✅", title: "Pass / Fail", desc: "A simple truthy comparison: average >= 40" },
-          { icon: "🎯", title: "Letter Grade", desc: "An if / elif / else chain (Unit 5.2)" },
-          { icon: "🎓", title: "Scholarship", desc: "A combined condition with and (Unit 5.3)" },
-          { icon: "🏅", title: "Honor Roll", desc: "A nested condition that depends on Scholarship" },
-        ].map((c, i) => (
-          <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 12px" }}>
-            <div style={{ fontSize: 24 }}>{c.icon}</div>
-            <div style={{ color: C.accent, fontWeight: 600, fontSize: 13, marginTop: 6 }}>{c.title}</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>{c.desc}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+const QUIZ = [
+  { q: "In Version 3, when is “Honor Roll” even checked?", options: ["Always", "Only when the scholarship condition was True", "Only for grade A", "Only when input is invalid"], answer: 1, explain: "It's nested inside the scholarship branch, so Python never reaches it otherwise." },
+  { q: "average = 92, attendance = 70. What prints after the grade?", options: ["Scholarship: Yes", "Scholarship: No", "Honor Roll: Yes", "Invalid input"], answer: 1, explain: "and needs both: 92 ≥ 85 is True but 70 ≥ 75 is False." },
+  { q: "Which condition catches bad input?", options: ["average > 0 or average < 100", "not (0 <= average <= 100)", "average != 100", "0 < average or average < 100"], answer: 1, explain: "A valid mark is 0 <= average <= 100; not flips it to catch everything else." },
+  { q: "For the electricity bill, what is the energy charge for 200 units?", options: ["Rs 400.00", "Rs 300.00", "Rs 500.00", "Rs 800.00"], answer: 0, explain: "100 × 1.50 + 100 × 2.50 = 150 + 250 = 400 (plus Rs 50 fixed = 450)." },
+  { q: "Why does the grade chain start with average >= 90?", options: ["Alphabetical order", "Only the first True branch runs, so the strictest test must come first", "It's faster", "No reason"], answer: 1, explain: "Starting with >= 40 would give a 95 the grade D." },
+];
 
-// ── Build It ─────────────────────────────────────────────────────────────────
-function CapstoneBuilder() {
-  const [average, setAverage] = useState(88);
-  const [attendance, setAttendance] = useState(92);
-  const r = evaluate(average, attendance);
-
-  // Mirror exactly what the print() statements in the code above would output
-  // for the current slider values, so the console panel and the code stay in sync.
-  const output = [];
-  if (r.scholarship) {
-    output.push("Scholarship eligible!");
-    if (r.honorRoll) output.push("Wow — Honor Roll!");
-  } else {
-    output.push("Not eligible for scholarship");
-  }
-
-  return (
-    <div>
-      {/* Problem statement — tells students exactly what this program has to work out */}
-      <div style={{ background: C.purple + "14", border: `1px solid ${C.purple}44`, borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-        <div style={{ color: C.purple, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>📝 The problem</div>
-        <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-          A college processes each student from just two numbers — <strong style={{ color: C.text }}>average marks</strong> and{" "}
-          <strong style={{ color: C.text }}>attendance %</strong> — and must decide: (1) did they <strong style={{ color: C.text }}>pass</strong> (average ≥ 40)?
-          (2) their <strong style={{ color: C.text }}>letter grade</strong>? (3) do they win a <strong style={{ color: C.text }}>scholarship</strong>{" "}
-          (pass + average ≥ 85 + attendance ≥ 75)? A scholarship winner is <em>then</em> checked for the top honour — the{" "}
-          <strong style={{ color: C.text }}>Honor Roll</strong> — which additionally needs attendance ≥ 90. The Honor Roll question is only
-          asked <em>if the scholarship one was already "yes"</em> — that's a <strong style={{ color: C.text }}>nested</strong> decision.
-        </div>
-      </div>
-
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Drag both sliders and watch all four decisions update live from the same two numbers.
-      </p>
-
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>average marks = <strong style={{ color: C.accent }}>{average}</strong></label>
-        <input type="range" min={0} max={100} value={average} onChange={(e) => setAverage(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>attendance = <strong style={{ color: C.accent }}>{attendance}%</strong></label>
-        <input type="range" min={0} max={100} value={attendance} onChange={(e) => setAttendance(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.85, marginBottom: 14 }}>
-{`average = ${average}
-attendance = ${attendance}
-
-pass_result = average >= 40
-
-if average >= 90:
-    grade = "A"
-elif average >= 75:
-    grade = "B"
-elif average >= 60:
-    grade = "C"
-elif average >= 40:
-    grade = "D"
-else:
-    grade = "F"
-
-scholarship = pass_result and average >= 85 and attendance >= 75
-
-if scholarship:
-    print("Scholarship eligible!")
-    honor_roll = attendance >= 90
-    if honor_roll:
-        print("Wow — Honor Roll!")
-else:
-    print("Not eligible for scholarship")`}
-      </pre>
-
-      {/* Console panel — the actual text the print() calls produce for these inputs */}
-      <div style={{ background: "#000", border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
-        <div style={{ fontSize: 10, color: C.muted, letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>▶ Output</div>
-        {output.map((line, i) => (
-          <div key={i} style={{ fontFamily: "monospace", fontSize: 13, color: C.green, lineHeight: 1.7 }}>{line}</div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {[
-          { label: "Pass / Fail", value: r.pass ? "Pass" : "Fail", ok: r.pass },
-          { label: "Grade", value: r.grade, ok: r.grade !== "F" },
-          { label: "Scholarship", value: r.scholarship ? "Eligible" : "Not eligible", ok: r.scholarship },
-          { label: "Honor Roll", value: r.honorRoll ? "Yes" : "No", ok: r.honorRoll },
-        ].map((row, i) => (
-          <div key={i} style={{ background: (row.ok ? C.green : C.red) + "18", border: `1px solid ${(row.ok ? C.green : C.red)}44`, borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
-            <div style={{ fontSize: 11, color: C.muted }}>{row.label}</div>
-            <div style={{ color: row.ok ? C.green : C.red, fontWeight: 700, fontFamily: "monospace" }}>{row.value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Trace The Logic ───────────────────────────────────────────────────────────
-function LogicTrace() {
-  const example = { average: 92, attendance: 95 };
-  const r = evaluate(example.average, example.attendance);
-
-  const steps = [
-    { title: "Step 1 — Pass or Fail?", code: "pass_result = average >= 40", result: `pass_result = ${r.pass}`, note: "The simplest check runs first: is 92 at least 40? Yes." },
-    { title: "Step 2 — Which Grade?", code: "if average >= 90:\n    grade = \"A\"\nelif average >= 75:\n    grade = \"B\"\nelif average >= 60:\n    grade = \"C\"\nelif average >= 40:\n    grade = \"D\"\nelse:\n    grade = \"F\"", result: `grade = "${r.grade}"`, note: "The elif chain runs top to bottom. 92 >= 90 is True, so grade is set to \"A\" immediately — the rest of the chain is skipped." },
-    { title: "Step 3 — Scholarship?", code: "scholarship = pass_result and average >= 85 and attendance >= 75", result: `scholarship = ${r.scholarship}`, note: "All three conditions must be True together: passed (yes), average >= 85 (92, yes), attendance >= 75 (100, yes)." },
-    { title: "Step 4 — Honor Roll? (nested)", code: "if scholarship:\n    print(\"Scholarship eligible!\")\n    honor_roll = attendance >= 90\n    if honor_roll:\n        print(\"Wow — Honor Roll!\")", result: `honor_roll = ${r.honorRoll}`, note: "This check is NESTED inside the scholarship check — it only even runs because scholarship was already True. It additionally requires attendance of at least 90%, so this student (95%) makes it." },
-  ];
-
-  const [step, setStep] = useState(0);
-  const s = steps[step];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Using a fixed example — average = {example.average}, attendance = {example.attendance}% — step through
-        exactly how the program reaches its four decisions, one at a time.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{s.title}</div>
-        <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, background: C.bg, borderRadius: 6, padding: "10px 12px", margin: "0 0 10px 0", whiteSpace: "pre-wrap" }}>{s.code}</pre>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 8 }}>📎 One step of the full decision program in the previous tab — it runs inside that program, after average and attendance are set.</div>
-        <div style={{ fontFamily: "monospace", fontSize: 14, color: C.green, marginBottom: 10 }}>&gt; {s.result}</div>
-        <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>{s.note}</div>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
-        <button onClick={() => setStep((v) => Math.max(0, v - 1))} disabled={step === 0} style={{
-          padding: "8px 18px", borderRadius: 6, background: C.card, border: `1px solid ${C.border}`,
-          color: C.text, cursor: step === 0 ? "not-allowed" : "pointer",
-        }}>← Back</button>
-        <span style={{ color: C.muted, fontSize: 12, alignSelf: "center" }}>Step {step + 1} / {steps.length}</span>
-        <button onClick={() => setStep((v) => Math.min(steps.length - 1, v + 1))} disabled={step === steps.length - 1} style={{
-          padding: "8px 18px", borderRadius: 6, background: C.accentGlow, border: "none",
-          color: "#fff", cursor: step === steps.length - 1 ? "not-allowed" : "pointer",
-        }}>Next →</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Challenge: Match the Profile ──────────────────────────────────────────────
-function MatchProfile() {
-  const [average, setAverage] = useState(50);
-  const [attendance, setAttendance] = useState(50);
-  const r = evaluate(average, attendance);
-
-  // Target: Grade A, but NOT on the Honor Roll — tests whether the student
-  // understands that Honor Roll needs scholarship AND attendance >= 90.
-  const targetMet = r.grade === "A" && !r.honorRoll;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        <strong style={{ color: C.accent }}>Your challenge:</strong> adjust the sliders to create a student who
-        earns <strong style={{ color: C.green }}>Grade A</strong> but does <strong style={{ color: C.red }}>NOT</strong> make
-        the Honor Roll. Think carefully about which condition you need to break.
-      </p>
-
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>average marks = <strong style={{ color: C.accent }}>{average}</strong></label>
-        <input type="range" min={0} max={100} value={average} onChange={(e) => setAverage(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>attendance = <strong style={{ color: C.accent }}>{attendance}%</strong></label>
-        <input type="range" min={0} max={100} value={attendance} onChange={(e) => setAttendance(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-        <div style={{ background: (r.grade === "A" ? C.green : C.red) + "18", border: `1px solid ${(r.grade === "A" ? C.green : C.red)}44`, borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: C.muted }}>Grade</div>
-          <div style={{ color: r.grade === "A" ? C.green : C.red, fontWeight: 700, fontFamily: "monospace" }}>{r.grade}</div>
-        </div>
-        <div style={{ background: (!r.honorRoll ? C.green : C.red) + "18", border: `1px solid ${(!r.honorRoll ? C.green : C.red)}44`, borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: C.muted }}>Honor Roll</div>
-          <div style={{ color: !r.honorRoll ? C.green : C.red, fontWeight: 700, fontFamily: "monospace" }}>{r.honorRoll ? "Yes" : "No"}</div>
-        </div>
-      </div>
-
-      <div style={{
-        textAlign: "center", padding: "14px 20px", borderRadius: 10,
-        background: (targetMet ? C.green : C.card) + (targetMet ? "22" : ""),
-        border: `1.5px solid ${targetMet ? C.green : C.border}`,
-        color: targetMet ? C.green : C.muted, fontWeight: 600,
-      }}>
-        {targetMet ? "🎉 Challenge solved! Grade A, but Honor Roll needs attendance of at least 90% too." : "Keep adjusting…"}
-      </div>
-
-      {targetMet && (
-        <div style={{ marginTop: 14, background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-          💡 You just proved you understand nested conditions: Honor Roll isn't just "Grade A" — it's{" "}
-          <code style={{ color: C.purple }}>scholarship and attendance &gt;= 90</code>, and scholarship itself needs
-          average &gt;= 85. Dropping attendance below 90 (while keeping average high) breaks only the innermost check.
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "In the Exam Result Analyzer, why is honor_roll checked INSIDE the scholarship check rather than as its own independent if?",
-      options: [
-        "It doesn't need to be — the placement is arbitrary",
-        "Because Honor Roll should only even be considered once Scholarship is already True — it's a stricter sub-case",
-        "Because Python requires all checks to be nested",
-        "Because nesting makes the code run faster",
-      ],
-      answer: 1,
-      explain: "Nesting expresses a real relationship: Honor Roll only makes sense as an extra-strict version of Scholarship, so checking it inside that block is the correct logic, not just a style choice.",
-    },
-    {
-      q: "A student has average = 95 and attendance = 80. What is their Honor Roll status?",
-      options: ["Yes, honor roll", "No — honor roll requires attendance >= 90", "Depends on their grade", "Error, undefined"],
-      answer: 1,
-      explain: "Even though 95 easily qualifies for Scholarship (>=85 average, >=75 attendance), Honor Roll additionally requires attendance of at least 90% — 80% attendance doesn't meet that.",
-    },
-    {
-      q: "If average = 30, what will grade and pass_result be?",
-      options: ['grade = "F", pass_result = True', 'grade = "F", pass_result = False', 'grade = "D", pass_result = False', 'grade = "A", pass_result = False'],
-      answer: 1,
-      explain: "30 is below every elif threshold, so it falls to the final else (grade = \"F\"), and 30 >= 40 is False, so pass_result is False too.",
-    },
-    {
-      q: "What's the benefit of building one program that makes four related decisions from the same two inputs, instead of four separate unrelated programs?",
-      options: [
-        "There's no benefit — it's just for practice",
-        "It mirrors how real decisions actually work: one situation, several related outcomes that build on each other",
-        "It makes the program run in less memory",
-        "Python requires all decisions to be in one program",
-      ],
-      answer: 1,
-      explain: "Real-world logic is rarely isolated — a single set of facts (marks, attendance) naturally implies several connected outcomes, which is exactly what if/elif/else, combined conditions, and nesting are designed to express together.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    const final = score + (selected === questions[current].answer ? 1 : 0);
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{final >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {final} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {final === 4 ? "Outstanding! You've mastered decision-making in Python." :
-            final >= 2 ? "Good work — revisit the Trace the Logic section once more." :
-              "Go back through the Build It and Trace sections, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.purple}22, ${C.green}22)`,
-          border: `1px solid ${C.green}`,
-        }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Module 5 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You can now write programs that make decisions: booleans, truthy/falsy values, if / elif / else,
-            combined and nested conditions, and short-circuit evaluation.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Module 6 — Repetition (Loops).</strong> You'll learn to
-            repeat actions with while and for, combining loops with the if statements you just mastered.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16 }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function Unit5_4({ student, onUnitComplete }) {
+export default function Unit5_4(props) {
   const sections = [
-    { id: "intro", label: "The Challenge" },
-    { id: "build", label: "Build It" },
-    { id: "trace", label: "Trace the Logic" },
-    { id: "challenge", label: "Match the Profile" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "The Mission", kicker: "CAPSTONE", title: "Exam Result Analyzer",
+      blocks: [
+        <P>A college works out four decisions about every student from just two numbers: <strong>average marks</strong> and <strong>attendance %</strong>. You'll build it in three versions, adding one idea each time — the way real programs are written. Here is every tool you need, and where you learnt it:</P>,
+        <Mission />,
+        <Note color={T.blue} icon="🧱">Each version starts from your previous one. Get Version 1 working before you add anything.</Note>,
+      ],
+    },
+    { label: "Version 1", kicker: "BUILD IN STEPS", title: "Version 1: pass/fail and the grade", blocks: [EX.v1] },
+    { label: "Version 2", kicker: "ADD ONE IDEA", title: "Version 2: two conditions at once", blocks: [EX.v2] },
+    {
+      label: "Version 3", kicker: "ADD ONE MORE", title: "Version 3: a nested decision, and bad input",
+      blocks: [
+        EX.v3,
+        <KeyIdea>Checking for impossible input <em>first</em> and only then doing the real work is called <strong>validation</strong>. Every program that reads input should do it.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Play It", kicker: "EXPLORE", title: "The finished analyzer",
+      blocks: [<P>This is your Version 3, live. Try the boundaries: 85 and 75, 90 attendance, 101.</P>, <PlayIt />],
+    },
+    {
+      label: "Make It", kicker: "ON YOUR OWN", title: "Your program: the electricity bill",
+      blocks: [<P>No versions this time: a blank editor and a slab-rate rule, exactly as it appears in exams.</P>, EX.ebill],
+    },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div>
-      <CapstoneIntro />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Build It: Exam Result Analyzer</h3>
-      <CapstoneBuilder />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Trace the Logic</h3>
-      <LogicTrace />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Challenge: Match the Profile</h3>
-      <MatchProfile />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-        4 questions to check your understanding of Unit 5.4 — and Module 5 as a whole.
-      </p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 5 › UNIT 5.4</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Capstone: Decision Maker</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell
+      {...props}
+      unitId="Unit5_4"
+      crumb="MODULE 5 › UNIT 5.4"
+      title="Capstone: Decision Maker"
+      sections={sections}
+      quiz={QUIZ}
+      next={{ title: "Module 6 — Repetition", text: "Module 5 complete! Next: loops — make the computer do it a thousand times while you say it once. (Optional first: Module 5's Crucible.)" }}
+    />
   );
 }

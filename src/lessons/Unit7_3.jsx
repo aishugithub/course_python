@@ -1,554 +1,205 @@
-// Unit 7.3 — List Methods & Loop Patterns (toolbox, count, find-max, sort)
-import { useState } from "react";
+// Unit 7.3 — List Methods & Loop Patterns (rebuilt on the typing-first lesson kit)
+// Built-ins (sum min max len sorted / .sort .reverse) → best-so-far (topper,
+// without max) → text ↔ list with split() and join() → filtering into a new
+// list → list comprehension (bonus) → class report make-task.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
+
+const codeBox = { margin: 0, fontFamily: CODE_FONT, fontSize: 14.5, lineHeight: 1.7, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 14px", whiteSpace: "pre" };
+const pyList = (a) => "[" + a.map((x) => (typeof x === "string" ? `'${x}'` : String(x))).join(", ") + "]";
+
+// ── Widget: the best-so-far tournament ──
+function Topper() {
+  const marks = [72, 85, 64, 91, 78];
+  const steps = [{ i: 0, best: 72, pos: 0, note: "Assume the first mark is the best — until something beats it." }];
+  for (let i = 1; i < marks.length; i++) {
+    const prev = steps[steps.length - 1];
+    const win = marks[i] > prev.best;
+    steps.push({ i, best: win ? marks[i] : prev.best, pos: win ? i : prev.pos, note: `Is ${marks[i]} > ${prev.best}? ${win ? "Yes — new champion." : "No — champion stays."}` });
+  }
+  const [k, setK] = useState(0);
+  const s = steps[k];
+  return (
+    <div className="fh-two">
+      <div>
+        <pre style={codeBox}>{"best = marks[0]\npos = 0\nfor i in range(1, len(marks)):\n    if marks[i] > best:\n        best = marks[i]\n        pos = i"}</pre>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+          <button onClick={() => setK(Math.max(0, k - 1))} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, cursor: "pointer" }}>◀</button>
+          <button onClick={() => setK(Math.min(steps.length - 1, k + 1))} style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: T.navy, color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Next mark ▶</button>
+        </div>
+      </div>
+      <div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {marks.map((m, i) => (
+            <div key={i} style={{ textAlign: "center", width: 54 }}>
+              <div style={{ fontFamily: CODE_FONT, fontSize: 11, color: T.blue }}>{i}</div>
+              <div style={{ padding: "10px 0", borderRadius: 8, fontFamily: CODE_FONT, fontWeight: 700, fontSize: 17, border: `1.5px solid ${i === s.pos ? T.amber : i === s.i ? T.blue : T.border}`, background: i === s.pos ? tint(T.amber, "22") : i <= s.i ? T.card : T.deep }}>{m}</div>
+              <div style={{ fontSize: 16 }}>{i === s.pos ? "👑" : ""}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontFamily: CODE_FONT, marginTop: 4 }}>best = <strong>{s.best}</strong>, pos = <strong>{s.pos}</strong></div>
+        <div style={{ fontSize: 14.5, color: T.slate, marginTop: 6 }}>{s.note}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const report = (line) => {
+  const m = line.split(/\s+/).filter(Boolean).map(Number);
+  const avg = m.reduce((a, b) => a + b, 0) / m.length;
+  const above = m.filter((x) => x > avg).length;
+  return [`Marks: ${line}`, `Count: ${m.length}`, `Average: ${avg.toFixed(1)}`, `Highest: ${Math.max(...m)}`, `Lowest: ${Math.min(...m)}`,
+    `Ranked: ${pyList([...m].sort((a, b) => b - a))}`, `Above average: ${above}`].join("\n");
+};
+const EX = {
+  builtins: {
+    id: "builtins", kind: "type", title: "The list toolbox",
+    task: <>Predict every line. Lines 3 and 4 show the difference between <code>sorted()</code> and <code>.sort()</code>.</>,
+    show: "marks = [72, 85, 64, 90, 58]\nprint(sum(marks), min(marks), max(marks), len(marks))\nprint(sorted(marks))\nprint(marks)\nmarks.sort(reverse=True)\nprint(marks)",
+    tests: [{ expect: "369 58 90 5\n[58, 64, 72, 85, 90]\n[72, 85, 64, 90, 58]\n[90, 85, 72, 64, 58]" }],
+    hints: ["sorted(x) gives a NEW sorted list and leaves x alone. x.sort() rearranges x itself."],
+    solution: "marks = [72, 85, 64, 90, 58]\nprint(sum(marks), min(marks), max(marks), len(marks))\nprint(sorted(marks))\nprint(marks)\nmarks.sort(reverse=True)\nprint(marks)",
+  },
+  sortnone: {
+    id: "sortnone", kind: "fix", title: "Sorted into nothing",
+    task: <>The teacher wants a ranked copy and the original order kept. Run it — two problems. Fix it so it prints the sorted list, then the untouched original.</>,
+    starter: "marks = [3, 1, 2]\nranked = marks.sort()\nprint(ranked)\nprint(marks)",
+    tests: [{ expect: "[1, 2, 3]\n[3, 1, 2]" }],
+    hints: [".sort() returns None (like append) AND changes marks.", "ranked = sorted(marks) makes a new list and leaves marks alone."],
+    solution: "marks = [3, 1, 2]\nranked = sorted(marks)\nprint(ranked)\nprint(marks)",
+  },
+  topper: {
+    id: "topper", kind: "write", title: "Find the topper (no max!)",
+    task: <>Read 5 marks into a list with a loop (prompt <code>Mark: </code>). Then, <strong>without max()</strong>, use best-so-far to find the highest mark and its position, and print <code>Highest: 91 (student 4)</code> — students are numbered from 1.</>,
+    minLines: 12,
+    tests: [
+      { inputs: ["72", "85", "64", "91", "78"], expect: "Mark: 72\nMark: 85\nMark: 64\nMark: 91\nMark: 78\nHighest: 91 (student 4)" },
+      { inputs: ["99", "10", "20", "30", "40"], expect: "Mark: 99\nMark: 10\nMark: 20\nMark: 30\nMark: 40\nHighest: 99 (student 1)", hidden: true },
+      { inputs: ["1", "2", "3", "4", "5"], expect: "Mark: 1\nMark: 2\nMark: 3\nMark: 4\nMark: 5\nHighest: 5 (student 5)", hidden: true },
+    ],
+    forbids: [{ call: "max", msg: "Do it with the best-so-far pattern — no max( )." }, { call: "sort" }, { call: "sorted" }],
+    hints: ["Fill the list: for i in range(5): marks.append(int(input(\"Mark: \")))", "best = marks[0], pos = 0, then loop from index 1.", 'print(f"Highest: {best} (student {pos + 1})")'],
+    solution: 'marks = []\nfor i in range(5):\n    marks.append(int(input("Mark: ")))\nbest = marks[0]\npos = 0\nfor i in range(1, len(marks)):\n    if marks[i] > best:\n        best = marks[i]\n        pos = i\nprint(f"Highest: {best} (student {pos + 1})")',
+  },
+  splitjoin: {
+    id: "splitjoin", kind: "type", title: "split() and join()",
+    task: <><code>split()</code> cuts text into a list of words (at spaces, or at any separator you give). <code>join()</code> glues a list of strings back into one. Remember: split gives <strong>strings</strong> — convert before maths.</>,
+    show: 'line = "72 85 64 90"\nparts = line.split()\nprint(parts)\nmarks = []\nfor p in parts:\n    marks.append(int(p))\nprint(sum(marks))\nprint("-".join(parts))\nprint("Priya,Arun,Meena".split(","))',
+    minLines: 10,
+    tests: [{ expect: "['72', '85', '64', '90']\n311\n72-85-64-90\n['Priya', 'Arun', 'Meena']" }],
+    hints: ["join is called on the separator: \"-\".join(parts)."],
+    solution: 'line = "72 85 64 90"\nparts = line.split()\nprint(parts)\nmarks = []\nfor p in parts:\n    marks.append(int(p))\nprint(sum(marks))\nprint("-".join(parts))\nprint("Priya,Arun,Meena".split(","))',
+  },
+  oneline: {
+    id: "oneline", kind: "write", title: "All the marks on one line",
+    task: <>Ask <code>Marks: </code> once — the user types all marks separated by spaces. Split, convert each to int, and print <code>Count: 5</code>, <code>Average: 69.80</code> (2 decimals) and <code>Highest: 90</code>.</>,
+    tests: [
+      { inputs: ["72 85 64 90 38"], expect: "Marks: 72 85 64 90 38\nCount: 5\nAverage: 69.80\nHighest: 90" },
+      { inputs: ["100 50"], expect: "Marks: 100 50\nCount: 2\nAverage: 75.00\nHighest: 100", hidden: true },
+    ],
+    requires: [{ call: "split" }],
+    hints: ["for p in line.split(): marks.append(int(p))", "Now sum, len and max do the rest."],
+    solution: 'line = input("Marks: ")\nmarks = []\nfor p in line.split():\n    marks.append(int(p))\nprint(f"Count: {len(marks)}")\nprint(f"Average: {sum(marks) / len(marks):.2f}")\nprint(f"Highest: {max(marks)}")',
+  },
+  words: {
+    id: "words", kind: "write", title: "Longest word",
+    task: <>Ask <code>Sentence: </code>. Print the number of words and the longest word (the first one, if there's a tie) — best-so-far on <code>len</code>: <code>Words: 6</code>, <code>Longest: education</code>.</>,
+    tests: [
+      { inputs: ["python makes education fun and fast"], expect: "Sentence: python makes education fun and fast\nWords: 6\nLongest: education" },
+      { inputs: ["a bb cc d"], expect: "Sentence: a bb cc d\nWords: 4\nLongest: bb", hidden: true },
+    ],
+    requires: [{ call: "split" }],
+    hints: ["words = sentence.split()", "longest = words[0]; for w in words: if len(w) > len(longest): longest = w"],
+    solution: 'sentence = input("Sentence: ")\nwords = sentence.split()\nlongest = words[0]\nfor w in words:\n    if len(w) > len(longest):\n        longest = w\nprint(f"Words: {len(words)}")\nprint(f"Longest: {longest}")',
+  },
+  filter: {
+    id: "filter", kind: "write", title: "Filter into a new list",
+    task: <>Ask <code>Marks: </code> (one line). Build a new list <code>passed</code> with the marks of 40 and above, and count the rest. Print <code>Passed: [72, 85, 64, 90]</code> and <code>Failed: 1</code>.</>,
+    tests: [
+      { inputs: ["72 85 64 90 38"], expect: "Marks: 72 85 64 90 38\nPassed: [72, 85, 64, 90]\nFailed: 1" },
+      { inputs: ["10 40 39"], expect: "Marks: 10 40 39\nPassed: [40]\nFailed: 2", hidden: true },
+    ],
+    requires: [{ call: "append" }],
+    hints: ["passed = [] and failed = 0 before the loop.", "Inside: if m >= 40: passed.append(m) else: failed += 1"],
+    solution: 'line = input("Marks: ")\npassed = []\nfailed = 0\nfor p in line.split():\n    m = int(p)\n    if m >= 40:\n        passed.append(m)\n    else:\n        failed += 1\nprint(f"Passed: {passed}")\nprint(f"Failed: {failed}")',
+  },
+  comp: {
+    id: "comp", kind: "complete", optional: true, title: "Bonus: list comprehension",
+    task: <>Python can build a list in one line: <code>[expression for item in collection]</code>, with an optional <code>if</code> filter. Fill the blanks so <code>marks</code> holds ints and <code>passed</code> holds only marks ≥ 40. (Optional — the loops you wrote do the same job.)</>,
+    starter: 'line = "72 85 38 64 21"\nmarks = [___ for p in line.split()]\npassed = [m for m in marks if ___]\nprint(marks)\nprint(passed)',
+    tests: [{ expect: "[72, 85, 38, 64, 21]\n[72, 85, 64]" }],
+    hints: ["int(p) converts each piece.", "if m >= 40"],
+    solution: 'line = "72 85 38 64 21"\nmarks = [int(p) for p in line.split()]\npassed = [m for m in marks if m >= 40]\nprint(marks)\nprint(passed)',
+  },
+  report: {
+    id: "report", kind: "make", title: "Class report",
+    task: <>Ask <code>Marks: </code> on one line. Print, in this order: <code>Count</code>, <code>Average</code> (1 decimal), <code>Highest</code>, <code>Lowest</code>, <code>Ranked</code> (highest first, as a list), and <code>Above average</code> (how many marks are strictly above the average).</>,
+    minLines: 12,
+    tests: [
+      { inputs: ["72 85 64 90 38"], expect: report("72 85 64 90 38") },
+      { inputs: ["50 50 50"], expect: report("50 50 50"), hidden: true },
+      { inputs: ["99 1"], expect: report("99 1"), hidden: true },
+    ],
+    requires: [{ call: "split" }],
+    hints: ["sorted(marks, reverse=True) gives the ranked list.", "Work out avg first, then count marks with m > avg in a loop.", 'f"Average: {avg:.1f}"'],
+    solution: 'line = input("Marks: ")\nmarks = []\nfor p in line.split():\n    marks.append(int(p))\navg = sum(marks) / len(marks)\nabove = 0\nfor m in marks:\n    if m > avg:\n        above += 1\nprint(f"Count: {len(marks)}")\nprint(f"Average: {avg:.1f}")\nprint(f"Highest: {max(marks)}")\nprint(f"Lowest: {min(marks)}")\nprint(f"Ranked: {sorted(marks, reverse=True)}")\nprint(f"Above average: {above}")',
+  },
 };
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-const insight = (color, children) => (
-  <div style={{ marginTop: 16, background: color + "18", border: `1px solid ${color}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-    🔑 {children}
-  </div>
-);
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-function SlotRow({ items, highlight = -1 }) {
-  return (
-    <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
-      {items.map((v, i) => (
-        <div key={i} style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 10, color: i === highlight ? C.accent : C.muted, fontWeight: 700, marginBottom: 3 }}>{i}</div>
-          <div style={{
-            minWidth: 46, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
-            borderRadius: 8, fontFamily: "monospace", fontSize: 15, fontWeight: 700, padding: "0 8px",
-            background: i === highlight ? C.accent + "26" : C.surface,
-            color: i === highlight ? C.accent : C.text,
-            border: `2px solid ${i === highlight ? C.accent : C.teal + "66"}`, transition: "all 0.25s",
-          }}>{String(v)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
+const QUIZ = [
+  { q: "What's the difference between sorted(x) and x.sort()?", options: ["None", "sorted returns a new list; x.sort() changes x and returns None", "sort is faster only", "sorted changes x"], answer: 1, explain: "Use sorted() when you want to keep the original order." },
+  { q: "What does \"a,b,,c\".split(\",\") give?", options: ["['a', 'b', 'c']", "['a', 'b', '', 'c']", "['a,b,,c']", "Error"], answer: 1, explain: "With an explicit separator, an empty piece appears between two commas." },
+  { q: "What does \" \".join([\"I\", \"love\", \"Python\"]) give?", options: ["\"I love Python\"", "[\"I love Python\"]", "\"ILovePython\"", "Error"], answer: 0, explain: "join glues the strings with the separator between them." },
+  { q: "In best-so-far, where does best start?", options: ["At 0", "At the first item", "At the last item", "At max()"], answer: 1, explain: "Starting at 0 breaks for all-negative lists; the first item is always a fair starting champion." },
+  { q: "\"72 85\".split() gives ['72', '85']. What is sum(['72', '85'])?", options: ["157", "\"7285\"", "TypeError", "0"], answer: 2, explain: "split gives strings. Convert each to int first." },
+  { q: "What does [n * 2 for n in [1, 2, 3]] give?", options: ["[1, 2, 3, 1, 2, 3]", "[2, 4, 6]", "6", "Error"], answer: 1, explain: "A comprehension builds a new list from an expression for each item." },
+];
 
-// ── Widget 1: Method Toolbox — live list surgery ──
-function ToolboxWidget() {
-  const initial = [72, 85, 91, 64];
-  const [items, setItems] = useState(initial);
-  const [log, setLog] = useState([]);
-
-  const act = (label, fn, note) => {
-    setItems((prev) => fn([...prev]));
-    setLog((l) => [...l, { label, note }]);
-  };
-  const reset = () => { setItems(initial); setLog([]); };
-
-  const buttons = [
-    { code: "marks.append(88)", note: "adds at the END — the list grows", fn: (a) => { a.push(88); return a; }, color: C.green },
-    { code: "marks.remove(64)", note: "deletes the first 64 it finds", fn: (a) => { const i = a.indexOf(64); if (i > -1) a.splice(i, 1); return a; }, color: C.red },
-    { code: "marks.pop()", note: "removes the LAST item (and hands it to you)", fn: (a) => { a.pop(); return a; }, color: C.orange },
-    { code: "marks.sort()", note: "rearranges in place, smallest first", fn: (a) => a.sort((x, y) => x - y), color: C.accent },
-  ];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A student left mid-year. A new one joined. The principal wants marks in order. Last unit you changed
-        slots by index — but Python lists come with built-in <strong style={{ color: C.text }}>methods</strong>:
-        verbs you call with a dot. Try each one and watch the slots react.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 12px", marginBottom: 14 }}>
-        <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
-          marks &nbsp;·&nbsp; len(marks) → {items.length}
-        </div>
-        {items.length > 0 ? <SlotRow items={items} /> :
-          <div style={{ textAlign: "center", color: C.muted, fontSize: 13, padding: 10 }}>[ ] — empty list!</div>}
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        {buttons.map((b) => (
-          <button key={b.code} onClick={() => act(b.code, b.fn, b.note)} style={{
-            padding: "9px 14px", borderRadius: 8, fontSize: 12, fontFamily: "monospace", fontWeight: 600,
-            background: b.color + "1c", color: b.color, border: `1.5px solid ${b.color}66`, cursor: "pointer",
-          }}>{b.code}</button>
-        ))}
-        <button onClick={reset} style={{
-          padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-          background: C.card, color: C.muted, border: `1.5px solid ${C.border}`, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      {log.length > 0 && (
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12 }}>
-          {log.slice(-5).map((e, i) => (
-            <div key={i} style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.9 }}>
-              <span style={{ color: C.text }}>{e.label}</span>
-              <span style={{ color: C.muted }}>{"   # " + e.note}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>Methods are verbs attached to the list.</strong> <code style={{ color: C.teal }}>marks.append(x)</code>,
-        <code style={{ color: C.teal }}> marks.remove(x)</code>, <code style={{ color: C.teal }}>marks.pop()</code>,
-        <code style={{ color: C.teal }}> marks.sort()</code> — all change the list <em>in place</em>, no new list,
-        no re-assignment. (Try <code style={{ color: C.red }}>word.append("!")</code> on a string — TypeError. Immutability again!)
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 2: Trace — count the passes (accumulate/count pattern) ──
-function CountTrace() {
-  const lines = [
-    'marks = [72, 45, 91, 30, 78]',
-    'passed = 0',
-    'for m in marks:',
-    '    if m >= 50:',
-    '        passed = passed + 1',
-    'print(passed, "students passed")',
-  ];
-  // precomputed steps: [lineIdx, m, passed, condition, output, narration]
-  const steps = [
-    [0, null, null, null, "", "The class marks go into one list."],
-    [1, null, 0, null, "", "Create the counter BEFORE the loop — passed starts at 0."],
-    [2, 72, 0, null, "", "The for loop hands m the first mark: 72."],
-    [3, 72, 0, true, "", "Is 72 >= 50? True ✓ — this student passed."],
-    [4, 72, 1, null, "", "Count it! passed becomes 1."],
-    [2, 45, 1, null, "", "Next mark: m = 45."],
-    [3, 45, 1, false, "", "Is 45 >= 50? False ✗ — skip the counting line."],
-    [2, 91, 1, null, "", "Next mark: m = 91."],
-    [3, 91, 1, true, "", "Is 91 >= 50? True ✓."],
-    [4, 91, 2, null, "", "passed becomes 2."],
-    [2, 30, 2, null, "", "Next mark: m = 30."],
-    [3, 30, 2, false, "", "Is 30 >= 50? False ✗ — skip."],
-    [2, 78, 2, null, "", "Last mark: m = 78."],
-    [3, 78, 2, true, "", "Is 78 >= 50? True ✓."],
-    [4, 78, 3, null, "", "passed becomes 3."],
-    [5, 78, 3, null, "3 students passed", "List finished — print the count. 3 out of 5 passed."],
-  ];
-  const [idx, setIdx] = useState(0);
-  const [line, m, passed, cond, output, narr] = steps[idx];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Pattern #1: <strong style={{ color: C.text }}>counting</strong>. "How many students passed?" is Unit 6's
-        counter pattern (create-before, update-inside) walking a list, with an <code style={{ color: C.teal }}>if</code> from
-        Module 5 deciding what counts. Step through and watch <code style={{ color: C.teal }}>passed</code> climb.
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14, marginBottom: 14 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
-          {lines.map((l, i) => (
-            <div key={i} style={{
-              fontFamily: "monospace", fontSize: 12.5, lineHeight: 1.9, padding: "1px 8px", borderRadius: 6,
-              background: i === line ? C.accent + "22" : "transparent",
-              borderLeft: `3px solid ${i === line ? C.accent : "transparent"}`,
-              color: i === line ? C.text : C.muted, whiteSpace: "pre",
-            }}>{i === line ? "▶ " : "  "}{l}</div>
-          ))}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ background: C.card, border: `1px solid ${C.teal}55`, borderRadius: 10, padding: 12 }}>
-            <div style={{ color: C.teal, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>MEMORY</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {[["m", m], ["passed", passed]].map(([name, val]) => (
-                <div key={name} style={{ textAlign: "center", flex: 1 }}>
-                  <div style={{ fontSize: 10, color: C.teal, fontWeight: 700 }}>{name}</div>
-                  <div style={{ border: `2px solid ${C.teal}`, borderRadius: 8, padding: "6px 4px", fontFamily: "monospace", fontSize: 14, color: val === null ? C.muted : C.text, background: C.surface }}>
-                    {val === null ? "—" : val}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${cond === true ? C.green : cond === false ? C.red : C.border}`, borderRadius: 10, padding: 12 }}>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>CONDITION CHECK</div>
-            <div style={{ fontFamily: "monospace", fontSize: 13, color: cond === true ? C.green : cond === false ? C.red : C.muted }}>
-              {cond === true ? `${m} >= 50 → True ✓` : cond === false ? `${m} >= 50 → False ✗` : "—"}
-            </div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, flex: 1 }}>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>OUTPUT</div>
-            <div style={{ fontFamily: "monospace", fontSize: 13, color: C.green, minHeight: 18 }}>{output || " "}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.6 }}>
-        {narr}
-      </div>
-
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setIdx((i) => Math.min(steps.length - 1, i + 1))} disabled={idx === steps.length - 1} style={{
-          padding: "10px 20px", borderRadius: 8, background: idx === steps.length - 1 ? C.card : C.accentGlow,
-          border: "none", color: idx === steps.length - 1 ? C.muted : "#fff", fontWeight: 600, fontSize: 13,
-          cursor: idx === steps.length - 1 ? "default" : "pointer",
-        }}>Step ▶ ({idx + 1} / {steps.length})</button>
-        <button onClick={() => setIdx(0)} style={{
-          padding: "10px 16px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`,
-          color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      {insight(C.green, <>
-        <strong style={{ color: C.green }}>The counting pattern:</strong> counter = 0 before the loop, walk
-        the list, <code style={{ color: C.teal }}>if</code> decides, counter += 1 inside. Swap the condition and
-        the same skeleton counts fails, distinctions, absentees — anything.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 3: Trace — find the topper (best-so-far / max pattern) ──
-function TopperTrace() {
-  const lines = [
-    'marks = [72, 85, 91, 64, 78]',
-    'topper = marks[0]',
-    'for m in marks:',
-    '    if m > topper:',
-    '        topper = m',
-    'print("Topper scored", topper)',
-  ];
-  const steps = [
-    [0, null, null, null, "", "Five students' marks, one list."],
-    [1, null, 72, null, "", "Assume the FIRST mark is the best... until proven otherwise."],
-    [2, 72, 72, null, "", "m = 72."],
-    [3, 72, 72, false, "", "Is 72 > 72? False ✗ — can't beat itself."],
-    [2, 85, 72, null, "", "m = 85."],
-    [3, 85, 72, true, "", "Is 85 > 72? True ✓ — we found someone better!"],
-    [4, 85, 85, null, "", "New champion: topper becomes 85."],
-    [2, 91, 85, null, "", "m = 91."],
-    [3, 91, 85, true, "", "Is 91 > 85? True ✓ — better again!"],
-    [4, 91, 91, null, "", "topper becomes 91."],
-    [2, 64, 91, null, "", "m = 64."],
-    [3, 64, 91, false, "", "Is 64 > 91? False ✗ — 91 keeps the crown."],
-    [2, 78, 91, null, "", "m = 78."],
-    [3, 78, 91, false, "", "Is 78 > 91? False ✗."],
-    [5, 78, 91, null, "Topper scored 91", "Every mark checked — 91 survived every challenge."],
-  ];
-  const [idx, setIdx] = useState(0);
-  const [line, m, topper, cond, output, narr] = steps[idx];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Pattern #2: <strong style={{ color: C.text }}>best-so-far</strong>. Finding the topper is a tournament:
-        the current champion (<code style={{ color: C.teal }}>topper</code>) faces every mark in turn, and only a
-        higher one takes the title. Step through the tournament.
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14, marginBottom: 14 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14 }}>
-          {lines.map((l, i) => (
-            <div key={i} style={{
-              fontFamily: "monospace", fontSize: 12.5, lineHeight: 1.9, padding: "1px 8px", borderRadius: 6,
-              background: i === line ? C.accent + "22" : "transparent",
-              borderLeft: `3px solid ${i === line ? C.accent : "transparent"}`,
-              color: i === line ? C.text : C.muted, whiteSpace: "pre",
-            }}>{i === line ? "▶ " : "  "}{l}</div>
-          ))}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ background: C.card, border: `1px solid ${C.teal}55`, borderRadius: 10, padding: 12 }}>
-            <div style={{ color: C.teal, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>MEMORY</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {[["m", m], ["topper 👑", topper]].map(([name, val]) => (
-                <div key={name} style={{ textAlign: "center", flex: 1 }}>
-                  <div style={{ fontSize: 10, color: C.teal, fontWeight: 700 }}>{name}</div>
-                  <div style={{ border: `2px solid ${C.teal}`, borderRadius: 8, padding: "6px 4px", fontFamily: "monospace", fontSize: 14, color: val === null ? C.muted : C.text, background: C.surface }}>
-                    {val === null ? "—" : val}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${cond === true ? C.green : cond === false ? C.red : C.border}`, borderRadius: 10, padding: 12 }}>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>CONDITION CHECK</div>
-            <div style={{ fontFamily: "monospace", fontSize: 13, color: cond === true ? C.green : cond === false ? C.red : C.muted }}>
-              {cond === true ? `${m} > ${topper} → True ✓` : cond === false ? `${m} > ${topper} → False ✗` : "—"}
-            </div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, flex: 1 }}>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>OUTPUT</div>
-            <div style={{ fontFamily: "monospace", fontSize: 13, color: C.green, minHeight: 18 }}>{output || " "}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.muted, marginBottom: 12, lineHeight: 1.6 }}>
-        {narr}
-      </div>
-
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setIdx((i) => Math.min(steps.length - 1, i + 1))} disabled={idx === steps.length - 1} style={{
-          padding: "10px 20px", borderRadius: 8, background: idx === steps.length - 1 ? C.card : C.accentGlow,
-          border: "none", color: idx === steps.length - 1 ? C.muted : "#fff", fontWeight: 600, fontSize: 13,
-          cursor: idx === steps.length - 1 ? "default" : "pointer",
-        }}>Step ▶ ({idx + 1} / {steps.length})</button>
-        <button onClick={() => setIdx(0)} style={{
-          padding: "10px 16px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`,
-          color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>The best-so-far pattern:</strong> start with the first item as
-        champion, challenge it with every item, replace when beaten. Flip <code style={{ color: C.teal }}>&gt;</code> to
-        <code style={{ color: C.teal }}> &lt;</code> and the same skeleton finds the LOWEST mark, cheapest ticket, shortest name.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 4: Build It — merit list (sort + slice) ──
-function MeritWidget() {
-  const [m2, setM2] = useState(91);
-  const marks = [72, 85, m2, 64, 78];
-  const sorted = [...marks].sort((a, b) => b - a);
-  const top3 = sorted.slice(0, 3);
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The notice board needs a merit list: top 3 marks, highest first. Watch three units of this module
-        work as one team — <code style={{ color: C.teal }}>sort()</code> (this unit) rearranges,
-        slicing (Unit 7.1!) cuts the top 3. Drag a mark and watch the merit list re-rank itself.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>marks[2] = <strong style={{ color: C.accent }}>{m2}</strong></label>
-        <input type="range" min={0} max={100} value={m2} onChange={(e) => setM2(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>🐍 THE PROGRAM</div>
-          <pre style={mono}>
-            {`marks = [${marks.join(", ")}]\n\nmarks.sort(reverse=True)\n# highest first\n\ntop3 = marks[:3]\nprint("Merit list:", top3)`}
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>▶ OUTPUT</div>
-          <pre style={{ ...mono, color: C.green }}>{`Merit list: [${top3.join(", ")}]`}</pre>
-          <div style={{ marginTop: 14 }}>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>AFTER sort(reverse=True)</div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {sorted.map((v, i) => (
-                <div key={i} style={{
-                  padding: "6px 10px", borderRadius: 7, fontFamily: "monospace", fontSize: 13, fontWeight: 700,
-                  background: i < 3 ? C.green + "1c" : C.surface,
-                  color: i < 3 ? C.green : C.muted,
-                  border: `1.5px solid ${i < 3 ? C.green : C.border}`,
-                }}>{i < 3 ? "🏅" : ""}{v}</div>
-              ))}
-            </div>
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
-              first 3 = <code style={{ color: C.green }}>marks[:3]</code> — stop excluded, as always!
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>Real programs are patterns snapped together.</strong> sort() +
-        slice = merit list. Loop + if + counter = pass count. You now own the three list patterns —
-        <em> accumulate, search, sort</em> — that power everything from report cards to search engines.
-      </>)}
-    </div>
-  );
-}
-
-// ── Quiz ──
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: 'nums = [3, 1, 2]\nnums.sort()\nprint(nums)\n\nWhat does this print?',
-      options: ["[3, 1, 2]", "[1, 2, 3]", "[3, 2, 1]", "None — sort() makes a new list"],
-      answer: 1,
-      explain: "sort() rearranges the SAME list in place, smallest first: [1, 2, 3]. No new list is created.",
-    },
-    {
-      q: 'nums = [1, 2, 3]\nnums.append(4)\nnums.pop()\nprint(nums)\n\nWhat does this print?',
-      options: ["[1, 2, 3, 4]", "[2, 3, 4]", "[1, 2, 3]", "[1, 2]"],
-      answer: 2,
-      explain: "append(4) adds 4 at the end; pop() removes the LAST item — that same 4. Back to [1, 2, 3].",
-    },
-    {
-      q: 'count = 0\nfor n in [5, 12, 8, 20]:\n    if n > 10:\n        count = count + 1\nprint(count)\n\nWhat does this print?',
-      options: ["0", "1", "2", "4"],
-      answer: 2,
-      explain: "The counting pattern: only 12 and 20 are > 10, so count ends at 2.",
-    },
-    {
-      q: 'best = 4\nfor n in [4, 9, 7]:\n    if n > best:\n        best = n\nprint(best)\n\nWhat does this print?',
-      options: ["4", "7", "9", "20"],
-      answer: 2,
-      explain: "Best-so-far: 4 can't beat 4; 9 beats 4 (new champion); 7 can't beat 9. Final answer: 9.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! The three loop patterns are yours." :
-            score >= 2 ? "Good work! If the traces felt fast, replay 'Count the Passes' and 'Find the Topper' step by step." :
-              "Worth a replay: step through both traces slowly — watching the counter and the champion update is what makes patterns stick."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 7.3 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You can now reshape lists with methods and run the big three patterns — count/accumulate,
-            best-so-far, and sort — the daily bread of real programs.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 7.4 — Tuples & Dictionaries.</strong> A list
-            that must NEVER change, and a collection where you look things up by <em>name</em> instead of
-            slot number — "what did PRIYA score?" instead of "what's in slot 3?"
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("\n") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s", fontFamily: "monospace",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit7_3({ student, onUnitComplete }) {
+export default function Unit7_3(props) {
   const sections = [
-    { id: "toolbox", label: "The Toolbox" },
-    { id: "count", label: "Count the Passes" },
-    { id: "topper", label: "Find the Topper" },
-    { id: "merit", label: "Merit List" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "Toolbox", kicker: "BUILT-INS", title: "sum, min, max, sorted",
+      blocks: [
+        <P>Python has built-in tools for the most common list questions. One important pair: <code>sorted(x)</code> gives a new sorted list; <code>x.sort()</code> sorts x itself.</P>,
+        EX.builtins,
+        EX.sortnone,
+      ],
+    },
+    {
+      label: "Best So Far", kicker: "THE TOURNAMENT", title: "Finding the topper yourself",
+      blocks: [
+        <P><code>max()</code> is handy — but exams (and real problems like “which student, not just which mark?”) need the pattern behind it: <strong>best-so-far</strong>. The current champion faces each mark in turn:</P>,
+        <Topper />,
+        EX.topper,
+      ],
+    },
+    {
+      label: "split & join", kicker: "TEXT ↔ LIST", title: "From one line of text to a list",
+      blocks: [
+        <P>Users type a whole line; your program wants a list. <code>split()</code> turns text into a list of pieces; <code>join()</code> turns a list of strings back into text.</P>,
+        EX.splitjoin,
+        EX.oneline,
+        EX.words,
+        <KeyIdea>The everyday recipe: <code>line = input()</code> → <code>line.split()</code> → convert each piece with <code>int()</code> → use the list.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Filter", kicker: "BUILD A NEW LIST", title: "Keep only what you need",
+      blocks: [EX.filter, EX.comp],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: class report",
+      blocks: [<P>split, convert, sum/len, max/min, sorted, and a count pattern — one input line, six results.</P>, EX.report],
+    },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>The List Toolbox</h3><ToolboxWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Pattern 1: Count the Passes</h3><CountTrace /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Pattern 2: Find the Topper</h3><TopperTrace /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Pattern 3: Sort → Merit List</h3><MeritWidget /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions to check your understanding of Unit 7.3.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 7 › UNIT 7.3</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>List Methods & Loop Patterns</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit7_3" crumb="MODULE 7 › UNIT 7.3" title="List Methods & Loop Patterns" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 7.4 — Tuples", text: "Fixed records, unpacking, a, b = b, a, and the enumerate / zip loop helpers." }} />
   );
 }

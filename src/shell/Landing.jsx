@@ -1,5 +1,5 @@
 import COURSE_CONFIG from '../../config/course.config.js';
-import { DARK as D, FONT, MONO } from './brand.js';
+import { LIGHT as D, FONT, MONO } from './brand.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Foothold Landing page — DARK BRAND EDITION
@@ -20,8 +20,8 @@ import { DARK as D, FONT, MONO } from './brand.js';
 function FootholdMark({ size = 96 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" style={{ display: 'block' }} aria-hidden="true">
-      <rect x="8" y="60" width="26" height="26" rx="7" fill={D.inkSoft} />
-      <rect x="37" y="37" width="26" height="26" rx="7" fill={D.inkSoft} />
+      <rect x="8" y="60" width="26" height="26" rx="7" fill={D.ink} />
+      <rect x="37" y="37" width="26" height="26" rx="7" fill={D.ink} />
       <rect x="66" y="14" width="26" height="26" rx="7" fill={D.amber} />
     </svg>
   );
@@ -89,7 +89,7 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
         }}>
           Foothold
         </h1>
-        <p style={{ color: D.amber, fontFamily: MONO, fontSize: 'clamp(14px, 3.5vw, 17px)', fontWeight: 700, margin: '10px 0 0' }}>
+        <p style={{ color: D.amberSoft, fontFamily: MONO, fontSize: 'clamp(14px, 3.5vw, 17px)', fontWeight: 700, margin: '10px 0 0' }}>
           Get your footing. Keep climbing.
         </p>
 
@@ -117,14 +117,14 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
              a screen" on the dark canvas. ── */}
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 24px 52px' }}>
         <div style={{
-          background: D.navyPanel, color: D.ink, borderRadius: 14,
+          background: D.navyPanel, color: D.panelText, borderRadius: 14,
           border: `1px solid ${D.border}`,
           padding: '20px 24px', fontFamily: MONO, fontSize: 14, lineHeight: 1.8,
           overflowX: 'auto', textAlign: 'left',
         }}>
           <div><span style={{ color: D.amber }}>&gt;&gt;&gt;</span> print(<span style={{ color: D.amber }}>"Hello, climber."</span>)</div>
           <div>Hello, climber.</div>
-          <div style={{ color: D.inkMuted }}># {totalUnits}+ interactive lessons between you and the summit.</div>
+          <div style={{ color: '#8A97AB' }}># {totalUnits}+ interactive lessons between you and the summit.</div>
         </div>
       </div>
 

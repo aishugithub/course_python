@@ -1,490 +1,195 @@
-// Unit 7.4 — Tuples & Dictionaries (immutability as a feature, lookup by name)
-import { useState } from "react";
+// Unit 7.4 — Tuples (rebuilt as its own unit in the typing-first redesign;
+// dictionaries moved to Unit7_4D). Locked records, (5,), packing/unpacking,
+// a, b = b, a, divmod, lists of tuples, enumerate(), zip(), merit list.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
+
+const codeBox = { margin: 0, fontFamily: CODE_FONT, fontSize: 14.5, lineHeight: 1.7, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 14px", whiteSpace: "pre-wrap" };
+
+// ── Widget: the same bug on a list and on a tuple ──
+function LockedRecord() {
+  const [kind, setKind] = useState("list");
+  const isList = kind === "list";
+  return (
+    <div className="fh-two">
+      <div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          {["list", "tuple"].map((k) => <button key={k} onClick={() => setKind(k)} style={{ padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontWeight: 700, border: `1.5px solid ${kind === k ? T.navy : T.border}`, background: kind === k ? T.navy : T.card, color: kind === k ? "#fff" : T.text }}>as a {k} {k === "list" ? "[ ]" : "( )"}</button>)}
+        </div>
+        <pre style={codeBox}>{isList ? "dob = [14, 11, 2006]   # birthday\n...\ndob[0] = 25            # a bug, 300 lines later\nprint(dob)" : "dob = (14, 11, 2006)   # birthday\n...\ndob[0] = 25            # the same bug\nprint(dob)"}</pre>
+      </div>
+      <div>
+        <pre style={{ ...codeBox, background: T.termBg, color: isList ? T.termText : T.termErr }}>{isList ? "[25, 11, 2006]" : "TypeError: 'tuple' object does not\nsupport item assignment"}</pre>
+        <div style={{ fontSize: 14.5, color: isList ? T.red : T.green, marginTop: 8, lineHeight: 1.6 }}>
+          {isList ? "No error. Someone's birthday silently changed — and you'll find out weeks later." : "The tuple refuses, loudly, at the exact line. For data that must never change, that lock is a feature."}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const pairs = (names, marks) => names.map((n, i) => `${n}: ${marks[i]}`).join("\n");
+const merit = (nl, ml) => {
+  const n = nl.split(" "), m = ml.split(" ").map(Number);
+  const out = [`Names: ${nl}`, `Marks: ${ml}`];
+  n.forEach((x, i) => out.push(`${i + 1}. ${x} - ${m[i]}`));
+  let b = 0; m.forEach((v, i) => { if (v > m[b]) b = i; });
+  out.push(`Topper: ${n[b]} (${m[b]})`);
+  out.push(`Class average: ${(m.reduce((a, c) => a + c, 0) / m.length).toFixed(1)}`);
+  return out.join("\n");
+};
+const EX = {
+  basics: {
+    id: "basics", kind: "type", title: "Making tuples",
+    task: <>Round brackets, commas between items. A tuple with <strong>one</strong> item needs a trailing comma — brackets alone are just maths brackets.</>,
+    show: "dob = (14, 11, 2006)\nprint(dob[0], dob[-1], len(dob))\none = (5,)\nnot_tuple = (5)\nprint(type(one))\nprint(type(not_tuple))\nprint(dob.count(11), dob.index(2006))",
+    minLines: 8,
+    tests: [{ expect: "14 2006 3\n<class 'tuple'>\n<class 'int'>\n1 2" }],
+    hints: ["(5) is just 5 in brackets. (5,) is a tuple holding 5."],
+    solution: "dob = (14, 11, 2006)\nprint(dob[0], dob[-1], len(dob))\none = (5,)\nnot_tuple = (5)\nprint(type(one))\nprint(type(not_tuple))\nprint(dob.count(11), dob.index(2006))",
+  },
+  locked: {
+    id: "locked", kind: "fix", title: "Correcting a locked record",
+    task: <>The year in this record is wrong; it should be 2007. You can't change a tuple in place — run it and see. Make a <strong>new</strong> tuple with the corrected year (keep the variable name <code>dob</code>).</>,
+    starter: "dob = (14, 11, 2006)\ndob[2] = 2007\nprint(dob)",
+    tests: [{ expect: "(14, 11, 2007)" }],
+    hints: ["Build a new tuple from the old one: (dob[0], dob[1], 2007)", "Or join tuples: dob[:2] + (2007,) — note the comma."],
+    solution: "dob = (14, 11, 2006)\ndob = (dob[0], dob[1], 2007)\nprint(dob)",
+  },
+  unpack: {
+    id: "unpack", kind: "type", title: "Packing and unpacking",
+    task: <>Commas pack values into a tuple; names on the left of <code>=</code> unpack it, one name per item. The last two lines are Python's famous one-line swap.</>,
+    show: 'student = ("Priya", "22CS1042", 8.7)\nname, roll, cgpa = student\nprint(name)\nprint(f"{roll}: {cgpa}")\na, b = 1, 2\na, b = b, a\nprint(a, b)',
+    tests: [{ expect: "Priya\n22CS1042: 8.7\n2 1" }],
+    hints: ["a, b = b, a: the right side is packed into a tuple FIRST, then unpacked into a and b."],
+    solution: 'student = ("Priya", "22CS1042", 8.7)\nname, roll, cgpa = student\nprint(name)\nprint(f"{roll}: {cgpa}")\na, b = 1, 2\na, b = b, a\nprint(a, b)',
+  },
+  swap: {
+    id: "swap", kind: "modify", title: "The cups, in one line",
+    task: <>In Unit 4.2 you swapped the cups with a third variable. Now replace the three swap lines with one tuple swap.</>,
+    starter: 'cup1 = "tea"\ncup2 = "coffee"\ntemp = cup1\ncup1 = cup2\ncup2 = temp\nprint("cup1 has", cup1)\nprint("cup2 has", cup2)',
+    tests: [{ expect: "cup1 has coffee\ncup2 has tea" }],
+    forbids: [{ name: "temp", msg: "No temp needed any more — swap with cup1, cup2 = cup2, cup1." }],
+    hints: ["cup1, cup2 = cup2, cup1"],
+    solution: 'cup1 = "tea"\ncup2 = "coffee"\ncup1, cup2 = cup2, cup1\nprint("cup1 has", cup1)\nprint("cup2 has", cup2)',
+  },
+  toomany: {
+    id: "toomany", kind: "fix", title: "Not enough names",
+    task: <>Run it and read the coach. Unpack all three items and print them on one line.</>,
+    starter: 'student = ("Priya", "22CS1042", 8.7)\nname, roll = student\nprint(name, roll)',
+    tests: [{ expect: "Priya 22CS1042 8.7" }],
+    hints: ["Three items need three names on the left."],
+    solution: 'student = ("Priya", "22CS1042", 8.7)\nname, roll, cgpa = student\nprint(name, roll, cgpa)',
+  },
+  divmod: {
+    id: "divmod", kind: "write", title: "divmod returns a tuple",
+    task: <>The built-in <code>divmod(a, b)</code> returns the tuple <code>(a // b, a % b)</code>. Redo Unit 4.4's minutes-to-hours: ask <code>Minutes: </code>, unpack <code>divmod(total, 60)</code> into two names in one line, and print <code>2 hours 5 minutes</code>.</>,
+    tests: [{ inputs: ["125"], expect: "Minutes: 125\n2 hours 5 minutes" }, { inputs: ["59"], expect: "Minutes: 59\n0 hours 59 minutes", hidden: true }],
+    requires: [{ call: "divmod" }],
+    hints: ["hours, mins = divmod(total, 60)"],
+    solution: 'total = int(input("Minutes: "))\nhours, mins = divmod(total, 60)\nprint(hours, "hours", mins, "minutes")',
+  },
+  records: {
+    id: "records", kind: "type", title: "A list of tuples",
+    task: <>The classic shape for a table of records: a <strong>list</strong> (it can grow) of <strong>tuples</strong> (each record is fixed). Unpack right in the for line.</>,
+    show: 'students = [("Priya", 87), ("Arun", 72), ("Meena", 95)]\nstudents.append(("Ravi", 64))\nfor name, mark in students:\n    print(f"{name}: {mark}")',
+    tests: [{ expect: "Priya: 87\nArun: 72\nMeena: 95\nRavi: 64" }],
+    hints: ["append gets ONE argument: the tuple (\"Ravi\", 64) — mind the double brackets."],
+    solution: 'students = [("Priya", 87), ("Arun", 72), ("Meena", 95)]\nstudents.append(("Ravi", 64))\nfor name, mark in students:\n    print(f"{name}: {mark}")',
+  },
+  enum: {
+    id: "enum", kind: "write", title: "enumerate: number the items",
+    task: <><code>enumerate(items, start=1)</code> hands you <code>(position, item)</code> tuples. Ask <code>Names: </code> (one line, separated by spaces) and print a numbered list: <code>1. Priya</code>, <code>2. Arun</code>…</>,
+    tests: [{ inputs: ["Priya Arun Meena"], expect: "Names: Priya Arun Meena\n1. Priya\n2. Arun\n3. Meena" }, { inputs: ["Ravi"], expect: "Names: Ravi\n1. Ravi", hidden: true }],
+    requires: [{ call: "enumerate" }],
+    hints: ['for i, name in enumerate(names, start=1): print(f"{i}. {name}")'],
+    solution: 'names = input("Names: ").split()\nfor i, name in enumerate(names, start=1):\n    print(f"{i}. {name}")',
+  },
+  zip: {
+    id: "zip", kind: "write", title: "zip: walk two lists together",
+    task: <><code>zip(a, b)</code> pairs items up: <code>(a[0], b[0]), (a[1], b[1])</code>… Ask <code>Names: </code> and <code>Marks: </code> (both one line) and print <code>Priya: 87</code> for each pair.</>,
+    tests: [
+      { inputs: ["Priya Arun Meena", "87 72 95"], expect: "Names: Priya Arun Meena\nMarks: 87 72 95\n" + pairs(["Priya", "Arun", "Meena"], [87, 72, 95]) },
+      { inputs: ["Ravi Divya", "64 99"], expect: "Names: Ravi Divya\nMarks: 64 99\n" + pairs(["Ravi", "Divya"], [64, 99]), hidden: true },
+    ],
+    requires: [{ call: "zip" }],
+    hints: ['for name, mark in zip(names, marks): print(f"{name}: {mark}")'],
+    solution: 'names = input("Names: ").split()\nmarks = input("Marks: ").split()\nfor name, mark in zip(names, marks):\n    print(f"{name}: {mark}")',
+  },
+  merit: {
+    id: "merit", kind: "make", title: "Merit list",
+    task: <>Ask <code>Names: </code> and <code>Marks: </code> (one line each). Build a list of <code>(name, mark)</code> tuples with zip (marks as ints). Print a numbered list <code>1. Priya - 87</code>, then <code>Topper: Meena (95)</code> (best-so-far over the tuples) and <code>Class average: 84.7</code> (1 decimal).</>,
+    minLines: 14,
+    tests: [
+      { inputs: ["Priya Arun Meena", "87 72 95"], expect: merit("Priya Arun Meena", "87 72 95") },
+      { inputs: ["Ravi Divya Arun Kavya", "99 64 70 99"], expect: merit("Ravi Divya Arun Kavya", "99 64 70 99"), hidden: true },
+    ],
+    requires: [{ call: "zip" }, { call: "enumerate" }],
+    hints: ["records = [] then for n, m in zip(names, marks): records.append((n, int(m)))", "best = records[0]; for rec in records: if rec[1] > best[1]: best = rec", 'top_name, top_mark = best'],
+    solution: 'names = input("Names: ").split()\nmarks = input("Marks: ").split()\nrecords = []\nfor n, m in zip(names, marks):\n    records.append((n, int(m)))\nfor i, (name, mark) in enumerate(records, start=1):\n    print(f"{i}. {name} - {mark}")\nbest = records[0]\ntotal = 0\nfor rec in records:\n    total += rec[1]\n    if rec[1] > best[1]:\n        best = rec\ntop_name, top_mark = best\nprint(f"Topper: {top_name} ({top_mark})")\nprint(f"Class average: {total / len(records):.1f}")',
+  },
 };
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-const insight = (color, children) => (
-  <div style={{ marginTop: 16, background: color + "18", border: `1px solid ${color}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-    🔑 {children}
-  </div>
-);
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-// ── Widget 1: Tuples — the list with a lock ──
-function TupleWidget() {
-  const [mode, setMode] = useState("list");
-  const [ran, setRan] = useState(false);
+const QUIZ = [
+  { q: "Which of these is a tuple?", options: ["(5)", "(5,)", "[5]", "{5}"], answer: 1, explain: "The comma makes the tuple. (5) is just the number 5." },
+  { q: "t = (10, 20, 30). What does t[0] = 99 do?", options: ["t becomes (99, 20, 30)", "TypeError", "Nothing", "t becomes (99,)"], answer: 1, explain: "Tuples are immutable. Make a new tuple instead." },
+  { q: "After a, b = 3, 7 and then a, b = b, a, what is a?", options: ["3", "7", "(7, 3)", "Error"], answer: 1, explain: "The right side (7, 3) is built first, then unpacked." },
+  { q: "x, y = (1, 2, 3) gives…", options: ["x=1, y=2", "x=1, y=(2, 3)", "ValueError: too many values to unpack", "x=(1,2,3)"], answer: 2, explain: "The number of names must match the number of items." },
+  { q: "What does list(enumerate([\"a\", \"b\"], start=1)) contain?", options: ["[1, 2]", "[(1, 'a'), (2, 'b')]", "['a', 'b']", "[(0, 'a'), (1, 'b')]"], answer: 1, explain: "enumerate yields (position, item) tuples, starting from start." },
+  { q: "When should you choose a tuple over a list?", options: ["Always", "For a fixed record that shouldn't change (a date, coordinates, one student's details)", "For data that grows", "Never"], answer: 1, explain: "Lists for collections that change; tuples for fixed records — often a list of tuples." },
+];
 
-  const switchMode = (m) => { setMode(m); setRan(false); };
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Some data must NEVER change: a date of birth, a PIN code's coordinates, the RGB values of a colour.
-        Store a birthday in a list, and any line of code — even a typo — can silently corrupt it. Run the
-        same "accident" on both versions.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <button onClick={() => switchMode("list")} style={{
-          padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-          background: mode === "list" ? C.accentGlow : C.card, color: mode === "list" ? "#fff" : C.muted,
-          border: `1.5px solid ${mode === "list" ? C.accent : C.border}`,
-        }}>as a list [ ]</button>
-        <button onClick={() => switchMode("tuple")} style={{
-          padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-          background: mode === "tuple" ? C.accentGlow : C.card, color: mode === "tuple" ? "#fff" : C.muted,
-          border: `1.5px solid ${mode === "tuple" ? C.accent : C.border}`,
-        }}>as a tuple ( )</button>
-      </div>
-
-      <div style={{ background: C.card, border: `1.5px solid ${ran ? (mode === "list" ? C.red : C.green) : C.border}`, borderRadius: 10, padding: 16, marginBottom: 12 }}>
-        <pre style={mono}>
-          {mode === "list"
-            ? `dob = [14, 11, 2006]   # birthday as a LIST\ndob[0] = 25            # oops — a bug elsewhere in the code`
-            : `dob = (14, 11, 2006)   # birthday as a TUPLE\ndob[0] = 25            # same buggy line`}
-        </pre>
-        {ran && (mode === "list" ? (
-          <>
-            <pre style={{ ...mono, color: C.yellow, marginTop: 10 }}>{`print(dob)  →  [25, 11, 2006]`}</pre>
-            <div style={{ color: C.red, fontSize: 12.5, marginTop: 8, lineHeight: 1.6 }}>
-              ⚠️ No error, no warning — the birthday is now the 25th, silently wrong forever.
-              You'd only discover it months later on the wrong cake day. 🎂
-            </div>
-          </>
-        ) : (
-          <>
-            <pre style={{ ...mono, color: C.red, marginTop: 10 }}>{`TypeError: 'tuple' object does not\nsupport item assignment`}</pre>
-            <div style={{ color: C.green, fontSize: 12.5, marginTop: 8, lineHeight: 1.6 }}>
-              ✓ Python slams the door AT the buggy line. The bad code crashes loudly instead of
-              corrupting quietly — you find the bug the moment it runs.
-            </div>
-          </>
-        ))}
-      </div>
-
-      {!ran && (
-        <button onClick={() => setRan(true)} style={{
-          padding: "10px 20px", borderRadius: 8, background: C.accentGlow, border: "none",
-          color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer", marginBottom: 4,
-        }}>▶ Run the buggy line</button>
-      )}
-
-      <div style={{ marginTop: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.9 }}>
-        Everything else works exactly like a list: <code style={{ color: C.teal }}>dob[0]</code> → 14,
-        <code style={{ color: C.teal }}> dob[-1]</code> → 2006, <code style={{ color: C.teal }}>len(dob)</code> → 3,
-        looping — all fine. Only <em>changing</em> is forbidden. Sound familiar? Strings taught you this
-        in Unit 7.1: a tuple is immutable on purpose.
-      </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>A tuple is a list with a lock — and the lock is the feature.</strong> Use
-        a list for data that grows and changes (marks being entered), a tuple for data that must stay
-        fixed (a date, a coordinate). Round brackets instead of square — that's the whole syntax.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 2: Need — look up by name, not by slot number ──
-function DictNeedWidget() {
-  const names = ["PRIYA", "ARUN", "MEENA", "DIVYA"];
-  const marks = [87, 62, 91, 78];
-  const [sel, setSel] = useState(2);
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Your list skills have one blind spot. "What did MEENA score?" — with lists you must first hunt for
-        <em> where</em> Meena is. Two parallel lists, kept in perfect step, searched by loop. Click a student
-        and compare the work.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {names.map((n, i) => (
-          <button key={n} onClick={() => setSel(i)} style={{
-            padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-            background: sel === i ? C.accentGlow : C.card, color: sel === i ? "#fff" : C.muted,
-            border: `1.5px solid ${sel === i ? C.accent : C.border}`,
-          }}>{n}</button>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>❌ TWO PARALLEL LISTS</div>
-          <pre style={mono}>
-            {`names = [${names.map((n) => `"${n}"`).join(", ")}]\nmarks = [${marks.join(", ")}]\n\n`}
-            {names.map((n, i) => {
-              const visited = i <= sel;
-              const found = i === sel;
-              return (
-                <span key={n} style={{ color: found ? C.green : visited ? C.yellow : C.muted }}>
-                  {`# slot ${i}: ${n}${found ? " ← found! marks[" + i + "] = " + marks[i] : " ? no"}\n`}
-                </span>
-              );
-            })}
-            <span style={{ color: C.red }}>{`# ${sel + 1} slot${sel > 0 ? "s" : ""} checked — and if the\n# lists ever drift apart... 💥`}</span>
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>✅ ONE DICTIONARY</div>
-          <pre style={mono}>
-            {`marks = {\n${names.map((n, i) => `  "${n}": ${marks[i]},`).join("\n")}\n}\n\nmarks["${names[sel]}"]`}
-            <span style={{ color: C.green }}>{`  → ${marks[sel]}`}</span>
-            {`\n`}<span style={{ color: C.muted }}># one step. no hunting.</span>
-          </pre>
-        </div>
-      </div>
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>A dictionary stores pairs: key → value.</strong> Instead of
-        "what's in slot 3?" you ask "what did MEENA score?" — the question you actually wanted to ask.
-        Curly braces, a colon between each key and value.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 3: Dict anatomy — lockers with names + KeyError gotcha ──
-function LockerWidget() {
-  const initial = { PRIYA: 87, ARUN: 62, MEENA: 91 };
-  const [d, setD] = useState(initial);
-  const [log, setLog] = useState([]);
-  const [flash, setFlash] = useState(null);
-
-  const run = (code, fn, note, flashKey) => {
-    setD((prev) => fn({ ...prev }));
-    setLog((l) => [...l, { code, note, err: false }]);
-    setFlash(flashKey);
-  };
-  const keyError = () => {
-    setLog((l) => [...l, { code: 'marks["RAJ"]', note: "KeyError: 'RAJ' — no such locker!", err: true }]);
-    setFlash(null);
-  };
-  const reset = () => { setD(initial); setLog([]); setFlash(null); };
-
-  const hasDivya = "DIVYA" in d;
-  const arunUpdated = d.ARUN === 65;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Unit 4.2 called a variable "a labelled locker". A dictionary is a whole <em>row</em> of lockers —
-        but labelled with names YOU choose, not slot numbers. Press each operation and watch the lockers.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 12px", marginBottom: 14 }}>
-        <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
-          marks &nbsp;·&nbsp; {Object.keys(d).length} lockers
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          {Object.entries(d).map(([k, v]) => (
-            <div key={k} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: flash === k ? C.accent : C.teal, fontWeight: 700, marginBottom: 3 }}>"{k}"</div>
-              <div style={{
-                minWidth: 62, height: 46, display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: 8, fontFamily: "monospace", fontSize: 16, fontWeight: 700,
-                background: flash === k ? C.accent + "26" : C.surface,
-                color: flash === k ? C.accent : C.text,
-                border: `2px solid ${flash === k ? C.accent : C.teal + "66"}`, transition: "all 0.25s",
-              }}>{v}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ textAlign: "center", marginTop: 10, fontSize: 10.5, color: C.muted }}>
-          key (the label) → value (what's inside)
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <button onClick={() => run('marks["DIVYA"] = 78', (x) => ({ ...x, DIVYA: 78 }), "NEW key → a locker appears", "DIVYA")}
-          disabled={hasDivya} style={{
-            padding: "9px 14px", borderRadius: 8, fontSize: 12, fontFamily: "monospace", fontWeight: 600,
-            background: hasDivya ? C.card : C.green + "1c", color: hasDivya ? C.muted : C.green,
-            border: `1.5px solid ${hasDivya ? C.border : C.green}66`, cursor: hasDivya ? "default" : "pointer",
-          }}>marks["DIVYA"] = 78</button>
-        <button onClick={() => run('marks["ARUN"] = 65', (x) => ({ ...x, ARUN: 65 }), "EXISTING key → value overwritten, same locker", "ARUN")}
-          disabled={arunUpdated} style={{
-            padding: "9px 14px", borderRadius: 8, fontSize: 12, fontFamily: "monospace", fontWeight: 600,
-            background: arunUpdated ? C.card : C.accent + "1c", color: arunUpdated ? C.muted : C.accent,
-            border: `1.5px solid ${arunUpdated ? C.border : C.accent}66`, cursor: arunUpdated ? "default" : "pointer",
-          }}>marks["ARUN"] = 65</button>
-        <button onClick={keyError} style={{
-          padding: "9px 14px", borderRadius: 8, fontSize: 12, fontFamily: "monospace", fontWeight: 600,
-          background: C.red + "1c", color: C.red, border: `1.5px solid ${C.red}66`, cursor: "pointer",
-        }}>marks["RAJ"]</button>
-        <button onClick={reset} style={{
-          padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-          background: C.card, color: C.muted, border: `1.5px solid ${C.border}`, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      {log.length > 0 && (
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, marginBottom: 4 }}>
-          {log.slice(-4).map((e, i) => (
-            <div key={i} style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.9 }}>
-              <span style={{ color: e.err ? C.red : C.text }}>{e.code}</span>
-              <span style={{ color: e.err ? C.red : C.muted }}>{"   # " + e.note}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ marginTop: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.8 }}>
-        Safety check before opening a locker: <code style={{ color: C.teal }}>"RAJ" in marks</code> →
-        <code style={{ color: C.red }}> False</code> — the <code style={{ color: C.teal }}>in</code> keyword
-        checks the <em>keys</em>, and pairs beautifully with Module 5's <code style={{ color: C.teal }}>if</code>.
-      </div>
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>One key, one locker.</strong> Assigning to a new key creates a
-        locker; assigning to an existing key overwrites its value; <em>reading</em> a missing key raises
-        a <code style={{ color: C.red }}>KeyError</code>. Check with <code style={{ color: C.teal }}>in</code> first when unsure.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 4: Build It — grade report (dict + loop + if) ──
-function BuildWidget() {
-  const [arun, setArun] = useState(62);
-  const entries = [["PRIYA", 87], ["ARUN", arun], ["MEENA", 91]];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The full Module 5 + 6 + 7 team-up: loop over a dictionary (<code style={{ color: C.accent }}>for name in marks</code> hands
-        you each <em>key</em>), look up the value, and let an <code style={{ color: C.teal }}>if</code> assign
-        the grade. Drag Arun's mark across the 75 boundary.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>marks["ARUN"] = <strong style={{ color: C.accent }}>{arun}</strong></label>
-        <input type="range" min={0} max={100} value={arun} onChange={(e) => setArun(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>🐍 THE PROGRAM</div>
-          <pre style={mono}>
-            {`marks = {\n  "PRIYA": 87,\n  "ARUN": ${arun},\n  "MEENA": 91,\n}\n\nfor name in marks:\n    if marks[name] >= 75:\n        print(name, "→ Distinction")\n    else:\n        print(name, "→ Pass")`}
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>▶ OUTPUT</div>
-          <pre style={mono}>
-            {entries.map(([n, m]) => (
-              <span key={n} style={{ color: m >= 75 ? C.green : C.yellow }}>
-                {`${n} → ${m >= 75 ? "Distinction" : "Pass"}\n`}
-              </span>
-            ))}
-          </pre>
-          <div style={{ marginTop: 12, fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
-            The loop visits each <em>key</em> ("PRIYA", "ARUN", "MEENA");
-            <code style={{ color: C.teal }}> marks[name]</code> opens that locker for the if-check.
-          </div>
-        </div>
-      </div>
-
-      {insight(C.green, <>
-        <strong style={{ color: C.green }}>Everything you've learned works on dictionaries too.</strong> Loops
-        walk them, ifs judge them, len() counts them. You now hold all four collection tools: string, list,
-        tuple, dict — time to build something real with them.
-      </>)}
-    </div>
-  );
-}
-
-// ── Quiz ──
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: 't = (10, 20, 30)\nt[0] = 99\n\nWhat happens?',
-      options: ["t becomes (99, 20, 30)", "TypeError — tuples are immutable", "t becomes (99, 10, 20, 30)", "Nothing"],
-      answer: 1,
-      explain: "Tuples are locked: reading t[0] is fine, but assigning raises TypeError. That loud error is the tuple doing its job — protecting fixed data.",
-    },
-    {
-      q: 'd = {"a": 1, "b": 2}\nprint(d["b"])\n\nWhat does this print?',
-      options: ["1", "2", "b", "KeyError"],
-      answer: 1,
-      explain: 'd["b"] opens the locker labelled "b" and hands you its value: 2.',
-    },
-    {
-      q: 'd = {"a": 1}\nd["b"] = 5\nd["a"] = 9\nprint(d)\n\nWhat does this print?',
-      options: ['{"a": 1, "b": 5}', '{"a": 9, "b": 5}', '{"a": 9}', "KeyError"],
-      answer: 1,
-      explain: 'New key "b" creates a pair; existing key "a" gets its value overwritten. Result: {"a": 9, "b": 5}.',
-    },
-    {
-      q: 'marks = {"PRIYA": 87, "ARUN": 62}\nprint("ARUN" in marks)\nprint(87 in marks)\n\nWhat does this print?',
-      options: ["True, True", "True, False", "False, True", "False, False"],
-      answer: 1,
-      explain: "The in keyword checks KEYS only. \"ARUN\" is a key → True. 87 is a value, not a key → False.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! All four collections are in your toolkit." :
-            score >= 2 ? "Good work! If keys vs values tripped you up, replay 'Lockers With Names' — pressing the buttons makes it stick." :
-              "Worth a replay: 'The Locked List' for tuples and 'Lockers With Names' for how dictionaries behave."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 7.4 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Strings, lists, tuples, dictionaries — you can now pick the right container for any data:
-            changeable or locked, numbered or named.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 7.5 — Capstone: Student Marks Manager.</strong> Every
-            tool from Modules 5, 6 and 7 in one real program: enter marks, compute the average, crown the
-            topper, print the grade report. Your biggest build yet.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("\n") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s", fontFamily: "monospace",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit7_4({ student, onUnitComplete }) {
+export default function Unit7_4(props) {
   const sections = [
-    { id: "tuple", label: "The Locked List" },
-    { id: "why-dict", label: "Look Up By Name" },
-    { id: "lockers", label: "Lockers With Names" },
-    { id: "build", label: "Build It" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
-  ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Tuples: The List With a Lock</h3><TupleWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Dictionaries: Look Up By Name</h3><DictNeedWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Lockers With Names</h3><LockerWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Build It: Grade Report</h3><BuildWidget /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions to check your understanding of Unit 7.4.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 7 › UNIT 7.4</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Tuples & Dictionaries</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
+    {
+      label: "Locked Records", kicker: "WHY TUPLES?", title: "A list with a lock",
+      blocks: [
+        <P>A birthday, a coordinate, a student's roll number and name — some data must never change once created. A <strong>tuple</strong> is like a list that cannot be changed. Run the same bug on both:</P>,
+        <LockedRecord />,
+        EX.basics,
+        EX.locked,
+      ],
+    },
+    {
+      label: "Unpacking", kicker: "ONE LINE, MANY NAMES", title: "Packing and unpacking",
+      blocks: [
+        <P>Write values with commas and Python <strong>packs</strong> them into a tuple. Put several names on the left of <code>=</code> and Python <strong>unpacks</strong> the tuple into them, item by item.</P>,
+        EX.unpack,
+        EX.swap,
+        EX.toomany,
+        EX.divmod,
+        <KeyIdea>Unpacking needs exactly one name per item. It's how Python returns several answers at once — <code>divmod</code> now, and your own functions in Module 8.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Records & Loops", kicker: "enumerate · zip", title: "Lists of tuples, enumerate and zip",
+      blocks: [
+        EX.records,
+        <P>Two built-ins hand you tuples to unpack in a loop: <code>enumerate</code> adds a position to each item; <code>zip</code> walks two lists side by side.</P>,
+        EX.enum,
+        EX.zip,
+        <P><strong>Tuple or list?</strong></P>,
+        <div style={{ border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden", maxWidth: 820 }}>
+          {[["", "list [ ]", "tuple ( )"], ["Can change?", "Yes — append, remove, replace", "No — make a new one"], ["Typical use", "A collection that grows: all the marks", "One fixed record: (name, roll, cgpa)"], ["Mistake it prevents", "—", "Accidental changes to fixed data"], ["Together", "A list of tuples: the whole class, one record each", ""]].map((r, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr 1.4fr", gap: 10, padding: "9px 14px", background: i === 0 ? T.deep : i % 2 ? T.surface : T.card, fontWeight: i === 0 ? 700 : 400, fontSize: 14.5 }}>
+              {r.map((c, j) => <span key={j}>{c}</span>)}
+            </div>
           ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+        </div>,
+      ],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: merit list",
+      blocks: [<P>split, zip into a list of tuples, enumerate for numbering, best-so-far over records, and unpacking the winner.</P>, EX.merit],
+    },
+  ];
+  return (
+    <LessonShell {...props} unitId="Unit7_4" crumb="MODULE 7 › UNIT 7.4" title="Tuples" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 7.5 — Dictionaries", text: "Look things up by name, not position — and count anything with a dict." }} />
   );
 }

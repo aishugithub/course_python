@@ -10,12 +10,15 @@ import { logEvent } from './analytics.js';
 import { certificateStatus } from './completion.js';
 import { labCertificateStatus } from './labCompletion.js';
 import COURSE_CONFIG from '../../config/course.config.js';
-import { DARK, FONT } from './brand.js';
+import { LIGHT as DARK, FONT } from './brand.js';
 
 // The report builder loads only when opened, so the dashboard stays light.
 const ReportBuilder = lazy(() => import('./report/ReportBuilder.jsx'));
 // The report card shows when course.config.js says so (or in local testing, see .claude/mock_gas).
 const REPORT_OPEN = !!COURSE_CONFIG.miniProjectReport?.open || import.meta.env.VITE_REPORT_OPEN === '1';
+// e-Lab (MED23CL202) certificate card + auto-redirect. Off since 2026-11-12;
+// set labCertificate.show to true in the config to bring it back.
+const LAB_CERT_ON = COURSE_CONFIG.labCertificate?.show !== false;
 
 // Loading screens now use the DARK shell palette (see brand.js): landing,
 // dashboard and login are all dark-and-on-brand, and the lessons are dark too,
@@ -26,8 +29,8 @@ function LoadingScreen({ message = 'Loading…' }) {
       {/* The brand mark doubles as the loading glyph — steps to climb. On dark,
           the two lower steps go light and the summit stays amber. */}
       <svg width="48" height="48" viewBox="0 0 100 100" aria-hidden="true">
-        <rect x="8" y="60" width="26" height="26" rx="7" fill={DARK.inkSoft} />
-        <rect x="37" y="37" width="26" height="26" rx="7" fill={DARK.inkSoft} />
+        <rect x="8" y="60" width="26" height="26" rx="7" fill={DARK.ink} />
+        <rect x="37" y="37" width="26" height="26" rx="7" fill={DARK.ink} />
         <rect x="66" y="14" width="26" height="26" rx="7" fill={DARK.amber} />
       </svg>
       <div style={{ color: DARK.inkSoft, fontSize: 15 }}>{message}</div>
@@ -181,7 +184,7 @@ export default function App() {
     // e-Lab Record: when this submission completes the last requirement (all ten
     // experiments + all five mini-project crucibles + the feedback) — or the final
     // crucible is submitted with everything done — go straight to the e-Lab certificate.
-    if (student && (activeUnit.startsWith('UnitLAB') || activeUnit === 'UnitFB')) {
+    if (LAB_CERT_ON && student && (activeUnit.startsWith('UnitLAB') || activeUnit === 'UnitFB')) {
       const wasEligible = labCertificateStatus(completedUnits).eligible;
       if (labCertificateStatus(after).eligible && (!wasEligible || activeUnit === 'UnitLAB10_5')) {
         setView('labCertificate');
@@ -310,7 +313,7 @@ export default function App() {
             is untouched byte-for-byte. Tune 1.25 here if it feels off. */}
         <style>{`
           @media (min-width: 1200px) {
-            .lesson-viewport { zoom: 1.25; }
+            .lesson-viewport:not(:has(.fh-lesson)) { zoom: 1.25; }
           }
         `}</style>
         <div style={{ position: 'fixed', top: 12, left: 12, zIndex: 1000 }}>
@@ -320,8 +323,8 @@ export default function App() {
             aria-label="Back to Dashboard"
             style={{
               width: 36, height: 36, borderRadius: '50%',
-              background: 'rgba(28,35,51,0.9)', border: '1px solid #30363D',
-              color: '#C9D1D9', fontSize: 18, lineHeight: 1, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.95)', border: '1px solid #D6CCB8',
+              color: '#16294A', boxShadow: '0 1px 4px rgba(22,41,74,.12)', fontSize: 18, lineHeight: 1, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -337,7 +340,7 @@ export default function App() {
             challengeProgress={completedUnits}
             onStageComplete={handleStageComplete}
             onSubmitFeedback={handleSubmitFeedback}
-            labCertStatus={labCertificateStatus(completedUnits)}
+            labCertStatus={LAB_CERT_ON ? labCertificateStatus(completedUnits) : null}
             onOpenLabCertificate={handleOpenLabCertificate}
           />
         </Suspense>
@@ -354,7 +357,7 @@ export default function App() {
       onSignOff={handleSignOff}
       certStatus={certificateStatus(completedUnits)}
       onOpenCertificate={handleOpenCertificate}
-      labCertStatus={labCertificateStatus(completedUnits)}
+      labCertStatus={LAB_CERT_ON ? labCertificateStatus(completedUnits) : null}
       onOpenLabCertificate={handleOpenLabCertificate}
       onOpenReport={REPORT_OPEN ? handleOpenReport : undefined}
     />

@@ -1,11 +1,11 @@
 import { useState } from "react";
 
 const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8", pink: "#FF7B9C",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+  bg: "#F1EEE6", surface: "#FFFFFF", card: "#FAF8F3",
+  accent: "#1F5FAD", accentGlow: "#16294A",
+  green: "#1F7A4D", yellow: "#A86B12", purple: "#6D4BC4",
+  red: "#B0322F", orange: "#C2651A", teal: "#0E7C86", pink: "#B8326F",
+  text: "#16294A", muted: "#40506A", border: "#E7E0D2",
 };
 
 // ── The Big Picture: Language Ladder ──────────────────────────────────────

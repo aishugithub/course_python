@@ -274,7 +274,7 @@ export function FinishStep({ draft, edit, track, cert, onDownload, downloading, 
           {cert.state === 'failed' && 'Couldn’t check your e-Lab Record right now. It is checked again when you download.'}
           {cert.state === 'ready' && (cert.status.eligible
             ? 'All ten experiments, all five mini-project checkpoints and your feedback are done. Your report will include your certificate of completion.'
-            : `You have completed ${cert.status.itemsDone} of the 15 e-Lab activities (${Math.round((cert.status.itemsDone / cert.status.itemsTotal) * 100)}%)${cert.status.feedbackDone ? '' : ', and the feedback is still pending'}. Your report will include a certificate of progress showing this. Finish more in Foothold before you download if you can.`)}
+            : `You have completed ${cert.status.itemsDone} of the 15 e-Lab activities (${Math.round((cert.status.itemsDone / cert.status.itemsTotal) * 100)}%)${cert.status.feedbackDone ? '' : ', and the feedback is still pending'}. Completing all 10 experiments, all 5 mini-project crucibles and the feedback is mandatory: please finish them in Foothold’s e-Lab Record first. If you download now, your report shows a certificate of progress instead of the certificate of completion.`)}
         </div>
       </Block>
 

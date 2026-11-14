@@ -1,482 +1,253 @@
-import { useState, useEffect } from "react";
+// Unit 6.1 — The while Loop (rebuilt on the typing-first lesson kit)
+// Why repeat → anatomy + trace (memory slot) → counter & accumulator →
+// infinite loops and off-by-one → loops that run until something happens →
+// digit sum (n % 10 and n // 10 from Unit 4.4).
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note, CodeBlock } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
+
+const slider = { width: "100%", accentColor: T.navy };
+const codeBox = { margin: 0, fontFamily: CODE_FONT, fontSize: 14.5, lineHeight: 1.7, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 14px", whiteSpace: "pre-wrap" };
+
+// ── Widget: 5 lines or 500? ──
+function WhyRepeat() {
+  const [n, setN] = useState(5);
+  return (
+    <div>
+      <label style={{ fontFamily: CODE_FONT }}>print the numbers 1 to <strong>{n}</strong></label>
+      <input type="range" min={3} max={500} value={n} onChange={(e) => setN(Number(e.target.value))} style={slider} />
+      <div className="fh-two" style={{ marginTop: 8 }}>
+        <div>
+          <div style={{ color: T.red, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>❌ Copy-paste: {n} lines</div>
+          <pre style={{ ...codeBox, maxHeight: 170, overflow: "hidden" }}>{Array.from({ length: Math.min(n, 6) }, (_, i) => `print(${i + 1})`).join("\n") + (n > 6 ? `\n… ${n - 6} more lines …` : "")}</pre>
+        </div>
+        <div>
+          <div style={{ color: T.green, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>✅ while loop: always 4 lines</div>
+          <pre style={codeBox}>{`count = 1\nwhile count <= ${n}:\n    print(count)\n    count += 1`}</pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Widget: be the computer ──
+const TRACE = (() => {
+  const s = [{ line: 0, c: 1, out: [], d: "count = 1 — create the counter before the loop." }];
+  const out = [];
+  for (let v = 1; v <= 3; v++) {
+    s.push({ line: 1, c: v, out: [...out], cond: true, d: `Check: is ${v} <= 3? True → run the body.` });
+    out.push(String(v));
+    s.push({ line: 2, c: v, out: [...out], d: `print(count) shows ${v}.` });
+    s.push({ line: 3, c: v + 1, out: [...out], d: `count += 1 → count is now ${v + 1}. Back up to the while line.` });
+  }
+  s.push({ line: 1, c: 4, out: [...out], cond: false, d: "Check: is 4 <= 3? False → skip the body." });
+  s.push({ line: 4, c: 4, out: [...out, "Done"], d: "Carry on with the first line after the loop." });
+  return s;
+})();
+const TRACE_SRC = ["count = 1", "while count <= 3:", "    print(count)", "    count += 1", 'print("Done")'];
+function Trace() {
+  const [i, setI] = useState(0);
+  const s = TRACE[i];
+  return (
+    <div className="fh-two">
+      <div>
+        <div style={{ ...codeBox, padding: 6 }}>
+          {TRACE_SRC.map((l, k) => (
+            <div key={k} style={{ padding: "2px 8px", borderRadius: 5, background: s.line === k ? tint(T.blue, "22") : "transparent", fontWeight: s.line === k ? 700 : 400, whiteSpace: "pre" }}>{l}</div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+          <button onClick={() => setI(Math.max(0, i - 1))} disabled={i === 0} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${T.border}`, background: T.card, cursor: "pointer", fontFamily: "inherit" }}>◀</button>
+          <button onClick={() => setI(Math.min(TRACE.length - 1, i + 1))} disabled={i === TRACE.length - 1} style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: T.navy, color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Next step ▶</button>
+          <span style={{ fontSize: 13, color: T.muted }}>{i + 1} / {TRACE.length}</span>
+        </div>
+      </div>
+      <div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ border: `1.5px solid ${T.teal}`, borderRadius: 10, padding: "6px 14px", textAlign: "center", background: tint(T.teal, "10") }}>
+            <div style={{ fontFamily: CODE_FONT, fontSize: 12, color: T.teal, fontWeight: 700 }}>count</div>
+            <div style={{ fontFamily: CODE_FONT, fontSize: 22, fontWeight: 700 }}>{s.c}</div>
+          </div>
+          {s.cond !== undefined && <div style={{ alignSelf: "center", fontFamily: CODE_FONT, fontWeight: 700, color: s.cond ? T.green : T.red }}>condition: {s.cond ? "True" : "False"}</div>}
+        </div>
+        <pre style={{ margin: "10px 0 0", fontFamily: CODE_FONT, fontSize: 14.5, background: T.termBg, color: T.termText, borderRadius: 10, padding: "10px 14px", minHeight: 80 }}>{s.out.join("\n") || " "}</pre>
+        <div style={{ fontSize: 14.5, color: T.slate, marginTop: 8 }}>{s.d}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const nums = (a, b, step = 1) => { const r = []; for (let i = a; step > 0 ? i <= b : i >= b; i += step) r.push(i); return r; };
+const EX = {
+  count5: {
+    id: "count5", kind: "type", title: "Your first loop",
+    task: <>Type it. Watch the indentation: both lines of the body are indented.</>,
+    show: "count = 1\nwhile count <= 5:\n    print(count)\n    count += 1\nprint(\"Done\")",
+    tests: [{ expect: "1\n2\n3\n4\n5\nDone" }],
+    requires: [{ node: "While" }],
+    hints: ["Done is NOT indented — it runs once, after the loop."],
+    solution: "count = 1\nwhile count <= 5:\n    print(count)\n    count += 1\nprint(\"Done\")",
+  },
+  countdown: {
+    id: "countdown", kind: "write", title: "Countdown",
+    task: <>Ask <code>Start from: </code>, then count down to 1 with a while loop, one number per line, then print <code>Lift off!</code></>,
+    tests: [
+      { inputs: ["5"], expect: "Start from: 5\n5\n4\n3\n2\n1\nLift off!" },
+      { inputs: ["3"], expect: "Start from: 3\n3\n2\n1\nLift off!", hidden: true },
+      { inputs: ["0"], expect: "Start from: 0\nLift off!", hidden: true },
+    ],
+    requires: [{ node: "While" }],
+    hints: ["The counter starts at the input and goes DOWN: n -= 1.", "Keep going while n >= 1 (or n > 0)."],
+    solution: 'n = int(input("Start from: "))\nwhile n >= 1:\n    print(n)\n    n -= 1\nprint("Lift off!")',
+  },
+  sumn: {
+    id: "sumn", kind: "write", title: "Add 1 + 2 + … + n",
+    task: <>Ask <code>n: </code> and print the sum of all whole numbers from 1 to n, as <code>Sum: 55</code>. You need two variables: a <strong>counter</strong> that walks from 1 to n, and a <strong>total</strong> that starts at 0 and grows.</>,
+    tests: [
+      { inputs: ["10"], expect: "n: 10\nSum: 55" },
+      { inputs: ["1"], expect: "n: 1\nSum: 1", hidden: true },
+      { inputs: ["100"], expect: "n: 100\nSum: 5050", hidden: true },
+    ],
+    requires: [{ node: "While" }],
+    forbids: [{ text: "n * (n + 1)", msg: "Nice maths! But this exercise is about the loop — add the numbers one by one." }],
+    hints: ["total = 0 and i = 1 go BEFORE the loop.", "Inside: total += i, then i += 1."],
+    solution: 'n = int(input("n: "))\ntotal = 0\ni = 1\nwhile i <= n:\n    total += i\n    i += 1\nprint(f"Sum: {total}")',
+  },
+  table: {
+    id: "table", kind: "complete", title: "Multiplication table",
+    task: <>Fill in the three blanks so the program prints the table of the number typed, from × 1 to × 10.</>,
+    starter: 'n = int(input("Table of: "))\ni = ___\nwhile i <= ___:\n    print(f"{n} x {i} = {n * i}")\n    ___',
+    tests: [
+      { inputs: ["7"], expect: "Table of: 7\n" + nums(1, 10).map((i) => `7 x ${i} = ${7 * i}`).join("\n") },
+      { inputs: ["12"], expect: "Table of: 12\n" + nums(1, 10).map((i) => `12 x ${i} = ${12 * i}`).join("\n"), hidden: true },
+    ],
+    hints: ["Start at 1, stop after 10, and move i forward each round."],
+    solution: 'n = int(input("Table of: "))\ni = 1\nwhile i <= 10:\n    print(f"{n} x {i} = {n * i}")\n    i += 1',
+  },
+  forever: {
+    id: "forever", kind: "fix", title: "The loop that never ends",
+    task: <>Run it — it will be stopped automatically after a few seconds. Read the coach, then fix it.</>,
+    starter: "count = 1\nwhile count <= 5:\n    print(count)",
+    tests: [{ expect: "1\n2\n3\n4\n5" }],
+    hints: ["What changes count inside the loop? Nothing — so the condition stays True forever."],
+    solution: "count = 1\nwhile count <= 5:\n    print(count)\n    count += 1",
+  },
+  offby1: {
+    id: "offby1", kind: "fix", title: "One short",
+    task: <>This should print the roll numbers 1 to 5 for a five-student group. Run it and count the lines.</>,
+    starter: 'roll = 1\nwhile roll < 5:\n    print("Roll", roll)\n    roll += 1',
+    tests: [{ expect: "Roll 1\nRoll 2\nRoll 3\nRoll 4\nRoll 5" }],
+    hints: ["When roll is 5, is 5 < 5 True?"],
+    solution: 'roll = 1\nwhile roll <= 5:\n    print("Roll", roll)\n    roll += 1',
+  },
+  validate: {
+    id: "validate", kind: "write", title: "Ask again until it's valid",
+    task: <>Here a loop runs an <strong>unknown</strong> number of times. Ask <code>Mark (0-100): </code>. While the mark is outside 0–100, print <code>Invalid, try again</code> and ask again. Finally print <code>Saved: 75</code> (with the valid mark).</>,
+    tests: [
+      { inputs: ["150", "-3", "75"], expect: "Mark (0-100): 150\nInvalid, try again\nMark (0-100): -3\nInvalid, try again\nMark (0-100): 75\nSaved: 75" },
+      { inputs: ["40"], expect: "Mark (0-100): 40\nSaved: 40", hidden: true },
+      { inputs: ["101", "100"], expect: "Mark (0-100): 101\nInvalid, try again\nMark (0-100): 100\nSaved: 100", hidden: true },
+    ],
+    requires: [{ node: "While" }],
+    hints: ["Ask once before the loop. The loop condition is “the mark is NOT valid”.", "while mark < 0 or mark > 100:", "Inside the loop: print the message, then ask again (same input line)."],
+    solution: 'mark = int(input("Mark (0-100): "))\nwhile mark < 0 or mark > 100:\n    print("Invalid, try again")\n    mark = int(input("Mark (0-100): "))\nprint(f"Saved: {mark}")',
+  },
+  sentinel: {
+    id: "sentinel", kind: "write", title: "Add until 0",
+    task: <>A shopkeeper types each item's price; typing <code>0</code> means “done”. Ask <code>Price: </code> again and again, add each price to a total, and when 0 is typed print <code>Total: Rs 135</code>.</>,
+    tests: [
+      { inputs: ["50", "60", "25", "0"], expect: "Price: 50\nPrice: 60\nPrice: 25\nPrice: 0\nTotal: Rs 135" },
+      { inputs: ["0"], expect: "Price: 0\nTotal: Rs 0", hidden: true },
+      { inputs: ["99", "1", "0"], expect: "Price: 99\nPrice: 1\nPrice: 0\nTotal: Rs 100", hidden: true },
+    ],
+    requires: [{ node: "While" }],
+    hints: ["total = 0 before the loop; ask for the first price before the loop too.", "while price != 0: add it, then ask for the next."],
+    solution: 'total = 0\nprice = int(input("Price: "))\nwhile price != 0:\n    total += price\n    price = int(input("Price: "))\nprint(f"Total: Rs {total}")',
+  },
+  digits: {
+    id: "digits", kind: "make", title: "Count the digits, add the digits",
+    task: <>Ask <code>Number: </code> (a positive whole number). Using a while loop with <code>% 10</code> and <code>// 10</code> from Unit 4.4, peel off digits one at a time. Print <code>Digits: 4</code> and <code>Digit sum: 22</code> (for 4729).</>,
+    minLines: 10,
+    tests: [
+      { inputs: ["4729"], expect: "Number: 4729\nDigits: 4\nDigit sum: 22" },
+      { inputs: ["7"], expect: "Number: 7\nDigits: 1\nDigit sum: 7", hidden: true },
+      { inputs: ["1000"], expect: "Number: 1000\nDigits: 4\nDigit sum: 1", hidden: true },
+    ],
+    requires: [{ node: "While" }, { text: "% 10", msg: "Get the last digit with n % 10." }, { text: "// 10", msg: "Drop the last digit with n // 10." }],
+    forbids: [{ call: "len", msg: "Do it with the loop and arithmetic, not len( )." }, { call: "str", msg: "Do it with % and //, not by converting to text." }],
+    hints: ["Loop while n > 0. Each round: add n % 10 to the sum, add 1 to the count, then n = n // 10.", "count = 0 and total = 0 before the loop."],
+    solution: 'n = int(input("Number: "))\ncount = 0\ntotal = 0\nwhile n > 0:\n    total += n % 10\n    count += 1\n    n = n // 10\nprint(f"Digits: {count}")\nprint(f"Digit sum: {total}")',
+  },
 };
 
-// ── Need For Repetition ──────────────────────────────────────────────────────
-function NeedForRepetition() {
-  const [n, setN] = useState(10);
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Suppose your program must print "Hello" {n} times. You already know print() — so you COULD just
-        copy-paste the line {n} times. Drag the slider and watch what happens to each program.
-      </p>
+const QUIZ = [
+  { q: "When does a while loop check its condition?", options: ["Only once, at the start", "Before every round", "After every round", "Only when the body changes something"], answer: 1, explain: "The condition is re-checked before each repetition; when it's False the loop ends." },
+  { q: "What does this print?", code: "i = 1\nwhile i <= 3:\n    print(i)\n    i += 1", options: ["1 2 3", "1 2 3 4", "0 1 2", "Nothing"], answer: 0, explain: "i is 1, 2, 3 inside the loop. When i becomes 4, 4 <= 3 is False and the loop stops." },
+  { q: "You forget i += 1. What happens?", options: ["Error", "The loop runs forever", "It runs once", "It never runs"], answer: 1, explain: "Nothing changes i, so the condition never becomes False — an infinite loop." },
+  { q: "What if the condition is False the very first time?", options: ["The body runs once anyway", "The body never runs", "Python waits", "Error"], answer: 1, explain: "while checks before running; a loop can run zero times." },
+  { q: "Where must total = 0 go when adding numbers in a loop?", options: ["Inside the loop", "Before the loop", "After the loop", "Anywhere"], answer: 1, explain: "Inside the loop it would reset to 0 every round. Create it once, before." },
+  { q: "Which loop job is a while loop's natural fit?", options: ["Exactly 10 times", "Until the user types a valid value", "For each letter of a word", "Never"], answer: 1, explain: "while shines when you don't know in advance how many rounds are needed. Counting loops get easier with for (next unit)." },
+];
 
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>times = <strong style={{ color: C.accent }}>{n}</strong></label>
-        <input type="range" min={1} max={100} value={n} onChange={(e) => setN(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>❌ COPY-PASTE</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: "0 0 10px 0" }}>
-            {Array.from({ length: Math.min(n, 4) }, () => 'print("Hello")').join("\n")}
-            {n > 4 ? `\n... ${n - 4} more lines ...` : ""}
-          </pre>
-          <div style={{ color: C.red, fontSize: 12, fontWeight: 600 }}>{n} line{n > 1 ? "s" : ""} of code</div>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8, lineHeight: 1.6 }}>
-            Want "Hi" instead of "Hello"? You now edit {n} lines. Want 1000 repeats? Good luck.
-          </div>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>✅ WITH A LOOP</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: "0 0 10px 0" }}>{`count = 1\nwhile count <= ${n}:\n    print("Hello")\n    count = count + 1`}</pre>
-          <div style={{ color: C.green, fontSize: 12, fontWeight: 600 }}>4 lines — always</div>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8, lineHeight: 1.6 }}>
-            10 repeats or 10 million — the code never grows. Change one number, done.
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16, background: C.accent + "18", border: `1px solid ${C.accent}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.accent }}>This is WHY loops exist.</strong> Computers are brilliant at
-        repeating boring work — loops are how you hand that boring work over instead of doing the
-        copy-pasting yourself.
-      </div>
-    </div>
-  );
-}
-
-// ── Anatomy Of While ─────────────────────────────────────────────────────────
-function WhileAnatomy() {
-  const [part, setPart] = useState(null);
-
-  const parts = [
-    { key: "kw", code: "while", color: C.purple, title: "The keyword", desc: "Tells Python: 'keep repeating the block below as long as my condition stays True.'" },
-    { key: "cond", code: "count <= 3", color: C.accent, title: "The condition", desc: "A normal boolean expression — exactly like the ones you wrote for if in Module 5. It is re-checked before EVERY repetition." },
-    { key: "colon", code: ":", color: C.yellow, title: "The colon", desc: "Same rule as if — the colon says 'an indented block starts here.'" },
-    { key: "body", code: 'print(count) …', color: C.green, title: "The body", desc: "The indented lines that get repeated. Same indentation rule you learned in Unit 5.2 — the indent IS the syntax." },
-  ];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Good news: you already know almost all of this. A <code style={{ color: C.accent }}>while</code> looks
-        exactly like an <code style={{ color: C.accent }}>if</code> — same condition, same colon, same indented
-        block. The ONLY difference: after the block finishes, Python <strong style={{ color: C.accent }}>jumps
-        back up and checks the condition again</strong>. Click each part of the code below.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 18, fontFamily: "monospace", fontSize: 15, lineHeight: 2 }}>
-        <div>
-          {[parts[0], parts[1], parts[2]].map((p, i) => (
-            <span key={p.key} onClick={() => setPart(p.key)} style={{
-              cursor: "pointer", padding: "3px 4px", borderRadius: 5,
-              background: part === p.key ? p.color + "33" : "transparent",
-              border: `1.5px solid ${part === p.key ? p.color : "transparent"}`,
-              color: p.color, marginRight: i === 0 ? 8 : 0,
-            }}>{p.code}</span>
-          ))}
-        </div>
-        <div onClick={() => setPart("body")} style={{
-          cursor: "pointer", marginLeft: 30, padding: "3px 4px", borderRadius: 5, width: "fit-content",
-          background: part === "body" ? C.green + "33" : "transparent",
-          border: `1.5px solid ${part === "body" ? C.green : "transparent"}`,
-          color: C.green,
-        }}>print(count)<br />count = count + 1</div>
-      </div>
-
-      {part && (() => {
-        const p = parts.find((x) => x.key === part);
-        return (
-          <div style={{ marginTop: 12, background: p.color + "18", border: `1px solid ${p.color}44`, borderRadius: 8, padding: "12px 16px" }}>
-            <div style={{ color: p.color, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{p.title}</div>
-            <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>{p.desc}</div>
-          </div>
-        );
-      })()}
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.orange}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.orange, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>⚙️ C</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0 }}>{`while (count <= 3) {\n    printf("%d", count);\n    count = count + 1;\n}`}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>Brackets around the condition, braces around the body, semicolons everywhere.</div>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.accent}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>🐍 Python</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0 }}>{`count = 1\nwhile count <= 3:\n    print(count)\n    count = count + 1`}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>Colon + indentation — the exact same block rule as if. Nothing new to memorise.</div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16, background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.purple }}>One sentence to remember:</strong> a while loop is just an if
-        statement that runs its block, then goes back up to ask the question again — and again — until the
-        answer is finally False.
-      </div>
-    </div>
-  );
-}
-
-// ── Loop Trace ───────────────────────────────────────────────────────────────
-const TRACE_CODE = ["count = 1", "while count <= 3:", "    print(count)", "    count = count + 1", 'print("Done!")'];
-
-function buildTraceSteps() {
-  const steps = [{ line: 0, count: 1, cond: null, out: [], desc: "A memory slot named count is created and stores 1." }];
-  let out = [];
-  for (let v = 1; v <= 3; v++) {
-    steps.push({ line: 1, count: v, cond: true, out: [...out], desc: `Check the condition: is ${v} <= 3? True → run the body.` });
-    out = [...out, String(v)];
-    steps.push({ line: 2, count: v, cond: null, out: [...out], desc: `print(count) prints ${v}.` });
-    steps.push({ line: 3, count: v + 1, cond: null, out: [...out], desc: `count = count + 1 → the slot is overwritten: ${v} becomes ${v + 1}.` });
-  }
-  steps.push({ line: 1, count: 4, cond: false, out: [...out], desc: "Check again: is 4 <= 3? False → Python skips the indented block. The loop is over." });
-  steps.push({ line: 4, count: 4, cond: null, out: [...out, "Done!"], desc: "Execution continues on the first line AFTER the loop." });
-  return steps;
-}
-const TRACE_STEPS = buildTraceSteps();
-
-function LoopTrace() {
-  const [step, setStep] = useState(0);
-  const s = TRACE_STEPS[step];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The best way to understand a loop is to BE the computer. Step through this program one action at a
-        time and watch the highlighted line, the memory slot, and the output.
-      </p>
-
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        <button onClick={() => setStep((x) => Math.min(TRACE_STEPS.length - 1, x + 1))} disabled={step === TRACE_STEPS.length - 1} style={{
-          flex: 1, padding: "10px", borderRadius: 8, background: step === TRACE_STEPS.length - 1 ? C.card : C.accentGlow,
-          border: "none", color: step === TRACE_STEPS.length - 1 ? C.muted : "#fff", fontWeight: 600, fontSize: 13,
-          cursor: step === TRACE_STEPS.length - 1 ? "default" : "pointer",
-        }}>Step ▶ ({step + 1} / {TRACE_STEPS.length})</button>
-        <button onClick={() => setStep(0)} style={{
-          padding: "10px 18px", borderRadius: 8, background: C.card, border: `1.5px solid ${C.border}`,
-          color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 12 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 13 }}>
-          {TRACE_CODE.map((line, i) => (
-            <div key={i} style={{
-              padding: "5px 8px", borderRadius: 6, whiteSpace: "pre",
-              background: s.line === i ? C.accent + "26" : "transparent",
-              border: `1.5px solid ${s.line === i ? C.accent : "transparent"}`,
-              color: s.line === i ? C.accent : C.muted, transition: "all 0.25s",
-            }}>{s.line === i ? "▶ " : "  "}{line}</div>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
-            <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 6 }}>MEMORY</div>
-            <div style={{ display: "inline-block", background: C.bg, border: `2px solid ${C.teal}`, borderRadius: 8, padding: "8px 18px" }}>
-              <div style={{ color: C.teal, fontSize: 11, fontFamily: "monospace" }}>count</div>
-              <div style={{ color: C.text, fontSize: 22, fontWeight: 700, fontFamily: "monospace" }}>{s.count}</div>
-            </div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
-            <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 6 }}>CONDITION CHECK</div>
-            <div style={{
-              fontFamily: "monospace", fontWeight: 700, fontSize: 15,
-              color: s.cond === null ? C.muted : s.cond ? C.green : C.red,
-            }}>{s.cond === null ? "—" : s.cond ? "True ✓" : "False ✗"}</div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, flex: 1 }}>
-            <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 6 }}>OUTPUT</div>
-            <div style={{ fontFamily: "monospace", fontSize: 13, color: C.green, minHeight: 40 }}>
-              {s.out.map((o, i) => <div key={i}>&gt; {o}</div>)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 12, background: C.accent + "12", border: `1px solid ${C.accent}33`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.text, minHeight: 44 }}>
-        {s.desc}
-      </div>
-    </div>
-  );
-}
-
-// ── Infinite Loop Danger ─────────────────────────────────────────────────────
-function InfiniteLoopDemo() {
-  const [broken, setBroken] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [lines, setLines] = useState([]);
-
-  useEffect(() => {
-    if (!running || !broken || lines.length >= 24) return;
-    const t = setTimeout(() => setLines((p) => [...p, "1"]), 70);
-    return () => clearTimeout(t);
-  }, [running, broken, lines]);
-
-  const run = () => {
-    setLines(broken ? [] : ["1", "2", "3", "Done!"]);
-    setRunning(true);
-  };
-  const pick = (b) => { setBroken(b); setRunning(false); setLines([]); };
-  const stuck = broken && running && lines.length >= 24;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A while loop only ends when its condition becomes False. So something INSIDE the body must move the
-        loop towards the finish line. Delete that one line and... see for yourself. Pick a version and run it.
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-        {[false, true].map((b) => (
-          <div key={String(b)} onClick={() => pick(b)} style={{
-            background: C.card, borderRadius: 10, padding: 14, cursor: "pointer",
-            border: `2px solid ${broken === b ? (b ? C.red : C.green) : C.border}`, transition: "all 0.2s",
-          }}>
-            <div style={{ color: b ? C.red : C.green, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>
-              {b ? "☠️ UPDATE LINE DELETED" : "✅ CORRECT LOOP"}
-            </div>
-            <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0 }}>
-              {b ? `count = 1\nwhile count <= 3:\n    print(count)` : `count = 1\nwhile count <= 3:\n    print(count)\n    count = count + 1`}
-            </pre>
-          </div>
-        ))}
-      </div>
-
-      <button onClick={run} style={{
-        width: "100%", padding: "10px", borderRadius: 8, background: C.accentGlow, border: "none",
-        color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer", marginBottom: 14,
-      }}>▶ Run this version</button>
-
-      <div style={{ background: C.bg, border: `1.5px solid ${stuck ? C.red : C.border}`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 13, maxHeight: 180, overflowY: "auto" }}>
-        <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 6 }}>TERMINAL</div>
-        {lines.map((l, i) => <div key={i} style={{ color: l === "Done!" ? C.accent : C.green }}>&gt; {l}</div>)}
-        {stuck && <div style={{ color: C.red, marginTop: 6 }}>... still printing 1, forever ⚠️</div>}
-      </div>
-
-      {stuck && (
-        <div style={{ marginTop: 12, background: C.red + "18", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-          ☠️ <strong style={{ color: C.red }}>Infinite loop!</strong> count stays 1 forever, so "is 1 &lt;= 3?"
-          is True forever. In real Python your program just hangs — press{" "}
-          <code style={{ color: C.red }}>Ctrl+C</code> in the terminal to kill it. Every programmer writes one
-          of these eventually; now you'll know exactly what happened.
-        </div>
-      )}
-
-      <div style={{ marginTop: 16, background: C.yellow + "15", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.yellow }}>The while-loop checklist:</strong> ① start the counter variable
-        BEFORE the loop, ② check it in the condition, ③ UPDATE it inside the body. Miss step ③ and the loop
-        never ends.
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "What does a while loop do just before EVERY repetition of its body?",
-      options: ["Nothing — it checks the condition only once, at the start", "Re-checks its condition, and runs the body only if it's still True", "Asks the user whether to continue", "Increments the loop variable automatically"],
-      answer: 1,
-      explain: "The condition is re-evaluated before every single round. The moment it's False, Python skips past the indented block. Nothing is automatic — updating the variable is YOUR job.",
-    },
-    {
-      q: "What does this print?\ncount = 1\nwhile count <= 3:\n    print(count)\n    count = count + 1",
-      options: ["1 2 3", "1 2 3 4", "0 1 2 3", "It loops forever"],
-      answer: 0,
-      explain: "count is printed at 1, 2 and 3. When count becomes 4, the check 4 <= 3 is False and the loop ends — 4 is never printed.",
-    },
-    {
-      q: "You forget the line count = count + 1 inside the loop body. What happens?",
-      options: ["Python raises a SyntaxError", "The loop runs exactly once", "The condition never becomes False — the loop runs forever", "Python adds the line for you"],
-      answer: 2,
-      explain: "The code is perfectly legal Python — it just never makes progress. count stays 1, the condition stays True, and the loop spins forever until you press Ctrl+C.",
-    },
-    {
-      q: "What if the condition is already False the FIRST time Python reaches the while line?",
-      options: ["The body runs once anyway, then stops", "Python raises an error", "The body never runs — zero repetitions", "Python waits until the condition becomes True"],
-      answer: 2,
-      explain: "while checks BEFORE running the body. If the very first check is False, the body is skipped entirely — a while loop can legitimately run zero times.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! You can read, trace and debug while loops already." :
-            score >= 2 ? "Good work — run through the Trace It section once more to lock it in." :
-              "Revisit Trace It and Infinite Loops, then try the quiz again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 6.1 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Your programs can finally repeat themselves — the second of the four superpowers (decide, repeat,
-            organise, modularise).<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 6.2 — The for Loop & range().</strong>{" "}
-            A shortcut that creates, checks AND updates the counter for you — in one line.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("\n") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function Unit6_1({ student, onUnitComplete }) {
+export default function Unit6_1(props) {
   const sections = [
-    { id: "need", label: "Why Repeat?" },
-    { id: "anatomy", label: "Anatomy of while" },
-    { id: "trace", label: "Trace It" },
-    { id: "infinite", label: "Infinite Loops" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "Why Repeat?", kicker: "THE NEED", title: "Say it once, run it many times",
+      blocks: [
+        <P>Printing 1 to 5 is five lines. 1 to 500 is five hundred — unless the computer repeats for you. Drag the slider:</P>,
+        <WhyRepeat />,
+        EX.count5,
+      ],
+    },
+    {
+      label: "Trace It", kicker: "BE THE COMPUTER", title: "How while runs, one step at a time",
+      blocks: [
+        <P><code>while condition:</code> works like <code>if</code>, with one difference: after the body runs, Python goes <strong>back up</strong> and checks again. Step through and watch <code>count</code> change in memory:</P>,
+        <Trace />,
+        <div className="fh-two" style={{ maxWidth: 820, marginTop: 14 }}>
+          <CodeBlock title="C" code={"int count = 1;\nwhile (count <= 3) {\n    printf(\"%d\\n\", count);\n    count++;\n}"} />
+          <CodeBlock title="Python" code={"count = 1\nwhile count <= 3:\n    print(count)\n    count += 1"} />
+        </div>,
+        EX.countdown,
+        <KeyIdea>Every counting loop needs three things: <strong>create</strong> the counter before the loop, <strong>check</strong> it in the condition, <strong>change</strong> it inside the body. Forget the third and the loop never ends.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Counter & Total", kicker: "TWO VARIABLES", title: "Counting and accumulating",
+      blocks: [
+        <P>The most useful loop pattern: a counter walks through the numbers while a <strong>total</strong> collects them. The total starts at 0 <em>before</em> the loop and grows <em>inside</em> it.</P>,
+        EX.sumn,
+        EX.table,
+      ],
+    },
+    {
+      label: "Loop Bugs", kicker: "INFINITE & OFF-BY-ONE", title: "The two classic loop bugs",
+      blocks: [
+        <P>Two mistakes cause most loop bugs: the condition never becomes False (an <strong>infinite loop</strong>), or the loop runs one time too few or too many (<strong>off-by-one</strong>). Meet both, then fix them.</P>,
+        EX.forever,
+        EX.offby1,
+        <Note icon="🛑">In real Python an infinite loop just hangs — press <strong>Ctrl+C</strong> to stop it. Here the runner stops it after 5 seconds.</Note>,
+      ],
+    },
+    {
+      label: "Until…", kicker: "UNKNOWN NUMBER OF ROUNDS", title: "Loops that run until something happens",
+      blocks: [
+        <P>Where <code>while</code> really shines: when you <em>can't</em> know in advance how many rounds are needed — re-asking until the input is valid, or reading values until a stop signal.</P>,
+        EX.validate,
+        EX.sentinel,
+      ],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: count and add the digits",
+      blocks: [<P>A while loop, a counter, a total, and the two digit tricks from Unit 4.4. This pattern appears in many exam questions (reverse a number, palindrome numbers, Armstrong numbers).</P>, EX.digits],
+    },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Why Programs Need to Repeat</h3>
-      <NeedForRepetition />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>The while Loop — an if That Comes Back</h3>
-      <WhileAnatomy />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Trace It: Be the Computer</h3>
-      <LoopTrace />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>The Infinite Loop — Every Beginner's Rite of Passage</h3>
-      <InfiniteLoopDemo />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-        4 questions to check your understanding of Unit 6.1.
-      </p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 6 › UNIT 6.1</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>The while Loop</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit6_1" crumb="MODULE 6 › UNIT 6.1" title="The while Loop" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 6.2 — The for Loop & range()", text: "When you know how many rounds, for does the counting for you — no forgotten += 1." }} />
   );
 }

@@ -1,418 +1,99 @@
-import { useState } from "react";
+// Unit CT2.5 — String Algorithms (rebuilt, typing-first)
+// Two-pointer palindrome (ignoring case/spaces) → reverse word order →
+// character frequencies → anagram check by counting → ord/chr and the
+// Caesar cipher (make-task). No functions yet.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, CodeBlock } from "../kit/Lesson.jsx";
+
+const comments = (min) => ({ text: "#", min, msg: `Write your algorithm first, as at least ${min} # comment lines.` });
+const shift = (text, k) => [...text].map((ch) => { if (ch >= "a" && ch <= "z") return String.fromCharCode((ch.charCodeAt(0) - 97 + k + 26 * 10) % 26 + 97); if (ch >= "A" && ch <= "Z") return String.fromCharCode((ch.charCodeAt(0) - 65 + k + 26 * 10) % 26 + 65); return ch; }).join("");
+const freq = (w) => { const m = new Map(); for (const c of w) m.set(c, (m.get(c) || 0) + 1); return [...m].map(([c, n]) => `${c}: ${n}`).join("\n"); };
+
+const EX = {
+  palindrome: {
+    id: "palindrome", kind: "write", title: "Two-pointer palindrome",
+    task: <>Ask <code>Phrase: </code>. Ignoring spaces and capitals, is it a palindrome? First clean it (lowercase, remove spaces). Then use <strong>two pointers</strong>: <code>left</code> from the start, <code>right</code> from the end, moving inwards; any mismatch → not a palindrome. No <code>[::-1]</code>. Print <code>Palindrome: True</code>.</>,
+    tests: [
+      { inputs: ["Never odd or even"], expect: "Phrase: Never odd or even\nPalindrome: True" },
+      { inputs: ["Python"], expect: "Phrase: Python\nPalindrome: False", hidden: true },
+      { inputs: ["Malayalam"], expect: "Phrase: Malayalam\nPalindrome: True", hidden: true },
+    ],
+    requires: [comments(3), { node: "While" }],
+    forbids: [{ text: "::-1", msg: "Use the two-pointer method, not slicing." }, { call: "reversed" }],
+    hints: ['clean = phrase.lower().replace(" ", "")', "left = 0, right = len(clean) - 1; while left < right: compare, then left += 1, right -= 1"],
+    solution: '# 1. clean: lowercase, no spaces\n# 2. pointers at both ends, assume palindrome\n# 3. move inwards; a mismatch disproves it\nphrase = input("Phrase: ")\nclean = phrase.lower().replace(" ", "")\nleft = 0\nright = len(clean) - 1\nis_pal = True\nwhile left < right:\n    if clean[left] != clean[right]:\n        is_pal = False\n        break\n    left += 1\n    right -= 1\nprint(f"Palindrome: {is_pal}")',
+  },
+  words: {
+    id: "words", kind: "write", title: "Reverse the word order",
+    task: <>Ask <code>Sentence: </code> and print the words in reverse order (not the letters): <code>Python love I</code>. Build the result with a loop that walks backwards, then join.</>,
+    tests: [{ inputs: ["I love Python"], expect: "Sentence: I love Python\nPython love I" }, { inputs: ["one"], expect: "Sentence: one\none", hidden: true }],
+    requires: [comments(2), { call: "join" }],
+    forbids: [{ text: "::-1" }, { call: "reverse" }, { call: "reversed" }],
+    hints: ["words = sentence.split(); for i in range(len(words) - 1, -1, -1): out.append(words[i])", '" ".join(out)'],
+    solution: '# 1. split into words\n# 2. walk backwards, collecting them; join with spaces\nwords = input("Sentence: ").split()\nout = []\nfor i in range(len(words) - 1, -1, -1):\n    out.append(words[i])\nprint(" ".join(out))',
+  },
+  freq: {
+    id: "freq", kind: "write", title: "Letter frequencies",
+    task: <>Ask <code>Word: </code> and print each letter's count, in the order first seen, one per line: <code>b: 1</code>, <code>a: 3</code>, <code>n: 2</code> for banana. The counting pattern from Unit 7.5, applied to characters.</>,
+    tests: [{ inputs: ["banana"], expect: "Word: banana\n" + freq("banana") }, { inputs: ["mississippi"], expect: "Word: mississippi\n" + freq("mississippi"), hidden: true }],
+    requires: [comments(2), { call: "get" }],
+    hints: ["counts[ch] = counts.get(ch, 0) + 1 for each ch in the word."],
+    solution: '# 1. count each character with a dict\n# 2. print counts in first-seen order\nword = input("Word: ")\ncounts = {}\nfor ch in word:\n    counts[ch] = counts.get(ch, 0) + 1\nfor ch, n in counts.items():\n    print(f"{ch}: {n}")',
+  },
+  anagram: {
+    id: "anagram", kind: "write", title: "Anagrams",
+    task: <>Two words are anagrams if they use exactly the same letters the same number of times (listen / silent). Ask <code>First: </code> and <code>Second: </code> (ignore capitals). Build a count dictionary for each and compare them: <code>Anagrams: True</code>. No sorted().</>,
+    tests: [
+      { inputs: ["Listen", "Silent"], expect: "First: Listen\nSecond: Silent\nAnagrams: True" },
+      { inputs: ["apple", "paper"], expect: "First: apple\nSecond: paper\nAnagrams: False", hidden: true },
+      { inputs: ["aab", "abb"], expect: "First: aab\nSecond: abb\nAnagrams: False", hidden: true },
+    ],
+    requires: [comments(3)],
+    forbids: [{ call: "sorted" }, { call: "sort" }],
+    hints: ["Two dicts built the same way; dictionaries compare equal with == if they have the same keys and values."],
+    solution: '# 1. lowercase both words\n# 2. count the letters of each into its own dict\n# 3. equal dicts means anagrams\na = input("First: ").lower()\nb = input("Second: ").lower()\nca = {}\nfor ch in a:\n    ca[ch] = ca.get(ch, 0) + 1\ncb = {}\nfor ch in b:\n    cb[ch] = cb.get(ch, 0) + 1\nprint(f"Anagrams: {ca == cb}")',
+  },
+  ordchr: {
+    id: "ordchr", kind: "type", title: "Characters are numbers inside",
+    task: <>Every character has a code number. <code>ord(ch)</code> gives the number; <code>chr(n)</code> turns a number back into a character. Letters are consecutive: a is 97, b is 98…</>,
+    show: 'print(ord("a"), ord("b"), ord("z"))\nprint(ord("A"), chr(66))\nshift = (ord("y") - ord("a") + 3) % 26\nprint(chr(ord("a") + shift))',
+    tests: [{ expect: "97 98 122\n65 B\nb" }],
+    hints: ["% 26 wraps past z back to a: y + 3 → b."],
+    solution: 'print(ord("a"), ord("b"), ord("z"))\nprint(ord("A"), chr(66))\nshift = (ord("y") - ord("a") + 3) % 26\nprint(chr(ord("a") + shift))',
+  },
+  caesar: {
+    id: "caesar", kind: "make", title: "Caesar cipher",
+    task: <>Julius Caesar's secret code shifts every letter by a fixed amount: with shift 3, a → d, z → c. Ask <code>Message: </code> and <code>Shift: </code> (can be negative, to decode). Shift lowercase and uppercase letters, wrapping around; keep everything else (spaces, digits, punctuation) unchanged. Print <code>Result: Khoor, Zruog!</code>.</>,
+    minLines: 16,
+    tests: [
+      { inputs: ["Hello, World!", "3"], expect: `Message: Hello, World!\nShift: 3\nResult: ${shift("Hello, World!", 3)}` },
+      { inputs: ["Khoor, Zruog!", "-3"], expect: "Message: Khoor, Zruog!\nShift: -3\nResult: Hello, World!", hidden: true },
+      { inputs: ["xyz ABC 2026", "5"], expect: `Message: xyz ABC 2026\nShift: 5\nResult: ${shift("xyz ABC 2026", 5)}`, hidden: true },
+    ],
+    requires: [comments(4), { call: "ord" }, { call: "chr" }],
+    hints: ["For a lowercase ch: chr((ord(ch) - ord(\"a\") + k) % 26 + ord(\"a\")). Uppercase: same with \"A\".", "Python's % always gives a non-negative result for % 26, so negative shifts wrap correctly.", "Build the result string: result += new_ch"],
+    solution: '# 1. read message and shift\n# 2. for each character\n# 3.     lowercase / uppercase letter: shift within its alphabet, wrapping with % 26\n# 4.     anything else: keep it; build and print the result\ntext = input("Message: ")\nk = int(input("Shift: "))\nresult = ""\nfor ch in text:\n    if "a" <= ch <= "z":\n        result += chr((ord(ch) - ord("a") + k) % 26 + ord("a"))\n    elif "A" <= ch <= "Z":\n        result += chr((ord(ch) - ord("A") + k) % 26 + ord("A"))\n    else:\n        result += ch\nprint(f"Result: {result}")',
+  },
 };
 
-// ── Section 1: The Need ──────────────────────────────────────────────────────
-function TheNeed() {
-  const word = "PYTHON";
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Text is data too — names, roll numbers, DNA, messages. Back in Unit 7.1 you saw a string is a{" "}
-        <strong style={{ color: C.text }}>sequence of characters</strong>, each at an index. That means every list
-        trick you just learned works on text: loop it, index it, count things in it.
-      </p>
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
-        <pre style={{ fontFamily: "monospace", fontSize: 13, color: C.accent, margin: "0 0 12px" }}>word = "PYTHON"</pre>
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {word.split("").map((ch, i) => (
-            <div key={i} style={{ textAlign: "center" }}>
-              <div style={{ minWidth: 34, background: C.card, border: `1.5px solid ${C.border}`, borderRadius: 6, padding: "8px 4px", fontFamily: "monospace", fontWeight: 700, fontSize: 16, color: C.text }}>{ch}</div>
-              <div style={{ color: C.muted, fontSize: 9, marginTop: 2 }}>{i}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>
-          <code style={{ color: C.teal }}>word[0]</code> → "P" &nbsp;·&nbsp; <code style={{ color: C.teal }}>len(word)</code> → 6 &nbsp;·&nbsp;{" "}
-          <code style={{ color: C.teal }}>for ch in word:</code> visits each letter
-        </div>
-      </div>
+const QUIZ = [
+  { q: "Why use two pointers for a palindrome?", options: ["Required", "Compare from both ends inward and stop at the first mismatch — no reversed copy needed", "Faster to type", "Python can't reverse"], answer: 1, explain: "Half the comparisons, and it can stop early." },
+  { q: "Two words are anagrams when…", options: ["They have the same length", "Their letter-count dictionaries are equal", "They start with the same letter", "They rhyme"], answer: 1, explain: "Same letters, same numbers of each." },
+  { q: "What does chr(ord(\"c\") + 1) give?", options: ["\"c1\"", "\"d\"", "100", "Error"], answer: 1, explain: "ord gives 99; 100 back to a character is d." },
+  { q: "In the cipher, why % 26?", options: ["To round", "To wrap past z back to the start of the alphabet", "To make it secret", "No reason"], answer: 1, explain: "Position 25 (z) + 3 = 28 → 28 % 26 = 2 → c." },
+];
 
-      <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>A string is a read-only list of characters.</strong> You can't change
-        a letter in place (Unit 7.1's immutability), but you can loop it, index it, and build a NEW string from it.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 2: Looping characters ────────────────────────────────────────────
-function CharAnatomy() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        Two ways to walk a string, and the classic "reverse a word" as an accumulator that grows a{" "}
-        <em>new</em> string.
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.teal, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>By character</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`word = "PYTHON"\nfor ch in word:\n    print(ch)`}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>When you only need the letters.</div>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.orange}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>By index</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`word = "PYTHON"\nfor i in range(len(word)):\n    print(word[i])`}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>When you need the position too.</div>
-        </div>
-      </div>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.green, fontSize: 12, fontWeight: 700, marginBottom: 8 }}>Reverse a word — accumulate a new string</div>
-        <pre style={{ fontFamily: "monospace", fontSize: 12, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre" }}>{`word = "PYTHON"\nrev = ""\nfor ch in word:\n    rev = ch + rev      # each new letter goes in FRONT\nprint(rev)`}</pre>
-      </div>
-
-      <div style={{ background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.teal }}>rev = ch + rev</strong> puts each letter before what's built so far, so
-        the string comes out backwards. Same accumulator idea as summing — just with strings.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 3: Palindrome stepper (two-pointer) ──────────────────────────────
-const WORD = "MADAM";
-const PAL_STEPS = (() => {
-  const w = WORD;
-  const steps = [];
-  let left = 0, right = w.length - 1;
-  while (left < right) {
-    const match = w[left] === w[right];
-    steps.push({ left, right, match, desc: `Compare word[${left}]='${w[left]}' with word[${right}]='${w[right]}' → ${match ? "match ✓" : "mismatch ✗ → NOT a palindrome"}.` });
-    if (!match) break;
-    left++; right--;
-  }
-  steps.push({ left, right, done: true, match: true, desc: "Pointers met in the middle with no mismatch → it IS a palindrome." });
-  return steps;
-})();
-
-function PalindromeStepper() {
-  const [step, setStep] = useState(0);
-  const s = PAL_STEPS[step];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 12, lineHeight: 1.7 }}>
-        A <strong style={{ color: C.text }}>palindrome</strong> reads the same forwards and backwards. Check it with
-        two pointers: one from each end, walking inward, comparing as they go. Word: <code style={{ color: C.accent }}>"MADAM"</code>.
-      </p>
-
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        <button onClick={() => setStep((x) => Math.min(PAL_STEPS.length - 1, x + 1))} disabled={step === PAL_STEPS.length - 1} style={{
-          flex: 1, padding: "10px", borderRadius: 8, background: step === PAL_STEPS.length - 1 ? C.card : C.accentGlow,
-          border: "none", color: step === PAL_STEPS.length - 1 ? C.muted : "#fff", fontWeight: 600, fontSize: 13,
-          cursor: step === PAL_STEPS.length - 1 ? "default" : "pointer",
-        }}>Step ▶ ({step + 1} / {PAL_STEPS.length})</button>
-        <button onClick={() => setStep(0)} style={{
-          padding: "10px 18px", borderRadius: 8, background: C.card, border: `1.5px solid ${C.border}`,
-          color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 14 }}>
-        {WORD.split("").map((ch, i) => {
-          const isL = i === s.left, isR = i === s.right;
-          const active = (isL || isR) && !s.done;
-          let bg = C.card, border = C.border, col = C.text;
-          if (active) { bg = (s.match ? C.green : C.red) + "22"; border = s.match ? C.green : C.red; col = s.match ? C.green : C.red; }
-          return (
-            <div key={i} style={{ textAlign: "center" }}>
-              <div style={{ minWidth: 44, borderRadius: 8, padding: "12px 6px", background: bg, border: `2px solid ${border}`, fontFamily: "monospace", fontWeight: 700, fontSize: 20, color: col }}>{ch}</div>
-              <div style={{ color: C.muted, fontSize: 10, marginTop: 2, height: 12 }}>{!s.done && isL ? "left" : !s.done && isR ? "right" : ""}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ background: (s.match ? C.green : C.red) + "12", border: `1px solid ${(s.match ? C.green : C.red)}33`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.text, minHeight: 44 }}>
-        {s.done ? "✅ " : ""}{s.desc}
-      </div>
-
-      <div style={{ marginTop: 14, background: C.purple + "15", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Two pointers beat reversing-and-comparing:</strong> you can stop at
-        the first mismatch, and you never build a second string. Same trick sorts, searches and merges use.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 4: Text toolkit ──────────────────────────────────────────────────
-function TextToolkit() {
-  const [mode, setMode] = useState("reverse");
-  const sample = "banana";
-  const sentence = "the cat sat";
-  const modes = {
-    reverse: {
-      label: "Reverse", color: C.green, out: `"ananab"`,
-      code: 'rev = ""\nfor ch in word:\n    rev = ch + rev\nprint(rev)',
-      note: 'Grow a new string, each letter in front. "banana" → "ananab".',
-    },
-    vowels: {
-      label: "Count vowels", color: C.teal, out: "3",
-      code: 'vowels = "aeiou"\ncount = 0\nfor ch in word:\n    if ch in vowels:\n        count = count + 1\nprint(count)',
-      note: 'A conditional accumulator: +1 only when the letter is in "aeiou". "banana" has 3.',
-    },
-    words: {
-      label: "Word count", color: C.orange, out: "3",
-      code: 'parts = text.split()\nprint(len(parts))',
-      note: 'split() breaks text on spaces into a list of words; len() counts them. "the cat sat" → 3.',
-    },
-    freq: {
-      label: "Char frequency", color: C.purple, out: "{'b':1, 'a':3, 'n':2}",
-      code: 'freq = {}\nfor ch in word:\n    if ch in freq:\n        freq[ch] = freq[ch] + 1\n    else:\n        freq[ch] = 1\nprint(freq)',
-      note: "A dictionary (Unit 7.4) as a tally: first sighting sets 1, repeats add 1.",
-    },
-  };
-  const m = modes[mode];
-  const shown = mode === "words" ? sentence : sample;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Four classic string programs. Input:{" "}
-        <code style={{ color: C.accent }}>{mode === "words" ? `"${sentence}"` : `"${sample}"`}</code>.
-      </p>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-        {Object.entries(modes).map(([k, mv]) => (
-          <button key={k} onClick={() => setMode(k)} style={{
-            flex: 1, minWidth: 90, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
-            background: mode === k ? mv.color + "22" : C.card,
-            border: `1.5px solid ${mode === k ? mv.color : C.border}`, color: mode === k ? mv.color : C.muted,
-          }}>{mv.label}</button>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14 }}>
-        <pre style={{ background: C.card, border: `1px solid ${m.color}55`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.75, margin: 0, whiteSpace: "pre" }}>{m.code}</pre>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
-            <div style={{ color: C.muted, fontSize: 10, letterSpacing: 1, marginBottom: 8 }}>OUTPUT</div>
-            <div style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 700, color: m.color, wordBreak: "break-all" }}>{m.out}</div>
-          </div>
-          <div style={{ background: m.color + "14", border: `1px solid ${m.color}44`, borderRadius: 10, padding: "10px 12px", fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>
-            {m.note}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16, background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.green }}>Text = a sequence you loop.</strong> Reverse is an accumulator, vowel
-        count is a conditional accumulator, frequency is a dictionary tally. All patterns you already own.
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "How does  rev = ch + rev  reverse a string?",
-      options: [
-        "It sorts the letters",
-        "Each new character is placed in FRONT of what's built so far, flipping the order",
-        "It removes duplicates",
-        "It only works on numbers",
-      ],
-      answer: 1,
-      explain: 'Putting ch before rev each round means the last letter read ends up first. "cat" → "c" → "ac" → "tac".',
-    },
-    {
-      q: "The palindrome check uses two pointers walking inward. What lets it stop early?",
-      options: [
-        "It never stops early",
-        "The first time two compared characters differ, it's already not a palindrome — break",
-        "It reverses the string first",
-        "It counts vowels",
-      ],
-      answer: 1,
-      explain: "One mismatch is enough to disprove a palindrome, so the loop breaks immediately — no need to check the rest.",
-    },
-    {
-      q: "For counting vowels, why  if ch in vowels?",
-      options: [
-        "To sort the vowels",
-        'It tests membership — is this character one of "aeiou"? — and only then does count += 1',
-        "It reverses the word",
-        "It splits the word",
-      ],
-      answer: 1,
-      explain: '`in` checks whether ch appears in the string "aeiou". It turns the vowel test into one clean condition on a conditional accumulator.',
-    },
-    {
-      q: "Character frequency stores counts in a dictionary. Why check  if ch in freq  first?",
-      options: [
-        "To sort the dictionary",
-        "To decide: seen before → add 1 to its count; brand new → start it at 1",
-        "Dictionaries need sorting",
-        "To reverse the key",
-      ],
-      answer: 1,
-      explain: "A new character has no entry yet, so freq[ch] would error if you added to it. The `in` check picks between 'start at 1' and 'increment' — the tally pattern from Unit 7.4.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You can treat any text as a loopable sequence of characters." :
-            score >= 2 ? "Good — replay the Palindrome Stepper to lock in two-pointers." :
-              "Revisit Looping Characters and the Palindrome Stepper, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 CT II · Content Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Scan, search, sort, matrices, and now string algorithms — the whole toolkit of algorithms on data.<br /><br />
-            <strong style={{ color: C.orange }}>Next up (optional): 🔥 The Crucible.</strong> Predict, hunt bugs,
-            assemble and write real Python across searching, sorting and strings.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function UnitCT2_5({ student, onUnitComplete }) {
+export default function UnitCT2_5(props) {
   const sections = [
-    { id: "need", label: "The Need" },
-    { id: "chars", label: "Looping Characters" },
-    { id: "pal", label: "Palindrome Stepper" },
-    { id: "toolkit", label: "Text Toolkit" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    { label: "Two Pointers", kicker: "FROM BOTH ENDS", title: "Palindromes and word order", blocks: [<P>Strings are sequences, so every list algorithm works on them — plus a few classics of their own.</P>, EX.palindrome, EX.words] },
+    { label: "Counting", kicker: "FREQUENCIES", title: "Counting characters", blocks: [EX.freq, EX.anagram, <KeyIdea>Many string questions reduce to counting: a frequency dictionary answers anagrams, most-common letters, missing letters and more.</KeyIdea>] },
+    { label: "Codes", kicker: "ORD · CHR", title: "Characters as numbers", blocks: [<div style={{ maxWidth: 560 }}><CodeBlock title="the shift formula" code={'pos = ord(ch) - ord("a")        # 0..25\nnew = (pos + k) % 26            # shift and wrap\nchr(new + ord("a"))             # back to a letter'} /></div>, EX.ordchr] },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: Caesar cipher", blocks: [EX.caesar] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Text Is a Sequence Too</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Looping Characters</h3><CharAnatomy /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>See It: Palindrome Check</h3><PalindromeStepper /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>The Text Toolkit</h3><TextToolkit /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on string algorithms.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🧠</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>COMPUTATIONAL THINKING II › UNIT 5</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>String Algorithms</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="UnitCT2_5" crumb="COMPUTATIONAL THINKING II › 5" title="String Algorithms" sections={sections} quiz={QUIZ}
+      next={{ title: "Module 8 — Functions", text: "CT II complete! Next: package your algorithms as reusable functions. (Optional first: CT II's Crucible.)" }} />
   );
 }

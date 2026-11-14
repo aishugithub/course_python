@@ -31,7 +31,7 @@ export const SCREENS = [
 const C = (id, screen, code, label, what, example, pattern) => ({ id, screen, code, label, what, example, pattern });
 
 export const CONCEPTS = [
-  C('input_conv', 'e1', 'IN', 'Input with type conversion', 'A line that reads input and converts it to a number.', 'temp = float(input("Temperature: "))', /\b(int|float)\s*\(\s*input\s*\(/),
+  C('input_conv', 'e1', 'IN', 'Input with type conversion', 'Where input is read and turned into a number: int(input(...)) on one line, or x = input(...) and then int(x) / float(x) on a later line (tag either line).', 'temp = float(input("Temperature: "))', /\b(int|float)\s*\(\s*input\s*\(/),
   C('arith', 'e1', 'AR', 'Arithmetic operators', 'A calculation using + - * / // % or **.', 'bmi = weight / (height ** 2)', /[\w)\]]\s*(\*\*|\/\/|[-+*/%])=?\s*[\w(.]/),
   C('compare', 'e1', 'CO', 'Comparison and logical operators', 'A comparison (== != < > <= >=), or and / or / not.', 'if temp >= 100.4 and pulse > 100:', /(==|!=|<=|>=|<|>|\band\b|\bor\b|\bnot\b)/),
   C('decision', 'e1', 'IF', 'Decisions (if / elif / else)', 'An if statement, from the if line to the end of its last branch.', 'if bmi < 18.5:\n    band = "Under"\nelif bmi < 25:\n    band = "Normal"\nelse:\n    band = "Over"', /^\s*(if|elif|else)\b|\bif\b.*\belse\b/),

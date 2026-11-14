@@ -55,31 +55,72 @@ export const BRAND = {
 //  now extended to the whole climbing route.
 // ============================================================
 export const DARK = {
-  // Surfaces (match the lessons' focus-mode greys)
-  bgDeep:       '#0D1117',  // page background — same as lesson <body>
-  surface:      '#161B22',  // cards / rows / header bar
-  surfaceRaised:'#1C2333',  // hover + elevated panels
-  border:       '#30363D',  // hairline borders
-  borderSoft:   '#243040',  // even subtler dividers
+  // 2026-11 redesign: the whole app (shell AND lessons) is now LIGHT, on the
+  // cream Foothold brand. The token names are kept (every shell page imports
+  // them) but the values are the light brand values.
+  // Surfaces
+  bgDeep:       '#F1EEE6',  // page background (brand cream)
+  surface:      '#FFFFFF',  // cards / rows / header bar
+  surfaceRaised:'#FBF9F4',  // hover + elevated panels
+  border:       '#E7E0D2',  // hairline borders
+  borderSoft:   '#EFE9DD',  // even subtler dividers
 
-  // Ink (light, for reading on the dark canvas)
-  ink:          '#E6EDF3',  // primary text — same as lesson body text
-  inkSoft:      '#C9D1D9',  // secondary body text
-  inkMuted:     '#8B949E',  // muted small print / mono captions
+  // Ink
+  ink:          '#16294A',  // primary text (brand navy)
+  inkSoft:      '#40506A',  // secondary body text (slate)
+  inkMuted:     '#7A879B',  // muted small print
 
-  // Accents — the brand, carried onto dark
-  amber:        '#E7A13E',  // THE accent (unchanged brand amber)
-  amberSoft:    '#F0B860',  // brighter amber for hover / glow
-  bronze:       '#C79A5B',  // kickers — brand bronze, lifted for contrast on dark
-  blue:         '#58A6FF',  // secondary accent (module rotation), matches lessons
+  // Accents
+  amber:        '#E7A13E',  // THE accent (fills, badges, buttons)
+  amberSoft:    '#D38E2A',  // deeper amber for hover
+  bronze:       '#B08343',  // kickers
+  blue:         '#2B5FB3',  // secondary accent (module rotation)
 
-  // Feedback (github-dark tuned, readable on the surfaces above)
-  green:        '#3FB950',  // success / completed
-  red:          '#F85149',  // errors
+  // Feedback (readable on cream)
+  green:        '#1F7A4D',
+  red:          '#B0322F',
 
-  // Deep navy panel (the landing code terminal sits a touch below bgDeep)
-  navyPanel:    '#111A2E',
+  // Navy panel (the landing code terminal) — text on it uses panelText
+  navyPanel:    '#16294A',
+  panelText:    '#E7EAF0',
 };
 
 export const FONT = "'Space Grotesk', system-ui, sans-serif"; // headings & UI
 export const MONO = "'Space Mono', monospace";                // code & kickers
+
+// ============================================================
+//  LIGHT — the shell's CURRENT palette (Nov 2026 revamp).
+//
+//  Built straight from the logo: cream page, white cards, navy
+//  ink (the two navy steps), amber accent (the top step).
+//  Same keys as DARK so a page can swap `DARK as D` for
+//  `LIGHT as D` and nothing else changes. DARK is kept above in
+//  case we ever want a dark mode toggle.
+// ============================================================
+export const LIGHT = {
+  // Surfaces
+  bgDeep:       '#F1EEE6',  // page background — brand cream
+  surface:      '#FFFFFF',  // cards / rows / header bar
+  surfaceRaised:'#FAF8F3',  // hover + elevated panels
+  border:       '#E7E0D2',  // hairline borders
+  borderSoft:   '#EFEAE0',  // even subtler dividers
+
+  // Ink
+  ink:          '#16294A',  // primary text — logo navy
+  inkSoft:      '#40506A',  // secondary body text
+  inkMuted:     '#6B7A90',  // muted small print / mono captions
+
+  // Accents
+  amber:        '#E7A13E',  // THE accent (fills, bars, highlights)
+  amberSoft:    '#C9852A',  // deeper amber for hover / amber TEXT on cream
+  bronze:       '#B08343',  // kickers
+  blue:         '#1F5FAD',  // secondary accent (module rotation)
+
+  // Feedback
+  green:        '#1F7A4D',  // success / completed
+  red:          '#B0322F',  // errors
+
+  // Navy panel (the landing code terminal stays dark, like the logo steps)
+  navyPanel:    '#16294A',
+  panelText:    '#E7EAF0',  // text that sits ON navyPanel
+};

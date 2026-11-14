@@ -7,11 +7,11 @@
 import { useState } from "react";
 
 const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+  bg: "#F1EEE6", surface: "#FFFFFF", card: "#FAF8F3",
+  accent: "#1F5FAD", accentGlow: "#16294A",
+  green: "#1F7A4D", yellow: "#A86B12", purple: "#6D4BC4",
+  red: "#B0322F", orange: "#C2651A", teal: "#0E7C86",
+  text: "#16294A", muted: "#40506A", border: "#E7E0D2",
 };
 
 // The seven agreement statements — each maps to one claimed design mechanism
@@ -177,8 +177,8 @@ export default function UnitFB({ student, onUnitComplete, onSubmitFeedback }) {
         <div>
           <h3 style={{ color: C.text, marginBottom: 6 }}>One last step</h3>
           <p style={{ color: C.muted, fontSize: 13, marginBottom: 18, lineHeight: 1.7 }}>
-            Submitting your feedback is the final foothold — it is required for your e-Lab certificate
-            (with all ten experiments and five mini-project crucibles), and it also counts toward the course certificate.
+            Submitting your feedback is the final foothold — together with all ten Crucibles, it unlocks
+            your Foothold course certificate.
           </p>
           <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 18 }}>
             <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: C.accent }} />
@@ -190,7 +190,7 @@ export default function UnitFB({ student, onUnitComplete, onSubmitFeedback }) {
           </label>
           <button onClick={handleSubmit} disabled={sending} style={{
             width: "100%", padding: "13px", borderRadius: 8, border: "none", cursor: sending ? "default" : "pointer",
-            background: sending ? C.border : C.green, color: sending ? C.muted : "#0D1117", fontWeight: 700, fontSize: 14.5,
+            background: sending ? C.border : C.green, color: sending ? C.muted : "#FFFFFF", fontWeight: 700, fontSize: 14.5,
           }}>{sending ? "Sending…" : "Submit feedback →"}</button>
         </div>
       ) : (
@@ -203,8 +203,8 @@ export default function UnitFB({ student, onUnitComplete, onSubmitFeedback }) {
           <div style={{ padding: 20, borderRadius: 12, background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`, border: `1px solid ${C.accent}55` }}>
             <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Course Complete!</div>
             <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-              If your e-Lab Record is complete (all ten experiments and five mini-project crucibles), your
-              <b style={{ color: C.accent }}> e-Lab certificate</b> opens when you tap Finish — it is also on the Dashboard.
+              If you have cleared all ten Crucibles, your
+              <b style={{ color: C.accent }}> course certificate</b> is ready on the Dashboard after you tap Finish.
             </div>
           </div>
           {/* Like the Crucible badge: never auto-fire onUnitComplete (it unloads

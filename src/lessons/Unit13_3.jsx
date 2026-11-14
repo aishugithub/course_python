@@ -1,606 +1,121 @@
-import { useState } from "react";
+// Unit 13.3 — Interactive Charts with Plotly (rebuilt, typing-first)
+// px.bar (hover, zoom) → px.line from grouped sales → px.scatter with color /
+// hover_data → px.pie donut → styling with update_layout / update_traces →
+// Make It: an interactive class explorer (two figures).
+// fig.show() is captured by the runner and rendered as a live chart; post
+// checks inspect the figure objects (fig.data, fig.layout). Hidden tests swap the CSV.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, Note, CodeBlock } from "../kit/Lesson.jsx";
+import { T } from "../kit/theme.js";
+
+const csvFile = (name, text) => `with open(${JSON.stringify(name)}, "w") as _f:\n    _f.write(${JSON.stringify(text)})`;
+const PX = { timeoutMs: 30000 };
+const py = (v) => JSON.stringify(v);
+const figVar = (name) => `assert ${py(name)} in globals(), "Store the chart in a variable called ${name}."\n_f = ${name}\n`;
+const nums = (expr) => `[round(float(v), 2) for v in ${expr}]`;
+const titled = (t) => `assert (_f.layout.title.text or "").strip().lower() == ${py(t.toLowerCase())}, "Give the chart the title ${t} (title=...)."\n`;
+const shown = `assert _fh_shown(), "Call fig.show() to display the chart."\n`;
+
+const SALES = "Date,Item,Category,Qty,Price\n2026-01-05,Pen,Stationery,10,15\n2026-01-07,Notebook,Stationery,5,60\n2026-01-12,Headphones,Electronics,2,1200\n2026-01-20,Mouse,Electronics,3,450\n2026-02-02,Pen,Stationery,20,15\n2026-02-14,Mug,Kitchen,6,250\n2026-02-18,Notebook,Stationery,8,60\n2026-02-25,Mouse,Electronics,1,450\n2026-03-03,Mug,Kitchen,4,250\n2026-03-10,Headphones,Electronics,1,1200\n2026-03-15,Pen,Stationery,15,15\n2026-03-28,Bottle,Kitchen,5,300\n";
+const SALES2 = "Date,Item,Category,Qty,Price\n2026-04-02,Ball,Sports,4,350\n2026-04-09,Racket,Sports,2,1800\n2026-04-15,Pen,Stationery,30,15\n2026-05-01,Lamp,Home,2,950\n2026-05-11,Ball,Sports,6,350\n2026-05-20,Cushion,Home,5,400\n2026-06-03,Racket,Sports,1,1800\n2026-06-17,Lamp,Home,2,950\n2026-06-25,Pen,Stationery,12,15\n";
+const STUDY = "Name,Dept,Hours,Sleep,Phone,Score\nAsha,CSE,5,7,4,82\nBen,ECE,1,5,6,35\nChen,CSE,3,6,2,67\nDev,MECH,6,8,1,91\nEsha,ECE,2,6,5,58\nFarah,CSE,4,7,3,74\nGopal,MECH,1,6,7,38\nHari,ECE,5,8,2,88\nIsha,CSE,6,7,1,95\nJay,MECH,3,5,3,61\nKavi,ECE,2,7,6,49\nLina,CSE,4,6,5,70\n";
+const STUDY2 = "Name,Dept,Hours,Sleep,Phone,Score\nArun,CIVIL,2,7,7,30\nBala,CSE,4,6,2,85\nCara,CIVIL,3,8,6,45\nDina,CSE,5,5,3,90\nEli,ECE,1,7,5,40\nFay,ECE,6,6,4,70\n";
+
+// ── Reference values ──
+const parse = (csv) => { const [head, ...rows] = csv.trim().split("\n"); const k = head.split(","); return rows.map((r) => Object.fromEntries(r.split(",").map((v, i) => [k[i], isNaN(+v) ? v : +v]))); };
+const sumBy = (rows, key) => { const m = new Map(); rows.forEach((r) => m.set(r[key], (m.get(r[key]) || 0) + r.Qty * r.Price)); return [...m].sort((a, b) => (a[0] < b[0] ? -1 : 1)); };
+const months = (csv) => sumBy(parse(csv).map((r) => ({ ...r, Month: r.Date.slice(0, 7) })), "Month");
+const cats = (csv) => sumBy(parse(csv), "Category");
+const depts = (csv) => [...new Set(parse(csv).map((r) => r.Dept))];
+const lineCheck = (csv) => figVar("fig") + titled("Revenue by month") + `assert _f.data and _f.data[0].type == "scatter" and "lines" in (_f.data[0].mode or "lines"), "Use px.line."\nassert "markers" in (_f.data[0].mode or ""), "Show a dot on each month: markers=True"\nassert [str(x) for x in _f.data[0].x] == ${py(months(csv).map((m) => m[0]))}, "x should be the months, in date order."\nassert ${nums("_f.data[0].y")} == ${py(months(csv).map((m) => m[1]))}, "y should be the total revenue of each month."\n` + shown;
+const pieCheck = (csv) => figVar("fig") + `assert _f.data and _f.data[0].type == "pie", "Use px.pie."\nassert sorted([[str(a), round(float(b), 2)] for a, b in zip(_f.data[0].labels, _f.data[0].values)]) == ${py(cats(csv))}, "One slice per category, sized by its total revenue."\nassert _f.data[0].hole == 0.4, "Make it a donut: hole=0.4"\n` + shown;
+const scatterCheck = (csv) => figVar("fig") + titled("Hours vs score") + `assert [t.type for t in _f.data] == ["scatter"] * ${depts(csv).length} and [t.name for t in _f.data] == ${py(depts(csv))}, "Colour the points by department: color=\\"Dept\\""\nassert sum(len(t.x) for t in _f.data) == ${parse(csv).length}, "Plot every student."\nassert _f.layout.xaxis.title.text == "Hours" and _f.layout.yaxis.title.text == "Score", "x = Hours, y = Score"\nassert "Name" in (_f.data[0].hovertemplate or ""), "Show the student's name on hover: hover_data=[\\"Name\\"]"\n` + shown;
+const explorer = (csv) => { const rows = parse(csv); const top = rows.reduce((a, b) => (b.Score > a.Score ? b : a)); return `Students: ${rows.length}\nTop student: ${top.Name} (${top.Score})`; };
+const explorerCheck = (csv) => figVar("fig1") + `assert _f.data and _f.data[0].type == "histogram", "fig1: use px.histogram."\nassert [t.name for t in _f.data] == ${py(depts(csv))}, "fig1: colour the bars by department: color=\\"Dept\\""\nassert _f.data[0].nbinsx == 5, "fig1: nbins=5"\n` + titled("Score distribution") + figVar("fig2") + `assert [t.name for t in _f.data] == ${py(depts(csv))}, "fig2: px.scatter coloured by department."\nassert _f.layout.xaxis.title.text == "Hours" and _f.layout.yaxis.title.text == "Score", "fig2: x = Hours, y = Score"\nassert _f.data[0].marker.size is not None and len(_f.data[0].marker.size) == len(_f.data[0].x), "fig2: size the dots by sleep: size=\\"Sleep\\""\nassert _f.data[0].hovertext is not None, "fig2: hover_name=\\"Name\\" puts the name at the top of the hover box."\nassert _fh_shown() >= 2, "Show both figures: fig1.show() and fig2.show()."\n`;
+
+const EX = {
+  first: {
+    ...PX, id: "first", kind: "type", title: "A chart you can touch",
+    task: <><code>plotly.express</code> (as <code>px</code>) makes charts that live in a web page: hover a bar to see its value, drag to zoom, double-click to reset. One call builds the figure; <code>fig.show()</code> displays it.</>,
+    show: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.DataFrame({\n    "Name": ["Asha", "Ben", "Chen", "Dev", "Esha"],\n    "Marks": [82, 35, 67, 91, 58],\n})\nfig = px.bar(df, x="Name", y="Marks", title="Marks by student")\nfig.show()',
+    tests: [{ post: figVar("fig") + titled("Marks by student") + `assert _f.data[0].type == "bar", "Use px.bar."\nassert ${nums("_f.data[0].y")} == [82, 35, 67, 91, 58], "y should be the Marks column."\n` + shown }],
+    hints: ["Hover the bars once the chart appears below — it's a live web chart."],
+    solution: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.DataFrame({\n    "Name": ["Asha", "Ben", "Chen", "Dev", "Esha"],\n    "Marks": [82, 35, 67, 91, 58],\n})\nfig = px.bar(df, x="Name", y="Marks", title="Marks by student")\nfig.show()',
+  },
+  line: {
+    ...PX, id: "line", kind: "write", title: "Revenue over time",
+    task: <>Load the shop's <code>sales.csv</code> (12.2), add Revenue and Month (<code>Date.str[:7]</code>), and total Revenue per Month. plotly wants a DataFrame, so finish with <code>.reset_index()</code>. Draw <code>fig = px.line(monthly, x="Month", y="Revenue", markers=True, title="Revenue by month")</code> and show it. Hidden tests use another shop.</>,
+    tests: [{ setup: csvFile("sales.csv", SALES), post: lineCheck(SALES) }, { setup: csvFile("sales.csv", SALES2), post: lineCheck(SALES2), hidden: true }],
+    requires: [{ call: "line" }, { call: "groupby" }],
+    hints: ['monthly = df.groupby("Month")["Revenue"].sum().reset_index()', "reset_index turns the grouped Series back into a table with Month and Revenue columns."],
+    solution: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.read_csv("sales.csv")\ndf["Revenue"] = df["Qty"] * df["Price"]\ndf["Month"] = df["Date"].str[:7]\nmonthly = df.groupby("Month")["Revenue"].sum().reset_index()\nfig = px.line(monthly, x="Month", y="Revenue", markers=True, title="Revenue by month")\nfig.show()',
+  },
+  scatter: {
+    ...PX, id: "scatter", kind: "write", title: "Hover to see who",
+    task: <>Load <code>study.csv</code> (13.2). Draw <code>fig = px.scatter(…)</code> of Hours (x) against Score (y), coloured by Dept, with <code>hover_data=["Name"]</code> so hovering a dot shows whose it is. Title it <code>Hours vs score</code>. Click a department in the legend to hide it — interactivity for free.</>,
+    tests: [{ setup: csvFile("study.csv", STUDY), post: scatterCheck(STUDY) }, { setup: csvFile("study.csv", STUDY2), post: scatterCheck(STUDY2), hidden: true }],
+    requires: [{ call: "scatter" }, { call: "read_csv" }],
+    hints: ['px.scatter(df, x="Hours", y="Score", color="Dept", hover_data=["Name"], title="Hours vs score")'],
+    solution: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.read_csv("study.csv")\nfig = px.scatter(df, x="Hours", y="Score", color="Dept", hover_data=["Name"], title="Hours vs score")\nfig.show()',
+  },
+  pie: {
+    ...PX, id: "pie", kind: "complete", title: "A donut chart",
+    task: <>Fill the blanks: total Revenue per Category from sales.csv, then <code>px.pie</code> with <code>values</code> = the Revenue column, <code>names</code> = the Category column, and <code>hole=0.4</code> to make a donut.</>,
+    starter: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.read_csv("sales.csv")\ndf["Revenue"] = df["Qty"] * df["Price"]\nby_cat = df.groupby("Category")["Revenue"].sum().reset_index()\nfig = px.pie(by_cat, values=___, names=___, hole=___, title="Where the money comes from")\nfig.show()',
+    tests: [{ setup: csvFile("sales.csv", SALES), post: pieCheck(SALES) }, { setup: csvFile("sales.csv", SALES2), post: pieCheck(SALES2), hidden: true }],
+    requires: [{ call: "pie" }],
+    hints: ['values="Revenue", names="Category", hole=0.4'],
+    solution: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.read_csv("sales.csv")\ndf["Revenue"] = df["Qty"] * df["Price"]\nby_cat = df.groupby("Category")["Revenue"].sum().reset_index()\nfig = px.pie(by_cat, values="Revenue", names="Category", hole=0.4, title="Where the money comes from")\nfig.show()',
+  },
+  style: {
+    ...PX, id: "style", kind: "type", title: "Polish the figure",
+    task: <>Once a figure exists, change it: <code>update_layout</code> for the whole chart (titles, theme), <code>update_traces</code> for the marks themselves (colour, text).</>,
+    show: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.DataFrame({"Name": ["Asha", "Ben", "Chen"], "Marks": [82, 35, 67]})\nfig = px.bar(df, x="Name", y="Marks", text="Marks")\nfig.update_layout(title="Marks", xaxis_title="Student", template="plotly_white")\nfig.update_traces(marker_color="teal", textposition="outside")\nfig.show()',
+    tests: [{ post: figVar("fig") + `assert _f.layout.xaxis.title.text == "Student", "update_layout(xaxis_title=\\"Student\\")"\nassert _f.data[0].marker.color == "teal", "update_traces(marker_color=\\"teal\\")"\nassert _f.data[0].textposition == "outside", "update_traces(textposition=\\"outside\\")"\nassert _f.layout.template.layout.paper_bgcolor == "white", "template=\\"plotly_white\\""\n` + shown }],
+    hints: ["text=\"Marks\" writes each value on its bar; textposition moves it above."],
+    solution: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.DataFrame({"Name": ["Asha", "Ben", "Chen"], "Marks": [82, 35, 67]})\nfig = px.bar(df, x="Name", y="Marks", text="Marks")\nfig.update_layout(title="Marks", xaxis_title="Student", template="plotly_white")\nfig.update_traces(marker_color="teal", textposition="outside")\nfig.show()',
+  },
+  explorer: {
+    ...PX, id: "explorer", kind: "make", title: "Interactive class explorer",
+    task: <>Load study.csv. Print <code>Students: 12</code> and <code>Top student: Isha (95)</code> (the highest Score). Then build two figures and show both: <code>fig1</code> — <code>px.histogram</code> of Score coloured by Dept, <code>nbins=5</code>, titled <code>Score distribution</code>; <code>fig2</code> — <code>px.scatter</code> of Hours vs Score coloured by Dept, dot <code>size="Sleep"</code> and <code>hover_name="Name"</code>. Hidden tests use another class.</>,
+    minLines: 10,
+    tests: [{ setup: csvFile("study.csv", STUDY), expect: explorer(STUDY), post: explorerCheck(STUDY) }, { setup: csvFile("study.csv", STUDY2), expect: explorer(STUDY2), post: explorerCheck(STUDY2), hidden: true, why: "Another class: count and find the top student from the DataFrame." }],
+    requires: [{ call: "histogram" }, { call: "scatter" }],
+    hints: ['top = df.loc[df["Score"].idxmax()] — a whole row; top["Name"], top["Score"]', 'fig1 = px.histogram(df, x="Score", color="Dept", nbins=5, title="Score distribution")', 'fig2 = px.scatter(df, x="Hours", y="Score", color="Dept", size="Sleep", hover_name="Name")'],
+    solution: 'import pandas as pd\nimport plotly.express as px\n\ndf = pd.read_csv("study.csv")\ntop = df.loc[df["Score"].idxmax()]\nprint(f"Students: {len(df)}")\nprint(f"Top student: {top[\'Name\']} ({top[\'Score\']})")\n\nfig1 = px.histogram(df, x="Score", color="Dept", nbins=5, title="Score distribution")\nfig1.show()\nfig2 = px.scatter(df, x="Hours", y="Score", color="Dept", size="Sleep", hover_name="Name", title="Hours vs score (dot size = sleep)")\nfig2.show()',
+  },
 };
 
-const NAMES = ["Asha", "Ravi", "Meera", "Karan"];
-const MARKS = [88, 45, 72, 91];
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-const FULL_TYPES = {
-  bar: `import pandas as pd
-import plotly.express as px
+const QUIZ = [
+  { q: "What makes a plotly chart different from a matplotlib one?", options: ["It's prettier", "It's interactive: hover, zoom, hide series — it lives in a web page", "It's faster", "It doesn't need data"], answer: 1, explain: "plotly draws with JavaScript in the browser." },
+  { q: "px.scatter(df, x=\"Hours\", y=\"Score\", color=\"Dept\") creates…", options: ["One trace", "One trace per department, each its own colour", "A bar chart", "A legend only"], answer: 1, explain: "color splits the data into groups, like seaborn's hue." },
+  { q: "hover_data=[\"Name\"] …", options: ["Hides names", "Adds the Name column to the hover box", "Sorts by Name", "Colours by Name"], answer: 1, explain: "Extra columns appear when you hover a point." },
+  { q: "Why .reset_index() before px.line?", options: ["To delete data", "plotly wants columns in a DataFrame — reset_index turns the grouped Series into a table", "To sort", "It's required by pandas"], answer: 1, explain: "Then x=\"Month\" and y=\"Revenue\" are real columns." },
+  { q: "update_traces vs update_layout?", options: ["Same thing", "traces = the marks (bars, dots, colours); layout = the chart around them (titles, axes, theme)", "layout = colours", "traces = titles"], answer: 1, explain: "fig.update_traces(marker_color=…), fig.update_layout(title=…)." },
+];
 
-df = pd.DataFrame({
-    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
-    "Marks": [88, 45, 72, 91],
-    "Hours": [5, 2, 4, 6],
-})
-
-fig = px.bar(df, x="Name", y="Marks")
-fig.show()`,
-  line: `import pandas as pd
-import plotly.express as px
-
-df = pd.DataFrame({
-    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
-    "Marks": [88, 45, 72, 91],
-    "Hours": [5, 2, 4, 6],
-})
-
-fig = px.line(df, x="Name", y="Marks")
-fig.show()`,
-  scatter: `import pandas as pd
-import plotly.express as px
-
-df = pd.DataFrame({
-    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
-    "Marks": [88, 45, 72, 91],
-    "Hours": [5, 2, 4, 6],
-})
-
-fig = px.scatter(df, x="Hours", y="Marks")
-fig.show()`,
-  pie: `import pandas as pd
-import plotly.express as px
-
-df = pd.DataFrame({
-    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
-    "Marks": [88, 45, 72, 91],
-    "Hours": [5, 2, 4, 6],
-})
-
-fig = px.pie(df, names="Name", values="Marks")
-fig.show()`,
-};
-
-// ── Full runnable program toggle ─────────────────────────────────────────────
-function FullCode({ code, note }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <button onClick={() => setOpen(!open)} style={{ padding: "5px 12px", borderRadius: 6, background: open ? C.green + "18" : "transparent", border: `1px solid ${C.green}66`, color: C.green, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
-        {open ? "▾ Hide" : "▸ Show"} the full runnable program
-      </button>
-      {open && (
-        <div style={{ marginTop: 8 }}>
-          <pre style={{ background: "#0A0E14", border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" , overflowX: "auto" }}>{code}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{note || "Complete as shown — paste into a .py file and run."}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CsvFile_unused() {
-  return (
-    <div style={{ background: C.card, border: `1px dashed ${C.yellow}66`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
-      <div style={{ color: C.yellow, fontSize: 11.5, fontWeight: 700, marginBottom: 6 }}>📄 marks.csv — create this file first, in the SAME folder as your .py file</div>
-      <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{""}</pre>
-      <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>Type it in Notepad / VS Code and save as <code style={{ color: C.text }}>marks.csv</code>. Without it, read_csv stops with FileNotFoundError.</div>
-    </div>
-  );
-}
-
-// ── Section 1: The Need ──────────────────────────────────────────────────────
-function TheNeed() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Matplotlib and Seaborn charts are <em>pictures</em> — flat images. You can't hover a bar to read its exact
-        value, zoom into a busy region, or drop the chart into a webpage. <strong style={{ color: C.teal }}>Plotly</strong>{" "}
-        makes charts <strong style={{ color: C.text }}>interactive</strong> and web-ready.
-      </p>
-
-      <div style={{ display: "flex", gap: 12, alignItems: "stretch", justifyContent: "center", flexWrap: "wrap", marginBottom: 16 }}>
-        <div style={{ flex: 1, minWidth: 200, background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: C.yellow, letterSpacing: 1, marginBottom: 8 }}>STATIC · a flat image</div>
-          <svg width="100%" height="80" viewBox="0 0 180 80" role="img">
-            {MARKS.map((m, i) => <rect key={i} x={12 + i * 42} y={72 - (m / 100) * 64} width={28} height={(m / 100) * 64} fill={C.muted} rx="1" />)}
-          </svg>
-          <div style={{ fontSize: 10.5, color: C.muted, marginTop: 6 }}>hover does nothing 😐</div>
-        </div>
-        <div style={{ flex: 1, minWidth: 200, background: "#0A0E14", border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14, textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: C.teal, letterSpacing: 1, marginBottom: 8 }}>PLOTLY · alive</div>
-          <svg width="100%" height="80" viewBox="0 0 180 80" role="img">
-            {MARKS.map((m, i) => <rect key={i} x={12 + i * 42} y={72 - (m / 100) * 64} width={28} height={(m / 100) * 64} fill={i === 3 ? C.teal : C.teal} opacity={i === 3 ? 1 : 0.55} rx="1" />)}
-            <rect x="118" y="4" width="56" height="20" rx="4" fill={C.card} stroke={C.teal} />
-            <text x="146" y="17" fontSize="9" fill={C.text} textAnchor="middle">Karan: 91</text>
-          </svg>
-          <div style={{ fontSize: 10.5, color: C.teal, marginTop: 6 }}>hover → live tooltip ✨</div>
-        </div>
-      </div>
-
-      <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>import plotly.express as px.</strong> Same data, but the output is a
-        live chart you can hover, zoom, and save as an HTML file that works in any browser.
-      </div>
-    </div>
-  );
-}
-
-// ── Install-first callout ────────────────────────────────────────────────────
-function InstallFirst({ pkgs, mod, check }) {
-  const [env, setEnv] = useState("win");
-  const [showErr, setShowErr] = useState(false);
-  const envs = {
-    win: { label: "Windows (cmd)", lines: ["env\\Scripts\\activate", "pip install " + pkgs, 'python -c "' + check + '"'], prompt: "(env) C:\\project>" },
-    ps: { label: "PowerShell", lines: [".\\env\\Scripts\\Activate.ps1", "pip install " + pkgs, 'python -c "' + check + '"'], prompt: "(env) PS C:\\project>" },
-    nix: { label: "macOS / Linux", lines: ["source env/bin/activate", "pip install " + pkgs, 'python3 -c "' + check + '"'], prompt: "(env) ~/project$" },
-    nb: { label: "Jupyter / Colab", lines: ["%pip install " + pkgs, check.replace("; ", "\n")], prompt: "In [1]:" },
-  };
-  const e = envs[env];
-  return (
-    <div style={{ background: C.card, border: `1.5px solid ${C.yellow}55`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
-      <div style={{ color: C.yellow, fontWeight: 700, fontSize: 12.5, marginBottom: 6 }}>📥 Step 0 — install it first (one time per project)</div>
-      <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 10 }}>
-        <code style={{ color: C.text }}>{mod}</code> is not part of the standard library, so <code style={{ color: C.text }}>import</code> fails
-        until you pip-install it. Activate your project's venv (Unit 11.1), then run:
-      </div>
-      <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
-        {Object.entries(envs).map(([k, v]) => (
-          <button key={k} onClick={() => setEnv(k)} style={{
-            flex: 1, minWidth: 90, padding: "6px 4px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600,
-            background: env === k ? C.yellow + "22" : C.surface, color: env === k ? C.yellow : C.muted,
-            border: `1px solid ${env === k ? C.yellow : C.border}`,
-          }}>{v.label}</button>
-        ))}
-      </div>
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
-        {e.lines.map((l, i) => (
-          <div key={i}><span style={{ color: env === "nb" ? C.accent : C.green }}>{env === "nb" ? "" : e.prompt + " "}</span>{l}</div>
-        ))}
-      </pre>
-      <div style={{ color: C.muted, fontSize: 11.5, lineHeight: 1.6, marginTop: 8 }}>
-        {env === "nb"
-          ? "In a notebook use %pip (with the %) so the package lands in the same Python the notebook is running. Colab already has most of these — the command just confirms it."
-          : "The last line is a quick check: if it prints a version number, the install worked. You only install once per venv; after that, just activate and import."}
-      </div>
-      <button onClick={() => setShowErr(!showErr)} style={{ marginTop: 8, padding: "5px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${C.red}55`, color: C.red, fontSize: 11, cursor: "pointer" }}>
-        {showErr ? "▾" : "▸"} Got ModuleNotFoundError?
-      </button>
-      {showErr && (
-        <div style={{ marginTop: 8, fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.red, margin: "0 0 6px", whiteSpace: "pre-wrap" }}>{"ModuleNotFoundError: No module named '" + mod.split(".")[0] + "'"}</pre>
-          Python can't find the package in the interpreter that ran your file. Usual causes: (1) you never ran pip install,
-          (2) you installed it while the venv was <em>not</em> active, so it went to the global Python, or (3) VS Code is
-          running a different interpreter — pick the env one via Ctrl+Shift+P → "Python: Select Interpreter".
-          Safest form: <code style={{ color: C.text }}>python -m pip install {pkgs}</code> — it installs into exactly the
-          python you'll run.
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Section 2: The recipe (returns a fig) ────────────────────────────────────
-function Recipe() {
-  return (
-    <div>
-      <InstallFirst pkgs="plotly pandas" mod="plotly" check="import plotly; print(plotly.__version__)" />
-
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        Plotly Express reads a DataFrame just like Seaborn — but instead of drawing straight to the screen, it{" "}
-        <strong style={{ color: C.text }}>returns a figure object</strong> you then show or save.
-      </p>
-
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.9, margin: "0 0 14px", whiteSpace: "pre" }}>{`import pandas as pd
-import plotly.express as px
-
-df = pd.DataFrame({
-    "Name":  ["Asha", "Ravi", "Meera", "Karan"],
-    "Marks": [88, 45, 72, 91],
-    "Hours": [5, 2, 4, 6],
-})
-
-fig = px.bar(df, x="Name", y="Marks",    # 1. build a figure
-             title="Class Marks")
-
-fig.show()                      # 2. open it (interactive!) in the browser
-fig.write_html("marks.html")    # 3. and/or save it as a webpage`}</pre>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
-        <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.7 }}>
-          The key difference: <code style={{ color: C.teal }}>fig = px.bar(...)</code> gives you an object. Matplotlib
-          and Seaborn draw immediately; Plotly hands you a <code style={{ color: C.teal }}>fig</code> you can{" "}
-          <code style={{ color: C.teal }}>.show()</code>, <code style={{ color: C.teal }}>.write_html()</code>, or tweak
-          before displaying.
-        </div>
-      </div>
-
-      <div style={{ background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.teal }}>Build a fig, then show or save it.</strong> Because a Plotly figure is
-        just data, <code style={{ color: C.teal }}>write_html</code> turns it into a standalone interactive page —
-        that's how these charts end up on websites and dashboards.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 3: Chart types with LIVE hover ───────────────────────────────────
-function ChartTypes() {
-  const [type, setType] = useState("bar");
-  const [hover, setHover] = useState(null); // hovered data index
-
-  const tip = (x, y, label) => (
-    <g style={{ pointerEvents: "none" }}>
-      <rect x={x - 34} y={y - 26} width={68} height={20} rx="4" fill={C.card} stroke={C.teal} />
-      <text x={x} y={y - 12} fontSize="9.5" fill={C.text} textAnchor="middle">{label}</text>
-    </g>
-  );
-
-  const bar = (
-    <svg width="280" height="160" viewBox="0 0 280 160" role="img">
-      <line x1="20" y1="135" x2="270" y2="135" stroke={C.border} />
-      {MARKS.map((m, i) => {
-        const x = 35 + i * 58, h = (m / 100) * 115, y = 135 - h;
-        return (
-          <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
-            <rect x={x} y={y} width={40} height={h} fill={C.teal} opacity={hover === null || hover === i ? 1 : 0.4} rx="2" />
-            <text x={x + 20} y={149} fontSize="9" fill={C.muted} textAnchor="middle">{NAMES[i].slice(0, 4)}</text>
-            {hover === i && tip(x + 20, y, `${NAMES[i]}: ${m}`)}
-          </g>
-        );
-      })}
-    </svg>
-  );
-
-  const line = (
-    <svg width="280" height="160" viewBox="0 0 280 160" role="img">
-      <line x1="20" y1="135" x2="270" y2="135" stroke={C.border} />
-      <polyline fill="none" stroke={C.orange} strokeWidth="2.5"
-        points={MARKS.map((m, i) => `${40 + i * 66},${135 - (m / 100) * 115}`).join(" ")} />
-      {MARKS.map((m, i) => {
-        const x = 40 + i * 66, y = 135 - (m / 100) * 115;
-        return (
-          <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
-            <circle cx={x} cy={y} r={hover === i ? 7 : 4.5} fill={C.orange} />
-            {hover === i && tip(x, y, `${NAMES[i]}: ${m}`)}
-          </g>
-        );
-      })}
-    </svg>
-  );
-
-  const scatter = (() => {
-    const pts = [[40, 62, "3h → 62"], [95, 45, "2h → 45"], [150, 78, "5h → 78"], [205, 91, "6h → 91"], [120, 70, "4h → 70"], [175, 55, "4h → 55"]];
-    return (
-      <svg width="280" height="160" viewBox="0 0 280 160" role="img">
-        <line x1="20" y1="135" x2="270" y2="135" stroke={C.border} />
-        {pts.map(([x, m, lbl], i) => {
-          const y = 135 - (m / 100) * 115;
-          return (
-            <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
-              <circle cx={x} cy={y} r={hover === i ? 8 : 5.5} fill={C.purple} opacity="0.85" />
-              {hover === i && tip(x, y, lbl)}
-            </g>
-          );
-        })}
-      </svg>
-    );
-  })();
-
-  const pie = (() => {
-    const total = MARKS.reduce((a, b) => a + b, 0);
-    let start = 0;
-    const cx = 90, cy = 80, r = 62;
-    const cols = [C.teal, C.orange, C.purple, C.green];
-    return (
-      <svg width="280" height="160" viewBox="0 0 280 160" role="img">
-        {MARKS.map((m, i) => {
-          const frac = m / total;
-          const end = start + frac * 2 * Math.PI;
-          const x1 = cx + r * Math.sin(start), y1 = cy - r * Math.cos(start);
-          const x2 = cx + r * Math.sin(end), y2 = cy - r * Math.cos(end);
-          const large = frac > 0.5 ? 1 : 0;
-          const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-          const mid = start + (end - start) / 2;
-          start = end;
-          return (
-            <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} style={{ cursor: "pointer" }}>
-              <path d={path} fill={cols[i]} stroke={C.bg} strokeWidth="1.5"
-                transform={hover === i ? `translate(${6 * Math.sin(mid)},${-6 * Math.cos(mid)})` : ""} />
-            </g>
-          );
-        })}
-        {NAMES.map((n, i) => (
-          <g key={i}>
-            <rect x={190} y={26 + i * 26} width={12} height={12} fill={cols[i]} rx="2" />
-            <text x={208} y={36 + i * 26} fontSize="10.5" fill={hover === i ? C.text : C.muted}>{n} ({Math.round((MARKS[i] / total) * 100)}%)</text>
-          </g>
-        ))}
-      </svg>
-    );
-  })();
-
-  const types = {
-    bar: { label: "px.bar", color: C.teal, code: 'fig = px.bar(df, x="Name", y="Marks")', svg: bar },
-    line: { label: "px.line", color: C.orange, code: 'fig = px.line(df, x="Name", y="Marks")', svg: line },
-    scatter: { label: "px.scatter", color: C.purple, code: 'fig = px.scatter(df, x="Hours", y="Marks")', svg: scatter },
-    pie: { label: "px.pie", color: C.green, code: 'fig = px.pie(df, names="Name", values="Marks")', svg: pie },
-  };
-  const t = types[type];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        Same family of charts as Matplotlib — but <strong style={{ color: C.teal }}>hover over the shapes below</strong>.
-        A real Plotly chart does exactly this in your browser.
-      </p>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-        {Object.entries(types).map(([k, tv]) => (
-          <button key={k} onClick={() => { setType(k); setHover(null); }} style={{
-            flex: 1, minWidth: 76, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
-            background: type === k ? tv.color + "22" : C.card,
-            border: `1.5px solid ${type === k ? tv.color : C.border}`, color: type === k ? tv.color : C.muted,
-          }}>{tv.label}</button>
-        ))}
-      </div>
-
-      <div style={{ background: "#0A0E14", border: `1.5px solid ${t.color}44`, borderRadius: 10, padding: 16, marginBottom: 12, display: "flex", justifyContent: "center", minHeight: 176 }}>
-        {t.svg}
-      </div>
-
-      <pre style={{ background: C.card, border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: "0 0 10px", whiteSpace: "pre-wrap" }}>{t.code}
-fig.show()</pre>
-      <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 6 }}>📎 This one line replaces the <code style={{ color: C.text }}>fig = px.bar(...)</code> line in The Recipe program — same df, same fig.show().</div>
-      <FullCode code={FULL_TYPES[type]} />
-
-      <div style={{ background: t.color + "14", border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-        Notice the pattern: <code style={{ color: t.color }}>px.&lt;type&gt;(df, ...)</code> → a <code style={{ color: t.color }}>fig</code> → hover for values. Swap the chart type, keep everything else.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 4: Interactivity + the web ───────────────────────────────────────
-function WebReady() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        Three things you get for free once a chart is a Plotly figure:
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-        {[
-          ["🖱️", "Hover & zoom", "Every point shows its exact value on hover; drag to zoom into a crowded region, double-click to reset. No extra code."],
-          ["🎨", 'color="Subject"', "Just like Seaborn's hue — one keyword splits the chart into coloured, clickable groups with a legend you can toggle."],
-          ["🌐", 'fig.write_html("chart.html")', "Saves a self-contained interactive page. Open it in any browser or embed it in a website or dashboard — this is what backs your visualization lab."],
-        ].map(([icon, title, body], i) => (
-          <div key={i} style={{ display: "flex", gap: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px" }}>
-            <div style={{ fontSize: 20 }}>{icon}</div>
-            <div>
-              <div style={{ color: C.teal, fontWeight: 600, fontSize: 13, fontFamily: "monospace", marginBottom: 3 }}>{title}</div>
-              <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>{body}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, marginBottom: 8 }}>THE THREE LIBRARIES, ONE PICTURE</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12.5 }}>
-          <div style={{ color: C.muted }}><strong style={{ color: C.accent }}>Matplotlib</strong> — the foundation: draw anything, full manual control.</div>
-          <div style={{ color: C.muted }}><strong style={{ color: C.teal }}>Seaborn</strong> — statistics + style in one line, on top of Matplotlib.</div>
-          <div style={{ color: C.muted }}><strong style={{ color: C.orange }}>Plotly</strong> — interactive + web-ready, when a picture isn't enough.</div>
-        </div>
-      </div>
-
-      <div style={{ background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.green }}>Pick the tool for the job.</strong> Static report → Matplotlib/Seaborn.
-        Something people explore in a browser → Plotly. All three read the same Pandas DataFrame, so switching is cheap.
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "What makes Plotly different from Matplotlib and Seaborn?",
-      options: [
-        "It's faster to import",
-        "Its charts are interactive (hover, zoom) and web-ready",
-        "It can't read DataFrames",
-        "It only makes pie charts",
-      ],
-      answer: 1,
-      explain: "Plotly produces interactive charts you can hover and zoom, and save as HTML for the web — Matplotlib and Seaborn output static images.",
-    },
-    {
-      q: "What does  fig = px.bar(df, x=\"Name\", y=\"Marks\")  return?",
-      options: [
-        "Nothing — it draws immediately",
-        "A figure object you then .show() or .write_html()",
-        "A DataFrame",
-        "A CSV file",
-      ],
-      answer: 1,
-      explain: "Plotly Express returns a figure object. Unlike Matplotlib (which draws right away), you get a fig to show, save, or modify first.",
-    },
-    {
-      q: "How do you save a Plotly chart as a standalone interactive webpage?",
-      options: [
-        "plt.show()",
-        'fig.write_html("chart.html")',
-        "print(fig)",
-        "You can't",
-      ],
-      answer: 1,
-      explain: 'fig.write_html("chart.html") writes a self-contained interactive HTML file — open it in any browser or embed it in a site.',
-    },
-    {
-      q: "You need a static chart for a printed report. Best choice?",
-      options: [
-        "Plotly — always",
-        "Matplotlib or Seaborn — interactivity is wasted on paper",
-        "No library can do that",
-        "Only a spreadsheet",
-      ],
-      answer: 1,
-      explain: "Interactivity does nothing on paper, so a clean static Matplotlib/Seaborn image is the right tool. Match the library to how the chart will be used.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You can pick the right plotting library for any job." :
-            score >= 2 ? "Good — replay Interactivity & the Web to lock in when to use Plotly." :
-              "Revisit The Recipe and the three-libraries summary, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🏆 Module 13 Complete — You Can Visualize Data!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Matplotlib for anything, Seaborn for statistics in one line, Plotly for interactive web charts — all from a
-            Pandas DataFrame.<br /><br />
-            That closes the data-visualization strand of your lab. From here the course branches into its applied
-            tracks — AI/ML, cybersecurity, and IoT — all built on the data skills you now have.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function Unit13_3({ student, onUnitComplete }) {
+export default function Unit13_3(props) {
   const sections = [
-    { id: "need", label: "The Need" },
-    { id: "recipe", label: "The Recipe" },
-    { id: "types", label: "Hover the Charts" },
-    { id: "web", label: "Interactive & Web" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    { label: "The Recipe", kicker: "import plotly.express as px", title: "A chart you can touch", blocks: [
+      <P>matplotlib and seaborn make pictures. <strong>plotly</strong> makes small web apps: every chart can be hovered, zoomed, panned and saved, and shared as a web page. <code>plotly.express</code> builds a whole figure from a DataFrame in one call.</P>,
+      EX.first,
+    ] },
+    { label: "Lines & Dots", kicker: "px.line · px.scatter", title: "Trends and links", blocks: [EX.line, EX.scatter] },
+    { label: "Parts", kicker: "px.pie", title: "Parts of a whole", blocks: [EX.pie] },
+    { label: "Polish", kicker: "update_layout · update_traces", title: "Styling a figure", blocks: [
+      EX.style,
+      <CodeBlock title="share it" code={'fig.write_html("chart.html")   # a web page anyone can open — still interactive'} />,
+    ] },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: class explorer", blocks: [
+      EX.explorer,
+      <KeyIdea>Pick the tool for the job: matplotlib for full control and print, seaborn for quick statistical pictures, plotly when people will explore the data themselves.</KeyIdea>,
+      <Note color={T.blue} icon="🏁">That's the whole journey: from print("Hello") to interactive dashboards. Next: the Finish Line.</Note>,
+    ] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>When a Picture Isn't Enough</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Build a Figure, Show or Save It</h3><Recipe /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Charts That Respond</h3><ChartTypes /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Interactivity & the Web</h3><WebReady /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on interactive plotting with Plotly.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🖱️</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 13 › UNIT 13.3</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Interactive Charts with Plotly</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit13_3" crumb="MODULE 13 › 3" title="Interactive Charts with Plotly" sections={sections} quiz={QUIZ}
+      next={{ title: "The Finish Line", text: "Module 13 complete! Give your feedback and claim your course certificate." }} />
   );
 }
