@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://aishugithub.github.io/course_python/sitemap.xml
