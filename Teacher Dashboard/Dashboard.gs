@@ -1,0 +1,999 @@
+// ============================================================================
+//  DASHBOARD.GS  —  TEACHER PROGRESS DASHBOARD  (server side)
+//  Foothold courses: Python Programming + Computer Organization & Architecture
+//  Plus the Python Lab MED23CL202 e-Record for one specific med class.
+//  ----------------------------------------------------------------------------
+//  WHAT THIS PROJECT IS
+//  A SEPARATE, STANDALONE Apps Script web app (NOT any course's Code.gs).
+//  The SHARED web pages are READ-ONLY: they read progress from your Foothold
+//  backend sheets and the marks from your SEPARATE marks workbook, and only
+//  DISPLAY them. No student page can write anything — safe to share.
+//  In addition, an OWNER-ONLY nightly job, writeMarks() (Section 11), computes
+//  each student's mark and WRITES it into your marks workbook (never a course
+//  backend). If you type a mark over a cell it keeps your value; if you leave a
+//  cell it refreshes with the calculation. This runs as you, on a time trigger
+//  — it is NOT reachable from the shared URLs.
+//
+//  THREE VIEWS, THREE URLs (routed by doGet from this ONE project)
+//    • .../exec?view=general  -> General.html
+//         Course completion for EVERY student, with a switcher between your two
+//         Foothold courses (Python and COA). Each list is sorted by progress
+//         (highest first) so you instantly see who is nearing completion.
+//    • .../exec?view=med      -> Med.html
+//         ONLY your 59 med students (roster below), reg-no order. Two sub-views:
+//         (1) Lab progress — a wide matrix of the 11 experiments, each cell a
+//         completion tick + date/time, plus per-experiment defaulters;
+//         (2) Marks — the /10 you award, read from the separate marks sheet.
+//    • .../exec?view=lab      -> LabProgress.html
+//         The e-Lab Record progress portal: per student, experiments done /10,
+//         mini projects done /5, feedback, certificate eligibility. No marks.
+//
+//  HOW THE PIECES FIT TOGETHER
+//    • doGet(e) reads ?view= and serves General.html, Med.html or LabProgress.html.
+//    • General.html calls getGeneralData(); Med.html calls getMedData();
+//      LabProgress.html calls getLabProgressData().
+//    • All three are pure reads (writeMarks, Section 10, is the only writer).
+//
+//  THE DATA MODEL WE READ (identical Foothold template in every course sheet)
+//  Tab `Progress` : RollNo | CourseId | UnitId | CompletedAt
+//  UnitId, told apart by "@":
+//    • plain "Unit5_2"           = a full COURSE unit completed.
+//    • "UnitLAB1@p1_algo"         = one STAGE of a lab experiment (Python only).
+//    • plain "UnitLAB1"           = the whole experiment RECORD submitted.
+//  CompletedAt = the ISO timestamp -> the date-under-the-tick in the MED matrix.
+// ============================================================================
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 1 — CONFIGURATION
+// ----------------------------------------------------------------------------
+//  Backend spreadsheet IDs (the long code in each sheet URL between /d/ and /edit).
+const PYTHON_SHEET_ID = '1XDUgokksXkRRJzA6-3ZwE-TJDEllm7jEUp19KQ6UuaE';   // course_python backend
+const COA_SHEET_ID    = '1adLuz2mnGdeBQtcZWiicW1E9Djtfjs5mR4QepdwDbfk';   // course_COA backend
+
+const STUDENTS_SHEET = 'Students';   // RollNo | Password | Name | Batch | Email
+const PROGRESS_SHEET = 'Progress';   // RollNo | CourseId | UnitId | CompletedAt
+const TIMEZONE       = 'Asia/Kolkata';
+
+//  MARKS come straight from each student's progress in the Python backend —
+//  NO separate marks sheet. Leave this blank. (Only if you ever want manual
+//  overrides or due-date penalties again, paste a workbook id here.)
+const MARKS_SPREADSHEET_ID = '';
+const MARKS_TAB    = 'Marks';      // OVERRIDES (wide): RollNo | Name | Exp1 … Exp10 | MiniProject  (blank = use auto)
+const DUEDATES_TAB = 'DueDates';   // two columns: Experiment | DueDate  (Experiment = 1..10 or MP; date YYYY-MM-DD)
+
+//  --- MARKS CALCULATION POLICY (from your choices) --------------------------
+//  A student's auto mark for an experiment = weighted completion (out of 10),
+//  then a lateness penalty. The Program stage carries the most weight — the
+//  per-stage weights live on LAB_STAGE_TEMPLATE below and sum to 10. Lateness
+//  removes LATE_PCT_PER_DAY of the earned mark for each day past that
+//  experiment's due date, and it can fall all the way to zero (LATE_FLOOR=0).
+//  With no marks workbook (the default) there are no due dates, so no penalty:
+//  the mark is simply the weighted completion out of 10.
+const LATE_PCT_PER_DAY = 0.10;   // 10% of the earned mark, per day late
+const LATE_FLOOR       = 0.00;   // lowest multiplier (0 => mark can reach zero)
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 2 — COURSE REGISTRY  (mirrors each course.config.js, MANDATORY units)
+//  ----------------------------------------------------------------------------
+//  Add a course by adding an entry here: its backend sheet id, its courseId (as
+//  recorded in that sheet's Progress tab), and its modules → unit lists. Python
+//  excludes optional Crucibles (…_C) and the LAB module (they are optional in
+//  its config). COA has NO optional flags, so ALL its units count (incl. the
+//  5 Capstones) — 38 in total. Update these lists if you edit a real config.
+// ----------------------------------------------------------------------------
+const COURSES = [
+  {
+    key: 'python', courseId: 'course_python',
+    title: 'Python Programming', sheetId: PYTHON_SHEET_ID,
+    modules: [
+      { id: 'M1',   title: 'Computing',                       units: ['Unit1_1','Unit1_2','Unit1_3'] },
+      { id: 'M2',   title: 'Computing Languages',             units: ['Unit2_1','Unit2_2','Unit2_3','Unit2_4'] },
+      { id: 'M3',   title: 'The Conversion',                  units: ['Unit3_1','Unit3_2','Unit3_3'] },
+      { id: 'M4',   title: 'Your First Python Program',       units: ['Unit4_0','Unit4_1','Unit4_2','Unit4_3','Unit4_4'] },
+      { id: 'M5',   title: 'Making Decisions',                units: ['Unit5_1','Unit5_2','Unit5_3','Unit5_4'] },
+      { id: 'M6',   title: 'Repetition',                      units: ['Unit6_1','Unit6_2','Unit6_3','Unit6_4'] },
+      { id: 'M6.5', title: 'Computational Thinking I',        units: ['UnitCT1_1','UnitCT1_2','UnitCT1_3','UnitCT1_4','UnitCT1_5'] },
+      { id: 'M7',   title: 'Organizing Data',                 units: ['Unit7_1','Unit7_2','Unit7_3','Unit7_4','Unit7_5','Unit7_6'] },
+      { id: 'M7.5', title: 'Computational Thinking II',       units: ['UnitCT2_1','UnitCT2_2','UnitCT2_3','UnitCT2_4','UnitCT2_5'] },
+      { id: 'M8',   title: 'Functions & Modular Thinking',    units: ['Unit8_1','Unit8_2','Unit8_3','Unit8_4'] },
+      { id: 'M8.5', title: 'Computational Thinking III',      units: ['UnitCT3_1','UnitCT3_2','UnitCT3_3'] },
+      { id: 'M9',   title: 'When Things Go Wrong',            units: ['Unit9_1','Unit9_2','Unit9_3','Unit9_4'] },
+      { id: 'M10',  title: 'Object-Oriented Programming',     units: ['Unit10_1','Unit10_2','Unit10_3','Unit10_4','Unit10_6','Unit10_7','Unit10_5'] },
+      { id: 'M11',  title: 'Pythonic Python & the Ecosystem', units: ['Unit11_1'] },
+      { id: 'M12',  title: 'Working with Real Data',          units: ['Unit12_1'] },
+      { id: 'M13',  title: 'Data Visualization',              units: ['Unit13_1','Unit13_2','Unit13_3'] },
+    ],
+  },
+  {
+    key: 'coa', courseId: 'course_COA',
+    title: 'Computer Organization & Architecture', sheetId: COA_SHEET_ID,
+    modules: [
+      { id: 'M0', title: 'Before the Machine',            units: ['Unit0_1','Unit0_2','Unit0_3'] },
+      { id: 'M1', title: 'Basic Structure of Computers',  units: ['Unit1_1','Unit1_2','Unit1_3','Unit1_4','Unit1_5','Unit1_6','Unit1_C'] },
+      { id: 'M2', title: 'Inside the Processor',          units: ['Unit2_1','Unit2_2','Unit2_3','Unit2_4','Unit2_5','Unit2_6','Unit2_7','Unit2_C'] },
+      { id: 'M3', title: 'Pipelining',                    units: ['Unit3_1','Unit3_2','Unit3_3','Unit3_4','Unit3_5','Unit3_C'] },
+      { id: 'M4', title: 'Memory Organization',           units: ['Unit4_1','Unit4_2','Unit4_3','Unit4_4','Unit4_5','Unit4_6','Unit4_C'] },
+      { id: 'M5', title: 'Input / Output Organization',   units: ['Unit5_1','Unit5_2','Unit5_3','Unit5_4','Unit5_5','Unit5_6','Unit5_C'] },
+    ],
+  },
+];
+
+//  Precompute each course's flat unit set and total (the % divisor).
+COURSES.forEach(function (c) {
+  c.unitSet = {};
+  c.modules.forEach(function (m) { m.units.forEach(function (u) { c.unitSet[u] = true; }); });
+  c.totalUnits = Object.keys(c.unitSet).length;   // Python = 62, COA = 38
+});
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 3 — LAB EXPERIMENTS (Python Lab MED23CL202: 10 + Mini-Project)
+//  Each stage logged "expId@stageId"; a submitted record is the plain expId.
+//  Only Exp 1 is built; set built:true and add a `stages` array as you build
+//  the rest. 6-stage template = 2 programs × (algorithm→flowchart→program).
+// ----------------------------------------------------------------------------
+//  Flowcharts are OPTIONAL (weight 0) — their marks were split into Algo + Program.
+//  `weight` = marks each subdivision is worth (Algo 1.5 · Flow 0 · Program 3.5
+//  per program), summing to 10 across both programs. The Program stage is
+//  weighted most, per your choice. If a future experiment uses a different
+//  shape, give its stages their own weights; the maths normalises to /10.
+const LAB_STAGE_TEMPLATE = [
+  { id: 'p1_algo', label: 'P1 · Algorithm', weight: 1.5 },
+  { id: 'p1_flow', label: 'P1 · Flowchart (opt.)', weight: 0, optional: true },
+  { id: 'p1_prog', label: 'P1 · Program',   weight: 3.5 },
+  { id: 'p2_algo', label: 'P2 · Algorithm', weight: 1.5 },
+  { id: 'p2_flow', label: 'P2 · Flowchart (opt.)', weight: 0, optional: true },
+  { id: 'p2_prog', label: 'P2 · Program',   weight: 3.5 },
+];
+const LAB_EXPERIMENTS = [
+  { expId: 'UnitLAB1',  no: '1',  co: 'CO1',     short: 'Exp 1',  title: 'Data Types, Operators & Conditional Statements', built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB2',  no: '2',  co: 'CO1',     short: 'Exp 2',  title: 'Loops, Collections & Functions',                 built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB3',  no: '3',  co: 'CO2',     short: 'Exp 3',  title: 'Classes, Objects & Encapsulation',               built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB4',  no: '4',  co: 'CO2',     short: 'Exp 4',  title: 'Inheritance & Polymorphism',                     built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB5',  no: '5',  co: 'CO3',     short: 'Exp 5',  title: 'Reading & Writing Text Files',                   built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB6',  no: '6',  co: 'CO3',     short: 'Exp 6',  title: 'File Operations & CSV Records',                  built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB7',  no: '7',  co: 'CO4',     short: 'Exp 7',  title: 'Exception Handling: try / except',               built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB8',  no: '8',  co: 'CO4',     short: 'Exp 8',  title: 'raise, finally & User-defined Exceptions',       built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB9',  no: '9',  co: 'CO5',     short: 'Exp 9',  title: 'Data Analysis with Pandas',                      built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLAB10', no: '10', co: 'CO5',     short: 'Exp 10', title: 'Visualization: Matplotlib & Seaborn',            built: true,  stages: LAB_STAGE_TEMPLATE },
+  { expId: 'UnitLABMP', no: '—',  co: 'CO1–CO5', short: 'Mini',   title: 'Mini-Project — Final Assembly',                  built: false, stages: [] },
+];
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 3b — MINI-PROJECT CRUCIBLE  (UnitLAB2_5)  — a DIFFERENT shape
+//  ----------------------------------------------------------------------------
+//  WHY THIS IS SEPARATE FROM THE 10 EXPERIMENTS ABOVE.
+//  The 10 experiments all share the same 2-programs × 3-stages shape (the
+//  LAB_STAGE_TEMPLATE: p1_algo…p2_prog). The "Crucible" checkpoint that sits
+//  AFTER Exp 1 & 2 does NOT: the student picks ONE of four independent
+//  mini-project TRACKS and then climbs four SEQUENTIALLY-GATED LEVELS —
+//        Spark → Flame → Forge → Temper
+//  — before "claiming" (submitting) the whole checkpoint.
+//
+//  HOW THE LESSON LOGS IT (must match src/lessons/UnitLAB2_5.jsx exactly):
+//    • each level cleared →  onStageComplete("UnitLAB2_5@<TRACK>_<level>")
+//         TRACK ∈ {A,B,C,D}   level ∈ {spark,flame,forge,temper}
+//         e.g.  "UnitLAB2_5@A_spark", "UnitLAB2_5@B_flame"
+//    • whole checkpoint claimed → onUnitComplete() → plain "UnitLAB2_5" row.
+//
+//  WHY THE MAIN DASHBOARD MISSED IT (the bug we are fixing).
+//  resolveExperiments() only maps ids that are LISTED in LAB_EXPERIMENTS, and
+//  "UnitLAB2_5" is not one of them — so the auto-detect silently dropped it.
+//  Even if it were listed, the 6-stage template (p1_algo…) does not match the
+//  crucible's stage ids (A_spark…), so its progress could never be parsed.
+//  We therefore model the crucible on its OWN terms here and report a LEVEL
+//  DISTRIBUTION: how many of the 59 students have reached each rung.
+// ----------------------------------------------------------------------------
+const CRUCIBLE = {
+  expId: 'UnitLAB2_5',                       // the pseudo-unit base id (note the "_5")
+  short: 'Crucible',
+  title: 'Mini-Project Crucible (built on Exp 1 & 2)',
+  //  The four selectable mini-project tracks. A student is expected to pick ONE.
+  //  `key` is the letter that appears in the id ("UnitLAB2_5@<key>_<level>").
+  tracks: [
+    { key: 'A', icon: '🅰', title: 'Patient Vitals Monitor' },
+    { key: 'B', icon: '🅱', title: 'Pharmacy Stock Manager' },
+    { key: 'C', icon: '🅲', title: 'Clinic Appointment Book' },
+    { key: 'D', icon: '🅳', title: 'Health-Camp Screening Analyzer' },
+  ],
+  //  The four gated levels INSIDE any track, listed in climb order. The array
+  //  index (+1) is the "rung" number we rank students by: spark=1 … temper=4.
+  levels: [
+    { id: 'spark',  label: 'Spark',  icon: '✨' },   // predict-output / trace MCQs
+    { id: 'flame',  label: 'Flame',  icon: '🔥' },   // bug hunt (find line + fix)
+    { id: 'forge',  label: 'Forge',  icon: '⚒️' },   // reorder the Exp-1 program (Parsons)
+    { id: 'temper', label: 'Temper', icon: '🗡️' },   // write the Exp-2 function in real Python
+  ],
+};
+
+//  Compute ONE student's Crucible standing from their {unitId: when} map.
+//  ----------------------------------------------------------------------------
+//  The levels are sequential WITHIN a track, but a curious student MAY dip into
+//  more than one track. The single most meaningful number for "how far has this
+//  student climbed?" is therefore the FURTHEST rung reached across ANY track —
+//  plus the track that furthest rung belongs to (their effective chosen track).
+//  We also keep the furthest rung PER track (perTrack) in case you ever want to
+//  see who spread themselves across tracks.
+//  Returns:
+//    started    – have they touched the crucible at all?
+//    claimed    – did they submit/claim the whole checkpoint? (plain id present)
+//    rung       – 0..4 : 0 = untouched, 1..4 = furthest level cleared
+//    levelLabel – the ladder bucket: 'Not started' | 'Spark'…'Temper' | 'Submitted'
+//    track      – the letter of their furthest track ('' if none yet)
+//    when       – readable timestamp of that furthest step (or the claim)
+//    perTrack   – { A:2, C:4, … } furthest rung reached in each track touched
+function crucibleStatusFor(done, expId) {
+  expId = expId || CRUCIBLE.expId;
+  //  Map each level id to its rung number once (spark→1, flame→2, forge→3, temper→4).
+  const rungOf = {};
+  CRUCIBLE.levels.forEach(function (lv, i) { rungOf[lv.id] = i + 1; });
+
+  //  Did they CLAIM the whole checkpoint? onUnitComplete() writes the plain id.
+  const claimed     = !!done[expId];
+  const claimedWhen = done[expId] || '';
+
+  //  Walk every "UnitLAB2_5@<TRACK>_<level>" row this student owns, tracking the
+  //  furthest rung overall and the furthest rung within each track.
+  const prefix   = expId + '@';                // "UnitLAB2_5@"
+  let bestRung = 0, bestTrack = '', bestWhen = '';
+  const perTrack = {};                          // trackKey -> furthest rung there
+  Object.keys(done).forEach(function (u) {
+    if (u.indexOf(prefix) !== 0) return;        // not a crucible stage row → skip
+    const tag = u.substring(prefix.length);     // "A_spark"
+    const us  = tag.indexOf('_');               // split at the FIRST underscore
+    if (us < 0) return;                         // malformed → ignore defensively
+    const trackKey = tag.substring(0, us);      // "A"
+    const levelId  = tag.substring(us + 1);     // "spark"
+    const rung     = rungOf[levelId];           // 1..4
+    if (!rung) return;                          // unknown level id → ignore
+    if (!perTrack[trackKey] || rung > perTrack[trackKey]) perTrack[trackKey] = rung;
+    if (rung > bestRung) { bestRung = rung; bestTrack = trackKey; bestWhen = done[u]; }
+  });
+
+  //  Claiming implies all four levels of the chosen track were cleared, so treat
+  //  a claim as the top rung even if (defensively) a stage row were missing.
+  const rung = claimed ? CRUCIBLE.levels.length : bestRung;
+
+  //  Bucket the student onto the 6-rung ladder used by the distribution.
+  let levelLabel;
+  if (claimed)          levelLabel = 'Submitted';
+  else if (rung === 0)  levelLabel = 'Not started';
+  else                  levelLabel = CRUCIBLE.levels[rung - 1].label;   // Spark…Temper
+
+  return {
+    started:    (rung > 0) || claimed,
+    claimed:    claimed,
+    rung:       rung,
+    levelLabel: levelLabel,
+    track:      bestTrack,
+    when:       fmtWhen(claimed ? claimedWhen : bestWhen),
+    perTrack:   perTrack,
+  };
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 4 — MED CLASS ROSTER (the whitelist we track to completion)
+//  We drive the MED views from THIS list (not the Students tab) so a student who
+//  has not logged in yet still appears — and correctly shows as a defaulter.
+// ----------------------------------------------------------------------------
+// The class list is NOT kept in this file any more (2026-11-14): this script
+// lives in a public repository, and student names must not. It is read from a
+// tab named "MedRoster" in the course Sheet (PYTHON_SHEET_ID):
+//     row 1:  RollNo | Name | OtherLogin   (OtherLogin: a personal email the
+//             student registered with, if any; usually empty)
+//     then one row per student.
+let _medRoster = null;
+function medRoster() {
+  if (_medRoster) return _medRoster;
+  const sh = SpreadsheetApp.openById(PYTHON_SHEET_ID).getSheetByName('MedRoster');
+  if (!sh) throw new Error('Add a tab named "MedRoster" (RollNo | Name) to the course Sheet.');
+  _medRoster = sh.getDataRange().getValues().slice(1)
+    .filter(function (r) { return String(r[0]).trim(); })
+    .map(function (r) { return { rollNo: String(r[0]).trim(), name: String(r[1]).trim(), otherLogin: String(r[2] || '').trim() }; });
+  return _medRoster;
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 5 — WEB-APP ROUTER
+// ----------------------------------------------------------------------------
+function doGet(e) {
+  const view = (e && e.parameter && e.parameter.view || 'general').toString().toLowerCase();
+  //  ?view=lab  -> LabProgress.html (the e-Lab Record progress portal, Section 13)
+  //  ?view=med  -> Med.html (the older progress + marks portal)
+  //  anything else -> General.html
+  const pages = {
+    lab: { file: 'LabProgress', title: 'MED23CL202 — e-Lab Record Progress' },
+    med: { file: 'Med',         title: 'MED ENGG LAB — Progress & Marks' },
+  };
+  const page = pages[view] || { file: 'General', title: 'Foothold — Course Progress' };
+  return HtmlService.createHtmlOutputFromFile(page.file)
+    .setTitle(page.title)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 6 — SHARED HELPERS
+// ----------------------------------------------------------------------------
+
+//  IDENTITY NORMALISATION.
+//  Students sign in with an EMAIL, so the sheet stores identifiers like
+//  "e0525052@sriher.edu.in" — NOT the bare reg-no "E0525052". This function
+//  converts any identifier to a canonical reg-no so the roster matches:
+//    "e0525052@sriher.edu.in" -> "E0525052"      (institutional: strip domain, upper-case)
+//    "E0525052"               -> "E0525052"
+//  A student who registered with a PERSONAL email has no reg-no in it. Those
+//  are listed in the private "MedRoster" tab, column C ("OtherLogin"), next to
+//  the student's row -- never in this file.
+let _rollAliases = null;
+function rollAliases() {
+  if (_rollAliases) return _rollAliases;
+  _rollAliases = {};
+  medRoster().forEach(function (stu) {
+    if (stu.otherLogin) _rollAliases[stu.otherLogin.toLowerCase()] = stu.rollNo;
+  });
+  return _rollAliases;
+}
+function normalizeId(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  const alias = rollAliases()[s.toLowerCase()];
+  if (alias) return alias;
+  const at = s.indexOf('@');
+  return (at >= 0 ? s.substring(0, at) : s).toUpperCase();
+}
+
+//  Read one course's Progress tab ONCE: progress[REG_NO][unitId] = CompletedAt.
+//  Keys are NORMALISED (see normalizeId) so email logins match the reg-no roster.
+//  courseId filters out stray rows; keeping the timestamp powers date-under-tick.
+function buildProgressIndex(ss, courseId) {
+  const rows = ss.getSheetByName(PROGRESS_SHEET).getDataRange().getValues();
+  const idx = {};
+  for (let i = 1; i < rows.length; i++) {
+    const roll   = normalizeId(rows[i][0]);                // email -> reg-no
+    const course = String(rows[i][1]).trim();
+    const unitId = String(rows[i][2]).trim();
+    const when   = rows[i][3];
+    if (course !== courseId || !roll || !unitId) continue;
+    if (!idx[roll]) idx[roll] = {};
+    if (!idx[roll][unitId]) idx[roll][unitId] = when;      // keep earliest
+  }
+  return idx;
+}
+
+//  Format a timestamp to a short readable string; '' if missing/bad.
+function fmtWhen(raw) {
+  if (!raw) return '';
+  try {
+    const d = (raw instanceof Date) ? raw : new Date(raw);
+    if (isNaN(d.getTime())) return String(raw);
+    return Utilities.formatDate(d, TIMEZONE, 'dd-MMM-yy HH:mm');
+  } catch (e) { return String(raw); }
+}
+
+//  One experiment's status for a student, from their {unitId:when} map.
+//  Also totals the WEIGHT completed (for marks) and picks the completion
+//  timestamp (for the lateness check): the record-submit time if submitted,
+//  else the latest stage time.
+function labStatusFor(exp, done) {
+  const submittedWhen = done[exp.expId];                   // plain id => submitted
+  const stagesTotal = exp.stages.filter(function (s) { return !s.optional; }).length;
+  let stagesDone = 0, lastStageWhen = '', totalWeight = 0, earnedWeight = 0;
+  exp.stages.forEach(function (s) {
+    const w = (s.weight != null) ? s.weight : 1;
+    totalWeight += w;
+    const t = done[exp.expId + '@' + s.id];
+    if (t) {
+      if (!s.optional) stagesDone++;
+      earnedWeight += w;
+      if (!lastStageWhen || t > lastStageWhen) lastStageWhen = t;
+    }
+  });
+  if (submittedWhen)                                       // submitting requires all stages => full credit
+    return { status: 'done',    when: submittedWhen, stagesDone: stagesTotal, stagesTotal: stagesTotal, earnedWeight: totalWeight, totalWeight: totalWeight };
+  if (stagesDone)
+    return { status: 'partial', when: lastStageWhen, stagesDone: stagesDone, stagesTotal: stagesTotal, earnedWeight: earnedWeight, totalWeight: totalWeight };
+  return   { status: 'none',    when: '',            stagesDone: 0,          stagesTotal: stagesTotal, earnedWeight: 0,           totalWeight: totalWeight };
+}
+
+//  Resolve a DueDates "Experiment" cell (e.g. "1", "10", "MP", "Exp 3") to an
+//  expId. Returns null if it matches nothing.
+function resolveExpId(key) {
+  key = String(key).trim().toUpperCase();
+  if (key === 'MP' || key === 'MINI' || key === 'MINIPROJECT' || key === '—') return 'UnitLABMP';
+  let hit = LAB_EXPERIMENTS.filter(function (e) { return e.no === key; })[0];          // "1".."10"
+  if (hit) return hit.expId;
+  hit = LAB_EXPERIMENTS.filter(function (e) { return e.expId.toUpperCase() === key; })[0];
+  if (hit) return hit.expId;
+  const m = key.match(/(\d+)/);                            // "Exp 3" -> 3
+  if (m) { hit = LAB_EXPERIMENTS.filter(function (e) { return e.no === m[1]; })[0]; if (hit) return hit.expId; }
+  return null;
+}
+
+//  Compute the AUTO mark for one experiment (before any manual override).
+//  base10   = weighted completion scaled to /10.
+//  daysLate = whole days the completion timestamp is past the due date.
+//  autoMark = base10 reduced by LATE_PCT_PER_DAY per late day (floored).
+function experimentMark(exp, done, dueDate) {
+  const st = labStatusFor(exp, done);
+  if (!exp.built || !st.totalWeight) {                     // can't grade an unbuilt experiment
+    return { built: false, status: st.status, whenDisplay: '', stagesDone: st.stagesDone,
+             stagesTotal: st.stagesTotal, base10: '', daysLate: 0, autoMark: '' };
+  }
+  const base10 = Math.round((st.earnedWeight / st.totalWeight) * 10 * 10) / 10;   // 1 decimal
+
+  //  Lateness: treat the due date as end-of-day; count whole days beyond it.
+  let daysLate = 0;
+  if (dueDate && st.when) {
+    const sub = (st.when instanceof Date) ? st.when : new Date(st.when);
+    if (!isNaN(sub.getTime())) {
+      const dueEnd = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 23, 59, 59);
+      if (sub.getTime() > dueEnd.getTime())
+        daysLate = Math.ceil((sub.getTime() - dueEnd.getTime()) / 86400000);
+    }
+  }
+  const factor   = Math.max(LATE_FLOOR, 1 - LATE_PCT_PER_DAY * daysLate);
+  const autoMark = Math.round(base10 * factor * 10) / 10;
+
+  return { built: true, status: st.status, whenDisplay: fmtWhen(st.when), stagesDone: st.stagesDone,
+           stagesTotal: st.stagesTotal, base10: base10, daysLate: daysLate, autoMark: autoMark };
+}
+
+//  AUTO-DETECT which experiments are live. Scan every student's progress for any
+//  "UnitLABn" or "UnitLABn@stage" row; each experiment id that appears is
+//  considered BUILT. Returns a set: { UnitLAB2:true, ... }.
+function activeExpIds(progress) {
+  const set = {};
+  Object.keys(progress).forEach(function (roll) {
+    Object.keys(progress[roll]).forEach(function (u) {
+      const base = u.split('@')[0];                        // "UnitLAB2@p1_algo" -> "UnitLAB2"
+      if (/^UnitLAB/i.test(base)) set[base] = true;
+    });
+  });
+  return set;
+}
+
+//  Resolve LAB_EXPERIMENTS against the data: an experiment is BUILT if its
+//  config says so OR any data for it exists. Built experiments with no explicit
+//  `stages` default to the standard 6-stage template, so a brand-new experiment
+//  lights up automatically the first time a student does it — no code change,
+//  no redeploy. (If a future experiment uses a different shape, give it its own
+//  `stages` array in LAB_EXPERIMENTS and it takes precedence.)
+function resolveExperiments(progress) {
+  const active = activeExpIds(progress);
+  return LAB_EXPERIMENTS.map(function (e) {
+    const built = e.built || !!active[e.expId];
+    const stages = (e.stages && e.stages.length) ? e.stages : LAB_STAGE_TEMPLATE;
+    return { expId: e.expId, no: e.no, co: e.co, short: e.short, title: e.title,
+             built: built, stages: built ? stages : [] };
+  });
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 7 — READ #1: getGeneralData()  (called by General.html)
+//  Every student in EACH course, that course's completion %, sorted DESC.
+// ----------------------------------------------------------------------------
+function getGeneralData() {
+  const courses = COURSES.map(function (c) {
+    const ss = SpreadsheetApp.openById(c.sheetId);
+    const progress = buildProgressIndex(ss, c.courseId);
+    const rows = ss.getSheetByName(STUDENTS_SHEET).getDataRange().getValues();
+
+    const students = [];
+    for (let r = 1; r < rows.length; r++) {
+      const rollNo = String(rows[r][0]).trim();
+      if (!rollNo) continue;
+      const done = progress[normalizeId(rollNo)] || {};   // match via normalised reg-no
+      let courseDone = 0;
+      const modules = c.modules.map(function (m) {
+        let d = 0;
+        m.units.forEach(function (u) { if (done[u]) d++; });
+        courseDone += d;
+        return { id: m.id, title: m.title, done: d, total: m.units.length };
+      });
+      students.push({
+        rollNo: rollNo, name: rows[r][2], batch: rows[r][3],
+        done: courseDone, total: c.totalUnits,
+        pct: c.totalUnits ? Math.round((courseDone / c.totalUnits) * 100) : 0,
+        modules: modules,
+      });
+    }
+    students.sort(function (a, b) {
+      if (b.pct !== a.pct) return b.pct - a.pct;           // nearing completion first
+      return String(a.rollNo).localeCompare(String(b.rollNo), undefined, { numeric: true });
+    });
+
+    return {
+      key: c.key, title: c.title, courseId: c.courseId,
+      totalUnits: c.totalUnits,
+      modules: c.modules.map(function (m) { return { id: m.id, title: m.title }; }),
+      students: students,
+    };
+  });
+
+  return {
+    generatedAt: Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm'),
+    courses: courses,
+  };
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 8 — READ #2: getMedData()  (called by Med.html)
+//  The 59 roster students (reg-no order): per-experiment status + timestamp,
+//  plus marks from the separate marks sheet. Reads the PYTHON backend.
+// ----------------------------------------------------------------------------
+//  The five mini-project crucibles, marked alongside the 10 experiments.
+//  Mark = furthest level reached in any track × 2.5  (Spark 2.5 · Flame 5 ·
+//  Forge 7.5 · Temper 10); claiming the checkpoint = 10.
+const MINI_PROJECTS = [
+  { expId: 'UnitLAB2_5',  short: 'MP1', co: 'Exp 1&2',  title: 'Mini-Project 1 (built on Exp 1 & 2)' },
+  { expId: 'UnitLAB4_5',  short: 'MP2', co: 'Exp 3&4',  title: 'Mini-Project 2 (built on Exp 3 & 4)' },
+  { expId: 'UnitLAB6_5',  short: 'MP3', co: 'Exp 5&6',  title: 'Mini-Project 3 (built on Exp 5 & 6)' },
+  { expId: 'UnitLAB8_5',  short: 'MP4', co: 'Exp 7&8',  title: 'Mini-Project 4 (built on Exp 7 & 8)' },
+  { expId: 'UnitLAB10_5', short: 'MP5', co: 'Exp 9&10', title: 'Mini-Project 5 (built on Exp 9 & 10)' },
+];
+
+function miniProjectColumns() {
+  return MINI_PROJECTS.map(function (m) {
+    return { expId: m.expId, no: m.short, co: m.co, short: m.short, title: m.title, built: true, isMini: true,
+             stages: CRUCIBLE.levels.map(function (l) { return { id: l.id, label: l.label }; }) };
+  });
+}
+
+function miniProjectMark(mp, done) {
+  const cs = crucibleStatusFor(done, mp.expId);
+  const n = CRUCIBLE.levels.length;
+  const mark = Math.round((cs.rung / n) * 10 * 10) / 10;
+  return {
+    status: cs.rung >= n ? 'done' : (cs.rung > 0 ? 'partial' : 'none'),
+    whenDisplay: cs.started ? cs.when : '',
+    stagesDone: cs.rung, stagesTotal: n,
+    built: true, base10: mark, daysLate: 0,
+    autoMark: mark, override: '', finalMark: mark, dueSet: false,
+    track: cs.track,
+    stages: CRUCIBLE.levels.map(function (l, i) {
+      return { label: l.label + (cs.track ? ' (Track ' + cs.track + ')' : ''), done: cs.rung > i, when: '' };
+    }),
+  };
+}
+
+function getMedData() {
+  const ss = SpreadsheetApp.openById(PYTHON_SHEET_ID);
+  const progress  = buildProgressIndex(ss, 'course_python');
+  const overrides = readMarks();        // manual overrides from the Marks tab (wide)
+  const dueDates  = readDueDates();     // expId -> Date, from the DueDates tab
+  const exps      = resolveExperiments(progress)    // auto-detect which are built
+                      .filter(function (e) { return e.expId !== 'UnitLABMP'; });   // replaced by the 5 mini-projects
+  const miniCols  = miniProjectColumns();
+
+  //  Attach due-date info to each experiment: the formatted date, whether a due
+  //  date is set, and whether the deadline has already passed. This lets the UI
+  //  distinguish real DEFAULTERS (overdue) from students who simply have not
+  //  reached a not-yet-due experiment.
+  const nowMs = new Date().getTime();
+  exps.forEach(function (e) {
+    const due = dueDates[e.expId];
+    e.hasDue     = !!due;
+    e.due        = due ? Utilities.formatDate(due, TIMEZONE, 'dd-MMM-yy') : '';
+    e.duePassed  = due ? (nowMs > new Date(due.getFullYear(), due.getMonth(), due.getDate(), 23, 59, 59).getTime()) : false;
+  });
+
+  const students = medRoster().map(function (stu) {
+    const done = progress[normalizeId(stu.rollNo)] || {};        // match via normalised reg-no
+    const experiments = exps.map(function (exp) {
+      const em = experimentMark(exp, done, dueDates[exp.expId]);  // auto mark + lateness
+      const cellRaw  = overrides[stu.rollNo] ? overrides[stu.rollNo][exp.expId] : '';
+      const cellNum  = (cellRaw !== '' && cellRaw != null && !isNaN(Number(cellRaw))) ? Number(cellRaw) : '';
+      const finalMark   = (cellNum !== '') ? cellNum : (em.built ? em.autoMark : '');
+      const hasOverride = (cellNum !== '' && em.built && cellNum !== em.autoMark);
+      //  Per-subdivision split (for the expanded Experiment view): each stage's
+      //  done-state and, if done, when it was finished.
+      const stages = exp.stages.map(function (s) {
+        const w = done[exp.expId + '@' + s.id];
+        return { label: s.label, done: !!w, when: fmtWhen(w) };
+      });
+      return {
+        status: em.status, whenDisplay: em.whenDisplay,
+        stagesDone: em.stagesDone, stagesTotal: em.stagesTotal,
+        built: em.built, base10: em.base10, daysLate: em.daysLate,
+        autoMark: em.autoMark, override: hasOverride ? cellNum : '',
+        finalMark: finalMark, dueSet: !!dueDates[exp.expId], stages: stages,
+      };
+    });
+    miniCols.forEach(function (mp) { experiments.push(miniProjectMark(mp, done)); });
+    return { rollNo: stu.rollNo, name: stu.name,
+             signedUp: !!progress[normalizeId(stu.rollNo)], experiments: experiments };
+  });
+  students.sort(function (a, b) {
+    return String(a.rollNo).localeCompare(String(b.rollNo), undefined, { numeric: true });
+  });
+
+  //  ---- MINI-PROJECT CRUCIBLE (UnitLAB2_5): per-student level + distribution --
+  //  The crucible is NOT one of the 6-stage experiments, so we compute it on its
+  //  own terms here (see SECTION 3b). We build:
+  //    • crucibleStudents  – one row per roster student: their furthest LEVEL and
+  //                          their chosen TRACK, in reg-no order.
+  //    • distribution      – the headline the professor asked for: how many of the
+  //                          59 are at each rung of the ladder.
+  //    • trackDistribution – how the class spread across the four tracks.
+  //  The ladder order is fixed left→right so the UI can render it as a funnel:
+  //  Not started → Spark → Flame → Forge → Temper → Submitted.
+  const crucibleLadder = ['Not started']
+    .concat(CRUCIBLE.levels.map(function (l) { return l.label; }))   // Spark…Temper
+    .concat(['Submitted']);
+  const distribution = {};                       // ladder label -> student count
+  crucibleLadder.forEach(function (l) { distribution[l] = 0; });
+  const trackDistribution = { none: 0 };         // track key (or 'none') -> count
+  CRUCIBLE.tracks.forEach(function (t) { trackDistribution[t.key] = 0; });
+
+  const crucibleStudents = medRoster().map(function (stu) {
+    const done = progress[normalizeId(stu.rollNo)] || {};
+    const cs   = crucibleStatusFor(done);                       // furthest level + track
+    distribution[cs.levelLabel]      = (distribution[cs.levelLabel]      || 0) + 1;
+    trackDistribution[cs.track || 'none'] = (trackDistribution[cs.track || 'none'] || 0) + 1;
+    return { rollNo: stu.rollNo, name: stu.name, signedUp: !!progress[normalizeId(stu.rollNo)],
+             levelLabel: cs.levelLabel, rung: cs.rung, claimed: cs.claimed,
+             track: cs.track, when: cs.when };
+  }).sort(function (a, b) {
+    return String(a.rollNo).localeCompare(String(b.rollNo), undefined, { numeric: true });
+  });
+
+  return {
+    generatedAt:  Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm'),
+    labExperiments: exps.concat(miniCols),   // 10 experiments + 5 mini-projects
+    students:     students,
+    marksLinked:  true,                 // marks are computed from progress — always available
+    dueDatesCount: Object.keys(dueDates).length,
+    //  Everything the new "Mini-Project" sub-tab in Med.html needs.
+    crucible: {
+      title:   CRUCIBLE.title,
+      expId:   CRUCIBLE.expId,
+      tracks:  CRUCIBLE.tracks,                  // [{key,icon,title}]
+      levels:  CRUCIBLE.levels,                  // [{id,label,icon}]
+      ladder:  crucibleLadder,                   // ordered bucket labels (the funnel)
+      distribution:      distribution,           // {label: count}
+      trackDistribution: trackDistribution,      // {trackKey|'none': count}
+      students:          crucibleStudents,       // per-student level + track
+    },
+  };
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 9 — THE MARKS WORKBOOK (READ-ONLY: overrides + due dates)
+//  ----------------------------------------------------------------------------
+//  Everything here reads your SEPARATE marks workbook. Nothing is written, which
+//  is what keeps the dashboard safe to share. The workbook has two tabs:
+//    • Marks    (wide) : RollNo | Name | Exp1 … Exp10 | MiniProject
+//                        You normally leave these blank and let the auto mark
+//                        stand; type a number ONLY to OVERRIDE a specific mark.
+//    • DueDates        : Experiment | DueDate  (Experiment = 1..10 or MP).
+// ----------------------------------------------------------------------------
+
+//  True once you've pasted a real marks-sheet id (not the placeholder).
+function marksSheetConfigured() {
+  return !!MARKS_SPREADSHEET_ID && MARKS_SPREADSHEET_ID.indexOf('PASTE_') !== 0;
+}
+
+//  Fetch a tab by any of several acceptable names (so small naming differences
+//  like "Due Dates" vs "DueDates" still work). Returns null if none match.
+function getSheetByAnyName(ss, names) {
+  for (let i = 0; i < names.length; i++) {
+    const sh = ss.getSheetByName(names[i]);
+    if (sh) return sh;
+  }
+  return null;
+}
+
+//  Read the Marks tab into overrides[rollNo][expId] = number or '' (blank).
+function readMarks() {
+  const map = {};
+  if (!marksSheetConfigured()) return map;
+  let sh;
+  try {
+    sh = getSheetByAnyName(SpreadsheetApp.openById(MARKS_SPREADSHEET_ID), [MARKS_TAB, 'Marks', 'marks']);
+  } catch (e) { return map; }
+  if (!sh) return map;
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const roll = String(rows[i][0]).trim();
+    if (!roll) continue;
+    map[roll] = {};
+    LAB_EXPERIMENTS.forEach(function (exp, k) {
+      const cell = rows[i][2 + k];                         // col C = Exp 1 … col M = Mini
+      map[roll][exp.expId] = (cell === '' || cell === null || cell === undefined) ? '' : cell;
+    });
+  }
+  return map;
+}
+
+//  Read the DueDates tab into dueDates[expId] = Date.
+function readDueDates() {
+  const map = {};
+  if (!marksSheetConfigured()) return map;
+  let sh;
+  try {
+    sh = getSheetByAnyName(SpreadsheetApp.openById(MARKS_SPREADSHEET_ID),
+                           [DUEDATES_TAB, 'Due Dates', 'DueDate', 'Due Date', 'duedates']);
+  } catch (e) { return map; }
+  if (!sh) return map;
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const key = rows[i][0];
+    const raw = rows[i][1];
+    if (key === '' || key === null || raw === '' || raw === null) continue;
+    const expId = resolveExpId(key);
+    if (!expId) continue;
+    const d = (raw instanceof Date) ? raw : new Date(raw);
+    if (!isNaN(d.getTime())) map[expId] = d;
+  }
+  return map;
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 10 — NIGHTLY MARKS WRITER  (owner-only; NOT on the shared pages)
+//  ----------------------------------------------------------------------------
+//  writeMarks() computes every roster student's mark and writes it into the
+//  Marks tab of your marks workbook. Your rule, implemented exactly:
+//    • You type a number over a cell  -> that value is kept (your override).
+//    • You leave a cell as calculated -> it refreshes as students do more work.
+//  To tell the two apart it keeps a hidden `_AutoMarks` tab holding the last
+//  value IT wrote. On each run, per cell:
+//    - if the cell is blank OR equals the last auto value  -> write new auto,
+//    - otherwise (you changed it)                          -> keep your value.
+//  Run it nightly via a trigger (see createNightlyTrigger) or by hand anytime.
+//  It writes ONLY to the marks workbook — never a course backend.
+// ----------------------------------------------------------------------------
+
+//  Numeric-aware equality: blanks match blanks; numbers compared as numbers.
+function numEq(a, b) {
+  const ab = (a === '' || a == null), bb = (b === '' || b == null);
+  if (ab || bb) return ab && bb;
+  const na = Number(a), nb = Number(b);
+  if (!isNaN(na) && !isNaN(nb)) return na === nb;
+  return String(a) === String(b);
+}
+
+//  Read a grid tab into rollNo -> [expMark0, expMark1, …] (experiment columns).
+function readGridByRoll(book, names) {
+  const sh = getSheetByAnyName(book, names);
+  const map = {};
+  if (!sh) return map;
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const roll = String(rows[i][0]).trim();
+    if (!roll) continue;
+    const arr = [];
+    for (let k = 0; k < LAB_EXPERIMENTS.length; k++) arr.push(rows[i][2 + k]);
+    map[roll] = arr;
+  }
+  return map;
+}
+
+//  Overwrite a tab (creating/ hiding as needed) with a full 2-D grid.
+function writeGrid(book, name, grid, hidden) {
+  let sh = book.getSheetByName(name);
+  if (!sh) sh = book.insertSheet(name);
+  sh.clearContents();
+  sh.getRange(1, 1, grid.length, grid[0].length).setValues(grid);
+  sh.setFrozenRows(1);
+  if (hidden) { try { sh.hideSheet(); } catch (e) {} }
+}
+
+//  THE JOB: recompute + write marks, preserving your manual overrides.
+function writeMarks() {
+  const lock = LockService.getScriptLock();
+  lock.tryLock(30000);
+  try {
+    if (!marksSheetConfigured()) return 'Marks workbook not configured.';
+    const pss      = SpreadsheetApp.openById(PYTHON_SHEET_ID);
+    const progress = buildProgressIndex(pss, 'course_python');
+    const dueDates = readDueDates();
+    const exps     = resolveExperiments(progress);            // auto-detect built experiments
+    const book     = SpreadsheetApp.openById(MARKS_SPREADSHEET_ID);
+
+    //  Current visible marks + last auto baseline, keyed by roll number.
+    const curByRoll  = readGridByRoll(book, [MARKS_TAB, 'Marks']);
+    const autoByRoll = readGridByRoll(book, ['_AutoMarks']);
+
+    const header   = ['RollNo', 'Name'].concat(exps.map(function (e) { return e.short; }));
+    const marksOut = [header.slice()];
+    const autoOut  = [header.slice()];
+
+    medRoster().forEach(function (stu) {
+      const done  = progress[normalizeId(stu.rollNo)] || {};   // match via normalised reg-no
+      const mRow  = [stu.rollNo, stu.name];
+      const aRow  = [stu.rollNo, stu.name];
+      exps.forEach(function (exp, k) {
+        const em = experimentMark(exp, done, dueDates[exp.expId]);
+        if (!em.built) { mRow.push(''); aRow.push(''); return; }   // can't grade unbuilt
+        const computed = em.autoMark;
+        const cur  = curByRoll[stu.rollNo]  ? curByRoll[stu.rollNo][k]  : '';
+        const base = autoByRoll[stu.rollNo] ? autoByRoll[stu.rollNo][k] : '';
+        //  blank OR unchanged-from-last-auto => refresh; else keep your override.
+        const keepOverride = (cur !== '' && cur != null && !numEq(cur, base));
+        mRow.push(keepOverride ? cur : computed);
+        aRow.push(computed);                                        // baseline = latest auto
+      });
+      marksOut.push(mRow);
+      autoOut.push(aRow);
+    });
+
+    writeGrid(book, MARKS_TAB, marksOut, false);
+    writeGrid(book, '_AutoMarks', autoOut, true);
+    return 'Wrote marks for ' + medRoster().length + ' students at ' +
+           Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+//  Run ONCE to schedule writeMarks nightly (~1 AM). Safe to re-run; it clears
+//  any previous writeMarks trigger first so you never get duplicates.
+function createNightlyTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'writeMarks') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('writeMarks').timeBased().everyDays(1).atHour(1).create();
+  return 'Nightly trigger installed: writeMarks runs daily around 1 AM.';
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 11 — OPTIONAL SELF-TEST (run manually from the editor)
+// ----------------------------------------------------------------------------
+function testData() {
+  const g = getGeneralData();
+  g.courses.forEach(function (c) {
+    Logger.log(c.title + ': ' + c.students.length + ' students | divisor ' + c.totalUnits);
+  });
+  const m = getMedData();
+  Logger.log('MED roster: ' + m.students.length + ' (expect 59) | marks linked: ' + m.marksLinked);
+}
+
+// ----------------------------------------------------------------------------
+//  SECTION 12 — LAB DIAGNOSTIC  (run manually; reveals why lab isn't matching)
+//  ----------------------------------------------------------------------------
+//  Run this from the editor and read the Execution log. It reports, from the
+//  Python Progress tab: which CourseId values exist, every distinct UnitId that
+//  looks lab-related, a handful of real lab rows, and how many of your 59 roster
+//  reg-numbers actually appear in Progress. That tells us exactly which of the
+//  three mismatches is happening, so we can correct the code or the data.
+// ----------------------------------------------------------------------------
+function diagnoseLab() {
+  const ss = SpreadsheetApp.openById(PYTHON_SHEET_ID);
+  const rows = ss.getSheetByName(PROGRESS_SHEET).getDataRange().getValues();
+
+  const courseIds = {}, labUnits = {}, sample = [], progRolls = {};
+  for (let i = 1; i < rows.length; i++) {
+    const roll = String(rows[i][0]).trim();
+    const course = String(rows[i][1]).trim();
+    const unit = String(rows[i][2]).trim();
+    if (roll) progRolls[roll] = true;
+    courseIds[course] = (courseIds[course] || 0) + 1;
+    if (/lab/i.test(unit)) {                              // anything with "lab" in it
+      labUnits[unit] = (labUnits[unit] || 0) + 1;
+      if (sample.length < 15) sample.push([roll, course, unit, rows[i][3]]);
+    }
+  }
+
+  Logger.log('=== PROGRESS DIAGNOSTIC ===');
+  Logger.log('CourseId values (with row counts): ' + JSON.stringify(courseIds));
+  Logger.log('Distinct lab-looking UnitIds: ' + JSON.stringify(labUnits));
+  Logger.log('Sample lab rows [Roll, Course, Unit, When]:');
+  sample.forEach(function (r) { Logger.log('   ' + JSON.stringify(r)); });
+
+  //  How many roster reg-nos match AFTER normalising the sheet's email logins.
+  const normSet = {};
+  Object.keys(progRolls).forEach(function (r) { normSet[normalizeId(r)] = true; });
+  let matched = 0, missing = [];
+  medRoster().forEach(function (s) { if (normSet[s.rollNo]) matched++; else missing.push(s.rollNo); });
+  Logger.log('Roster reg-nos matched (after normalising emails): ' + matched + ' of ' + medRoster().length);
+  Logger.log('Raw identifiers in sheet (first 8): ' + Object.keys(progRolls).slice(0, 8).join(' | '));
+  Logger.log('Still-unmatched roster reg-nos (likely personal emails — add to column C of the MedRoster tab): ' +
+             (missing.length ? missing.join(', ') : 'none 🎉'));
+}
+
+
+// ----------------------------------------------------------------------------
+//  SECTION 13 — READ #3: getLabProgressData()  (called by LabProgress.html)
+//  ----------------------------------------------------------------------------
+//  The e-Lab Record progress portal (?view=lab). For every roster student:
+//  how many of the 10 experiments and 5 mini-project crucibles are done, and
+//  whether the feedback is in. No marks. The rule is the SAME as the course
+//  app's src/shell/labCompletion.js, so "eligible" here means exactly what the
+//  student's certificate gate means:
+//    • experiment done  = record submitted ("UnitLAB3") OR all 6 stages present
+//    • mini project done = claimed ("UnitLAB4_5") OR any track's temper stage
+//                          ("UnitLAB4_5@B_temper") — tracks may be mixed
+//    • feedback done    = "UnitFB" present
+//    • eligible         = 10/10 experiments + 5/5 mini projects + feedback
+//    • participation    = not eligible, but feedback in and at least
+//                         ELAB_PARTICIPATION_MIN_PCT % of the 15 items done
+//                         (shown to YOU here always; students only see it once
+//                         the app's labCertificate.participationOpen is true)
+//  If you change the rule in the app, change it here too.
+// ----------------------------------------------------------------------------
+const ELAB_EXPERIMENTS = ['UnitLAB1', 'UnitLAB2', 'UnitLAB3', 'UnitLAB4', 'UnitLAB5',
+                          'UnitLAB6', 'UnitLAB7', 'UnitLAB8', 'UnitLAB9', 'UnitLAB10'];
+const ELAB_MINI_PROJECTS = [
+  { id: 'UnitLAB2_5',  label: 'MP1', covers: 'Exp 1 & 2' },
+  { id: 'UnitLAB4_5',  label: 'MP2', covers: 'Exp 3 & 4' },
+  { id: 'UnitLAB6_5',  label: 'MP3', covers: 'Exp 5 & 6' },
+  { id: 'UnitLAB8_5',  label: 'MP4', covers: 'Exp 7 & 8' },
+  { id: 'UnitLAB10_5', label: 'MP5', covers: 'Exp 9 & 10' },
+];
+const ELAB_FEEDBACK = 'UnitFB';
+const ELAB_EXP_STAGES = ['p1_algo', 'p1_flow', 'p1_prog', 'p2_algo', 'p2_flow', 'p2_prog'];
+const ELAB_TRACKS = ['A', 'B', 'C', 'D'];
+const ELAB_PARTICIPATION_MIN_PCT = 60;   // must match participationMinPct in course.config.js
+
+//  'done' | 'started' | 'none' for one experiment.
+function elabExperimentState(id, done) {
+  if (done[id]) return 'done';
+  const n = ELAB_EXP_STAGES.filter(function (s) { return done[id + '@' + s]; }).length;
+  //  Flowcharts are optional: the four algorithm/program stages are enough.
+  const required = ELAB_EXP_STAGES.filter(function (s) { return !/_flow$/.test(s); });
+  if (required.every(function (s) { return done[id + '@' + s]; })) return 'done';
+  return n ? 'started' : 'none';
+}
+
+//  'done' | 'started' | 'none' for one mini-project crucible.
+function elabMiniProjectState(id, done) {
+  if (done[id]) return 'done';
+  if (ELAB_TRACKS.some(function (L) { return done[id + '@' + L + '_temper']; })) return 'done';
+  const prefix = id + '@';
+  return Object.keys(done).some(function (u) { return u.indexOf(prefix) === 0; }) ? 'started' : 'none';
+}
+
+function getLabProgressData() {
+  const ss = SpreadsheetApp.openById(PYTHON_SHEET_ID);
+  const progress = buildProgressIndex(ss, 'course_python');
+
+  const students = medRoster().map(function (s) {
+    const done = progress[s.rollNo] || {};
+    const exps = ELAB_EXPERIMENTS.map(function (id) { return elabExperimentState(id, done); });
+    const mps  = ELAB_MINI_PROJECTS.map(function (m) { return elabMiniProjectState(m.id, done); });
+    const expDone = exps.filter(function (x) { return x === 'done'; }).length;
+    const mpDone  = mps.filter(function (x) { return x === 'done'; }).length;
+    const feedback = !!done[ELAB_FEEDBACK];
+    const itemsTotal = ELAB_EXPERIMENTS.length + ELAB_MINI_PROJECTS.length;
+    const eligible = expDone === ELAB_EXPERIMENTS.length && mpDone === ELAB_MINI_PROJECTS.length && feedback;
+
+    //  Latest timestamp on any lab or feedback row = "last active".
+    let last = '';
+    Object.keys(done).forEach(function (u) {
+      if (!/^UnitLAB|^UnitFB$/.test(u)) return;
+      const t = done[u];
+      const ms = (t instanceof Date) ? t.getTime() : new Date(t).getTime();
+      if (!isNaN(ms) && (!last || ms > last)) last = ms;
+    });
+
+    return {
+      rollNo: s.rollNo, name: s.name,
+      exps: exps, mps: mps,
+      expDone: expDone, mpDone: mpDone, feedback: feedback,
+      pct: Math.round(((expDone + mpDone) / itemsTotal) * 100),
+      eligible: eligible,
+      participation: !eligible && feedback && (expDone + mpDone) * 100 >= ELAB_PARTICIPATION_MIN_PCT * itemsTotal,
+      lastActive: last ? Utilities.formatDate(new Date(last), TIMEZONE, 'dd-MMM-yy HH:mm') : '',
+    };
+  });
+
+  return {
+    generatedAt: Utilities.formatDate(new Date(), TIMEZONE, 'dd-MMM-yy HH:mm'),
+    expTotal: ELAB_EXPERIMENTS.length,
+    mpTotal: ELAB_MINI_PROJECTS.length,
+    participationMinPct: ELAB_PARTICIPATION_MIN_PCT,
+    miniProjects: ELAB_MINI_PROJECTS,
+    students: students,
+  };
+}
