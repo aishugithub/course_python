@@ -41,6 +41,8 @@ and progress.
 1. Create a new, empty Google Sheet. Name it, for example, `Python course records`.
 2. In the Sheet: **Extensions → Apps Script**. Delete what is there, paste the whole of
    `Code.gs` from your repository, and save.
+   Then add a second script file (the **+** next to *Files* → *Script*), name it
+   `ClassDashboard`, and paste the whole of `ClassDashboard.gs` into it. Save.
 3. In the Apps Script editor, pick the function **`setupSheets`** and press **Run**.
    Accept the permission request. This creates the `Students` and `Progress` tabs.
    **Run it once only: it clears those two tabs.**
@@ -101,6 +103,26 @@ feedback form. The signature and institution printed on it are in
 - **Forgotten password:** type a new one into that student's `Password` cell.
 - **Progress** is in the `Progress` tab (one row per finished unit or exercise).
   **Events** has one row per lesson opened, finished or skipped.
+
+## Your class dashboard
+
+Reload the Sheet and a new menu appears: **Foothold → Open class dashboard**. It reads
+your Sheet and shows:
+
+- **Students** — course progress, units covered, programs written, Crucibles cleared,
+  active time and last active date for each student. Click a student to see every unit
+  and exactly which programs are still to be written.
+- **Units** — how much of the class has covered each unit, how many tries a program
+  took on average, the most common Python error, and how often sections were skipped.
+- **Needs attention** — students who have gone quiet for a week, students who have not
+  started, students who keep leaving out the final "Make It" program, and the programs
+  the class finds hard.
+- **Export table to a tab** — writes the student table to a tab named `Class export`.
+
+A unit counts as *covered* at 80% of its programs. *Active time* counts only minutes
+when the student was typing, clicking or scrolling. Progress is checked in the student's
+browser, so read it as evidence of practice; the Crucibles are the stronger evidence of
+skill. Only people you share the Sheet with can open the dashboard.
 
 **Looking after their data.** The Sheet holds names, emails and learning records. Keep
 it private (do not share it by link), and never upload an export of it to GitHub.

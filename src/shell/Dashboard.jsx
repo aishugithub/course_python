@@ -2,6 +2,7 @@ import { useState } from 'react';
 import COURSE_CONFIG from '../../config/course.config.js';
 import { LIGHT as D, FONT, MONO } from './brand.js';
 import { labUnitDone } from './labCompletion.js';
+import MANIFEST from 'virtual:foothold-manifest';   // programs to write, per unit (built by vite.config.js)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Foothold Dashboard — ACCORDION EDITION, DARK BRAND
@@ -70,7 +71,23 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
   const totalUnits = requiredIds.size;
   const doneSet = new Set(completedUnits);
   const doneCount = completedUnits.filter(id => requiredIds.has(id)).length;
-  const pct = Math.round((doneCount / totalUnits) * 100);
+
+  // Progress inside one unit (2026-11-14): how many of its programs are written.
+  // A unit is no longer all-or-nothing — 7 of 9 programs shows as 78%, not as
+  // "incomplete". GOOD (80%) is the level at which a unit counts as well covered:
+  // the bar turns green and "START HERE" moves on to the next unit.
+  // A unit finished before it had typed programs (older progress) counts as 100%.
+  const GOOD = 0.8;
+  const unitProgress = (unitId) => {
+    const programs = (MANIFEST[unitId] || []).filter(x => !x.optional);
+    const solved = programs.filter(x => doneSet.has(`${unitId}@ex:${x.id}`)).length;
+    const finished = doneSet.has(unitId) || (programs.length > 0 && solved === programs.length);
+    const frac = finished ? 1 : programs.length ? solved / programs.length : 0;
+    return { total: programs.length, solved, frac, finished };
+  };
+  const requiredList = [...requiredIds];
+  const pct = Math.round((requiredList.reduce((sum, id) => sum + unitProgress(id).frac, 0) / totalUnits) * 100);
+  const programsWritten = completedUnits.filter(id => id.includes('@ex:')).length;
   const isGuest = !student;
 
   // "Next up" = first required unit (in course order) not yet completed.
@@ -79,7 +96,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
   outer:
   for (const mod of MODULES) {
     for (const unit of mod.units) {
-      if (!unit.optional && !doneSet.has(unit.unitId)) {
+      if (!unit.optional && unitProgress(unit.unitId).frac < GOOD) {
         nextUnitId = unit.unitId; nextModuleId = mod.moduleId;
         break outer;
       }
@@ -203,9 +220,9 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
         <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 18, marginBottom: 26 }}>
           <div style={{ fontSize: 26 }}>🎯</div>
           <div>
-            <div style={{ color: D.ink, fontWeight: 600, fontSize: 14.5 }}>{doneCount} of {totalUnits} units completed · {pct}%</div>
+            <div style={{ color: D.ink, fontWeight: 600, fontSize: 14.5 }}>{pct}% of the course · {programsWritten} program{programsWritten === 1 ? '' : 's'} written · {doneCount} of {totalUnits} units finished</div>
             <div style={{ color: D.inkSoft, fontSize: 13 }}>
-              {doneCount === 0 ? 'Your climb starts with one click. Pick a foothold below.'
+              {pct === 0 ? 'Your climb starts with one click. Pick a foothold below.'
                 : pct === 100 ? 'Summit reached. The Crucibles still burn, if you dare. 🔥'
                 : 'Keep climbing — your next foothold is marked below.'}
             </div>
@@ -411,7 +428,8 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                   <div className="fh-units-inner">
                     <div style={{ borderTop: `1px solid ${D.border}`, padding: '6px 0' }}>
                       {mod.units.map(unit => {
-                        const done = isDone(unit);
+                        const prog = mod.labRecord ? null : unitProgress(unit.unitId);
+                        const done = isDone(unit) || !!(prog && prog.finished);
                         const kind = unitKind(mod, unit);
                         const isNext = unit.unitId === nextUnitId;
                         return (
@@ -443,6 +461,22 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                               {/* The unit's hook line — two seconds of temptation */}
                               {unit.blurb && (
                                 <div style={{ color: D.inkSoft, fontSize: 12.5, marginTop: 2, lineHeight: 1.5 }}>{unit.blurb}</div>
+                              )}
+                              {/* Progress inside the unit: a bar plus the count in words,
+                                  so the state never depends on colour alone. */}
+                              {prog && prog.total > 0 && (prog.solved > 0 || prog.finished) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                                  <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(prog.frac * 100)}
+                                    style={{ width: 120, height: 6, borderRadius: 3, background: D.border, overflow: 'hidden', flexShrink: 0 }}>
+                                    <div style={{ width: `${prog.frac * 100}%`, height: '100%', borderRadius: 3, background: prog.frac >= GOOD ? D.green : D.amber }} />
+                                  </div>
+                                  <span style={{ color: D.inkSoft, fontFamily: MONO, fontSize: 11 }}>
+                                    {prog.finished && prog.solved < prog.total
+                                      ? 'finished'
+                                      : `${prog.solved} of ${prog.total} programs · ${Math.round(prog.frac * 100)}%`}
+                                    {!prog.finished && prog.frac >= GOOD ? ' · good' : ''}
+                                  </span>
+                                </div>
                               )}
                             </div>
                           </div>

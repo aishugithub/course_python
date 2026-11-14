@@ -45,6 +45,9 @@ function getAnonId() {
 // dwell time -- can reuse this same param without another analytics.js edit.
 export function logEvent(eventType, { unitId = '', userId = '', detail = '' } = {}) {
   try {
+    // The first event of a visit also says where this copy of the course lives,
+    // so the teacher's class dashboard can find the course's list of units.
+    if (eventType === 'session_start' && !detail) detail = window.location.origin + import.meta.env.BASE_URL;
     const url = `${GAS_URL}?action=logEvent`
       + `&anonId=${encodeURIComponent(getAnonId())}`
       + `&userId=${encodeURIComponent(userId)}`
@@ -53,7 +56,8 @@ export function logEvent(eventType, { unitId = '', userId = '', detail = '' } = 
       + `&unitId=${encodeURIComponent(unitId)}`
       + `&detail=${encodeURIComponent(detail)}`;
     // No await, no .then() the caller waits on -- fire and forget.
-    fetch(url).catch(() => {});
+    // keepalive lets the request finish even if the page is closing (lesson_time on tab close).
+    fetch(url, { keepalive: true }).catch(() => {});
   } catch {
     // Never let analytics break the app.
   }

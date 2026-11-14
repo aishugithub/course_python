@@ -3,6 +3,7 @@ import Landing from './Landing.jsx';
 import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
 import Certificate from './Certificate.jsx';
+import ActiveTimer from './ActiveTimer.jsx';
 import LabCertificate from './LabCertificate.jsx';
 import { fetchProgress, saveProgress, saveProgressMany, submitFeedback } from './api.js';
 import { getGuestProgress, saveGuestProgress, clearGuestProgress } from './guestProgress.js';
@@ -462,6 +463,7 @@ export default function App() {
             ←
           </button>
         </div>
+        <ActiveTimer key={activeUnit} unitId={activeUnit} userId={student?.rollNo} />
         <Suspense fallback={<LoadingScreen message="Preparing lesson…" />}>
           {/* Regular lessons use only the first two props; Crucible units
               also read challengeProgress + onStageComplete for gating. */}

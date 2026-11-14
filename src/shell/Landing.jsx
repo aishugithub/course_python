@@ -205,6 +205,39 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
         </Card>
       </div>
 
+      {/* ── For teachers: run your own copy. Shown only when the registration
+             form link is set in course.config.js (adoption.formUrl). ── */}
+      {COURSE_CONFIG.adoption?.formUrl && (
+        <div style={{ maxWidth: 780, margin: '0 auto', padding: '0 24px 64px' }}>
+          <Card style={{ borderLeft: `4px solid ${D.blue}` }}>
+            <Kicker>For teachers</Kicker>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: D.ink }}>
+              Teach with Foothold — on your own site, with your own students
+            </h2>
+            <p style={{ color: D.inkSoft, fontSize: 15.5, lineHeight: 1.7, margin: 0 }}>
+              You can run your own copy of this course, free: your web address, your class
+              list, your students' progress in your own Google Sheet. Hide the modules you
+              don't need, add lessons of your own, and keep a lab record for your class.
+              Setting it up takes about 45 minutes and needs no web programming.
+            </p>
+            <ul style={{ color: D.inkSoft, fontSize: 15, lineHeight: 1.8, margin: '14px 0 0', paddingLeft: 20 }}>
+              <li><strong style={{ color: D.ink }}>1. Register</strong> with the short form below.</li>
+              <li><strong style={{ color: D.ink }}>2. Check your inbox.</strong> The step-by-step guide is emailed to you within a few minutes.</li>
+              <li><strong style={{ color: D.ink }}>3. Follow the guide</strong> — and write to us if you get stuck. We help you set it up.</li>
+            </ul>
+            <p style={{ color: D.inkMuted, fontSize: 13.5, lineHeight: 1.6, margin: '14px 0 0' }}>
+              All we ask in return: keep the line “Built on Foothold” on your site.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 22 }}>
+              <a href={COURSE_CONFIG.adoption.formUrl} target="_blank" rel="noopener noreferrer"
+                style={{ ...outlineBtn, padding: '12px 24px', fontSize: 15, textDecoration: 'none', display: 'inline-block' }}>
+                Register as a teacher →
+              </a>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* ── Footer ── */}
       <div style={{ textAlign: 'center', color: D.inkMuted, fontSize: 12.5, paddingBottom: 44, fontFamily: MONO }}>
         Your progress is saved on this device automatically. Sign in anytime to keep it across devices.
