@@ -4,9 +4,10 @@
 // tabs, progress, exercise persistence and the completion gate:
 // a unit can only be finished once EVERY exercise in it has been solved.
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useRef, useState } from "react";
 import CodeExercise from "./CodeExercise.jsx";
 import { T, FONT, MONO, CODE_FONT, tint } from "./theme.js";
+import { logEvent } from "../shell/analytics.js";
 
 const Ctx = createContext(null);
 const isSpec = (b) => b && typeof b === "object" && !b.$$typeof && b.kind && b.id;
@@ -124,7 +125,8 @@ function Logo() {
 
 // ── LessonShell ──
 // lockAhead (Crucibles): a tab opens only when every earlier section is done.
-export default function LessonShell({ unitId, crumb, title, sections, quiz, next, challengeProgress = [], onStageComplete, onUnitComplete, lockAhead = false }) {
+export default function LessonShell({ unitId, crumb, title, sections, quiz, next, challengeProgress = [], onStageComplete, onUnitComplete, lockAhead = false, student }) {
+  const skipsLogged = useRef(new Set());
   const allSpecs = useMemo(() => sections.flatMap((s, si) => (s.blocks || []).filter(isSpec).map((spec) => ({ spec, si }))), [sections]);
   const prefix = `${unitId}@ex:`;
   const [solved, setSolved] = useState(() => new Set(challengeProgress.filter((p) => p.startsWith(prefix)).map((p) => p.slice(prefix.length))));
@@ -152,6 +154,24 @@ export default function LessonShell({ unitId, crumb, title, sections, quiz, next
   const curSpecs = isQuiz ? [] : sectionSpecs(active);
   const curLeft = curSpecs.filter((x) => !solved.has(x.spec.id)).length;
 
+  // Opening a tab. Jumping ahead past unsolved programs is allowed in lessons
+  // (not Crucibles) and is recorded as ONE "section_skip" event per section
+  // left behind, per visit. logEvent is fire-and-forget (never awaited), so
+  // this costs the learner nothing: no waiting, no effect on the page.
+  const openTab = (i) => {
+    if (i > active && !isQuiz) {
+      for (let s = active; s < i && s < sections.length; s++) {
+        const left = sectionSpecs(s).filter((x) => !solved.has(x.spec.id)).length;
+        if (left > 0 && !skipsLogged.current.has(s)) {
+          skipsLogged.current.add(s);
+          logEvent("section_skip", { unitId, userId: student?.rollNo || "", detail: JSON.stringify({ section: s + 1, label: sections[s].label, unsolved: left, of: sectionSpecs(s).length, to: i + 1 }) });
+        }
+      }
+    }
+    setActive(i);
+    window.scrollTo({ top: 0 });
+  };
+
   return (
     <Ctx.Provider value={{ unitId, solved, pass }}>
       <div className="fh-lesson" style={{ background: T.bg, minHeight: "100vh", fontFamily: FONT, color: T.text, paddingBottom: 60 }}>
@@ -178,7 +198,7 @@ export default function LessonShell({ unitId, crumb, title, sections, quiz, next
               const on = i === active;
               const done = i < sections.length ? sectionSpecs(i).length > 0 && sectionDone(i) : !!quizResult;
               return (
-                <button key={i} disabled={isLocked(i)} title={isLocked(i) ? "Locked — finish the earlier stages first" : undefined} onClick={() => { setActive(i); window.scrollTo({ top: 0 }); }} style={{
+                <button key={i} disabled={isLocked(i)} title={isLocked(i) ? "Locked — finish the earlier stages first" : undefined} onClick={() => openTab(i)} style={{
                   flex: "0 0 auto", padding: "8px 14px", borderRadius: 999, border: `1.5px solid ${on ? T.navy : T.border}`,
                   background: on ? T.navy : T.card, color: on ? "#fff" : T.slate, fontSize: 13, fontWeight: on ? 700 : 500,
                   cursor: isLocked(i) ? "not-allowed" : "pointer", opacity: isLocked(i) ? 0.5 : 1, fontFamily: "inherit", whiteSpace: "nowrap",
@@ -209,6 +229,13 @@ export default function LessonShell({ unitId, crumb, title, sections, quiz, next
                   </span>
                 )}
               </div>
+              {curLeft > 0 && (
+                <div style={{ marginTop: 10, fontSize: 13, color: T.muted, maxWidth: "78ch", lineHeight: 1.6 }}>
+                  {lockAhead
+                    ? "🔒 In the Crucible, each stage opens only when the one before it is finished."
+                    : <>Already know this? If you're sure you want to skip, click the next section in the bar at the top. The unit gets its ✓ only when every program is written.</>}
+                </div>
+              )}
             </>
           )}
 

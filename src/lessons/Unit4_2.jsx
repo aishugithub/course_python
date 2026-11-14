@@ -389,7 +389,7 @@ export default function Unit4_2(props) {
         <P>Python works out a value's <strong>type</strong> from how you write it. The type decides what you can do with it. <code>type( )</code> tells you. Click each value:</P>,
         <TypeExplorer />,
         EX.types,
-        <P>In C you declare the type before using a variable. In Python the type belongs to the value:</P>,
+        <P><strong>If you know C:</strong> there you declare the type before using a variable. In Python the type belongs to the value (if C is new to you, read only the Python side):</P>,
         <PythonVsC />,
         EX.record,
         <KeyIdea>The four basic types: <code>int</code> (whole numbers), <code>float</code> (decimals), <code>str</code> (text, in quotes), <code>bool</code> (True / False). <code>"18"</code> in quotes is a str, not a number.</KeyIdea>,

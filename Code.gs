@@ -35,10 +35,13 @@ function handleRequest(params) {
   }
 }
 
+const USE_POST = { success: false, code: 'OLD_PAGE', message: 'This page is out of date. Please refresh it (Ctrl+F5) and try again.' };
+
 function routeAction(body) {
   switch (body.action) {
-    case 'login':        return handleLogin(body);
-    case 'register':     return handleRegister(body);
+    // Sign-in and sign-up arrive as a POST, so a password is never part of a web address.
+    case 'login':        return body.__post ? handleLogin(body) : USE_POST;
+    case 'register':     return body.__post ? handleRegister(body) : USE_POST;
     case 'saveProgress': return handleSaveProgress(body);
     case 'getProgress':  return handleGetProgress(body);
     case 'logEvent':     return handleLogEvent(body);
@@ -150,15 +153,55 @@ function handleFeedback(body) {
   return { success: true };
 }
 
+// ------------------------------------------------------------
+// Passwords (2026-11-14). The Password column no longer holds the
+// password itself but a salted hash: "sha256$<salt>$<hex>".
+//   - A cell that is still plain text (older rows, or a password the
+//     teacher types in by hand to reset one) keeps working: it is checked
+//     as-is and replaced by its hash at that student's next sign-in.
+//   - To RESET a password: type the new one into the student's Password
+//     cell. It turns into a hash the first time they sign in with it.
+// ------------------------------------------------------------
+const HASH_PREFIX = 'sha256$';
+const HASH_ROUNDS = 200;
+
+function hexOf(bytes) {
+  return bytes.map(function (b) { return ((b + 256) % 256).toString(16).padStart(2, '0'); }).join('');
+}
+
+function hashPassword(password, salt) {
+  let h = salt + ':' + password;
+  for (let i = 0; i < HASH_ROUNDS; i++) {
+    h = hexOf(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + h, Utilities.Charset.UTF_8));
+  }
+  return HASH_PREFIX + salt + '$' + h;
+}
+
+function newPasswordHash(password) {
+  return hashPassword(password, Utilities.getUuid().replace(/-/g, '').slice(0, 16));
+}
+
+function passwordMatches(stored, given) {
+  stored = String(stored);
+  if (stored.indexOf(HASH_PREFIX) !== 0) return stored.trim() === given;   // not hashed yet
+  const salt = stored.split('$')[1];
+  return hashPassword(given, salt) === stored;
+}
+
 function handleLogin(body) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Students');
   const data  = sheet.getDataRange().getValues();
+  const who   = String(body.rollNo || '').trim().toLowerCase();
+  const given = String(body.password || '').trim();
+  if (!who || !given) return { success: false, message: 'Invalid roll number or password.' };
   for (let i = 1; i < data.length; i++) {
     const [rollNo, password, name, batch, email] = data[i];
-    if (String(rollNo).trim() === String(body.rollNo).trim() &&
-        String(password).trim() === String(body.password).trim()) {
-      return { success: true, student: { rollNo: String(rollNo), name, batch, email, token: createSession(rollNo) } };
+    if (String(rollNo).trim().toLowerCase() !== who) continue;
+    if (!passwordMatches(password, given)) break;
+    if (String(password).indexOf(HASH_PREFIX) !== 0) {
+      sheet.getRange(i + 1, 2).setValue(newPasswordHash(given));   // upgrade a plain-text cell
     }
+    return { success: true, student: { rollNo: String(rollNo), name, batch, email, token: createSession(rollNo) } };
   }
   return { success: false, message: 'Invalid roll number or password.' };
 }
@@ -204,30 +247,62 @@ function handleRegister(body) {
   // Row shape matches handleLogin's [rollNo, password, name, batch, email]:
   // rollNo slot = the email (that's what they'll type in to sign back in),
   // batch slot marks this as a self-registered public account (not a batch year).
-  sheet.appendRow([email, password, name, 'Self-registered', email]);
+  sheet.appendRow([email, newPasswordHash(password), name, 'Self-registered', email]);
   return { success: true, student: { rollNo: email, name, batch: 'Self-registered', email, token: createSession(email) } };
 }
 
+// ------------------------------------------------------------
+// Progress (2026-11-14: now tied to the sign-in).
+// Whose progress is read or written comes from the session token, not
+// from a roll number typed into the request, so nobody can mark units
+// (or Crucibles, which earn the certificate) complete for someone else.
+// REQUIRE_SESSION = false brings back the old behaviour (roll number
+// trusted as sent) -- only for the few days when learners may still have
+// an old copy of the site open in a tab.
+// ------------------------------------------------------------
+const REQUIRE_SESSION = true;
+const SESSION_EXPIRED = { success: false, code: 'SESSION', message: 'Your sign-in has expired. Please sign in again.' };
+
+function progressOwner(body) {
+  const fromToken = sessionRollNo(body.token);
+  if (fromToken) return fromToken;
+  if (!REQUIRE_SESSION && body.rollNo) return String(body.rollNo);
+  return null;
+}
+
 function handleSaveProgress(body) {
+  const rollNo = progressOwner(body);
+  if (!rollNo) return SESSION_EXPIRED;
+  // One unit (unitId) or several at once (unitIds: a guest's progress being
+  // moved into a brand-new account).
+  let wanted = body.unitIds || [body.unitId];
+  if (typeof wanted === 'string') { try { wanted = JSON.parse(wanted); } catch (e) { wanted = [wanted]; } }
+  wanted = wanted.map(String).filter(function (u) { return u && u !== 'undefined' && u.length < 80; }).slice(0, 800);
+  if (!wanted.length) return { success: false, message: 'No unit given.' };
+
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Progress');
   const data  = sheet.getDataRange().getValues();
+  const have  = {};
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(body.rollNo) &&
-        String(data[i][1]) === String(body.courseId) &&
-        String(data[i][2]) === String(body.unitId)) {
-      return { success: true, message: 'Already recorded.' };
-    }
+    if (String(data[i][0]) === rollNo && String(data[i][1]) === String(body.courseId)) have[String(data[i][2])] = true;
   }
-  sheet.appendRow([body.rollNo, body.courseId, body.unitId, new Date().toISOString()]);
-  return { success: true };
+  const now = new Date().toISOString();
+  const rows = [];
+  wanted.forEach(function (u) { if (!have[u]) { have[u] = true; rows.push([rollNo, body.courseId, u, now]); } });
+  if (!rows.length) return { success: true, message: 'Already recorded.' };
+  if (rows.length === 1) sheet.appendRow(rows[0]);
+  else sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
+  return { success: true, added: rows.length };
 }
 
 function handleGetProgress(body) {
+  const rollNo = progressOwner(body);
+  if (!rollNo) return SESSION_EXPIRED;
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Progress');
   const data  = sheet.getDataRange().getValues();
   const units = [];
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(body.rollNo) &&
+    if (String(data[i][0]) === rollNo &&
         String(data[i][1]) === String(body.courseId)) {
       units.push(String(data[i][2]));
     }
@@ -293,15 +368,23 @@ function createSession(rollNo) {
 }
 
 // Returns the roll number a valid, unexpired token belongs to, or null.
+// A token that checks out is remembered for 6 hours (CacheService), so the
+// Sessions sheet is not re-read on every saved exercise.
 function sessionRollNo(token) {
   if (!token) return null;
+  token = String(token);
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('s:' + token);
+  if (hit) return hit;
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Sessions');
   if (!sheet) return null;
   const data = sheet.getDataRange().getValues();
   const oldest = Date.now() - SESSION_DAYS * 24 * 3600 * 1000;
   for (let i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][0]) === String(token)) {
-      return new Date(data[i][2]).getTime() >= oldest ? String(data[i][1]) : null;
+    if (String(data[i][0]) === token) {
+      if (new Date(data[i][2]).getTime() < oldest) return null;
+      cache.put('s:' + token, String(data[i][1]), 21600);
+      return String(data[i][1]);
     }
   }
   return null;

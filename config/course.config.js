@@ -46,8 +46,8 @@ const COURSE_CONFIG = {
   },
 
   hook: {
-    line1: "You don't read Foothold. You click it, break it, and fix it.",
-    line2: "Every lesson is something you do — open any module below and see for yourself.",
+    line1: "You don't read Foothold. You type it, run it, break it, and fix it.",
+    line2: "Every lesson ends with real Python you write yourself — open any module below and see.",
   },
 
   modules: [

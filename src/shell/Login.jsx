@@ -17,7 +17,7 @@ const C = {
 // navy panel tone, which reads far better on amber than white does.
 const ON_ACCENT = '#111A2E';
 
-export default function Login({ onLogin, onBack }) {
+export default function Login({ onLogin, onBack, notice }) {
   // 'signin' = existing account (SRFET roll number OR a previously
   // registered email). 'register' = brand-new public account.
   const [mode, setMode] = useState('signin');
@@ -32,6 +32,8 @@ export default function Login({ onLogin, onBack }) {
 
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
+  // On by default; a learner on a shared lab computer unticks it.
+  const [keep, setKeep] = useState(true);
 
   async function handleSignIn(e) {
     e.preventDefault();
@@ -39,7 +41,7 @@ export default function Login({ onLogin, onBack }) {
     setLoading(true); setError('');
     const result = await loginStudent(rollNo.trim(), password.trim());
     setLoading(false);
-    if (result.success) { onLogin(result.student); }
+    if (result.success) { onLogin(result.student, { keep }); }
     else { setError(result.message || 'Invalid credentials. Please try again.'); }
   }
 
@@ -53,7 +55,7 @@ export default function Login({ onLogin, onBack }) {
     setLoading(false);
     if (result.success) {
       logEvent('signup', { userId: result.student.rollNo }); // only on a real new account, not every sign-in
-      onLogin(result.student);
+      onLogin(result.student, { isNew: true, keep });
     }
     else { setError(result.message || 'Could not create your account. Please try again.'); }
   }
@@ -87,6 +89,12 @@ export default function Login({ onLogin, onBack }) {
           ))}
         </div>
 
+        {notice && !error && (
+          <div style={{ background: 'rgba(231,161,62,0.14)', border: `1px solid ${D.amber}`, borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: C.text, fontSize: 13, lineHeight: 1.5 }}>
+            {notice}
+          </div>
+        )}
+
         {mode === 'signin' ? (
           <form onSubmit={handleSignIn}>
             <div style={{ marginBottom: 16 }}>
@@ -100,6 +108,7 @@ export default function Login({ onLogin, onBack }) {
                 style={inputStyle} />
             </div>
             {error && <ErrorBox text={error} />}
+            <KeepBox keep={keep} setKeep={setKeep} />
             <SubmitButton loading={loading} label="Sign In →" loadingLabel="Signing in…" />
           </form>
         ) : (
@@ -125,6 +134,7 @@ export default function Login({ onLogin, onBack }) {
               <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Re-enter your password" style={inputStyle} />
             </div>
             {error && <ErrorBox text={error} />}
+            <KeepBox keep={keep} setKeep={setKeep} />
             <SubmitButton loading={loading} label="Create Account →" loadingLabel="Creating your account…" />
           </form>
         )}
@@ -148,6 +158,15 @@ const inputStyle = {
   width: '100%', padding: '10px 14px', borderRadius: 8, background: C.card, border: `1px solid ${C.border}`,
   color: C.text, fontSize: 15, outline: 'none', boxSizing: 'border-box',
 };
+
+function KeepBox({ keep, setKeep }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, margin: '0 0 16px', color: C.soft, fontSize: 13, lineHeight: 1.45, cursor: 'pointer' }}>
+      <input type="checkbox" checked={keep} onChange={e => setKeep(e.target.checked)} style={{ marginTop: 2, accentColor: D.amber }} />
+      <span>Keep me signed in on this device <span style={{ color: C.muted }}>(untick on a shared or lab computer)</span></span>
+    </label>
+  );
+}
 
 function ErrorBox({ text }) {
   return (

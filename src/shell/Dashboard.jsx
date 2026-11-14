@@ -44,7 +44,7 @@ function unitKind(mod, unit) {
       : { chip: 'EXPERIMENT ' + unit.unitId.replace('UnitLAB', ''), icon: '🧪', fire: false };
   }
   if (!unit.optional) return { chip: unit.unitId.replace('Unit', '').replace('_', '.'), icon: '▶️', fire: false };
-  if (/_C$/.test(unit.unitId)) return { chip: 'CRUCIBLE · OPTIONAL', icon: '🔥', fire: true };
+  if (/_C$/.test(unit.unitId)) return { chip: 'CRUCIBLE · FOR THE CERTIFICATE', icon: '🔥', fire: true };
   return { chip: unit.tag || 'EXTRA', icon: '⭐', fire: false };
 }
 
@@ -228,7 +228,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
           }}>
             <div style={{ fontSize: 26 }}>🎓</div>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Course Certificate <span style={{ color: D.inkMuted, fontWeight: 400, fontSize: 13 }}>· optional</span></div>
+              <div style={{ color: D.ink, fontWeight: 700, fontSize: 15 }}>Course Certificate</div>
               {isGuest ? (
                 <div style={{ color: D.inkSoft, fontSize: 13, marginTop: 2 }}>
                   Sign in to earn a verifiable certificate — it’s issued from your saved progress.
@@ -342,6 +342,20 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                 Open report
               </button>
             )}
+          </div>
+        )}
+
+        {/* Modules 1–3 are background (no code yet). Someone who wants to start
+            typing Python straight away gets a one-click jump to Unit 4.1. */}
+        {!doneSet.has('Unit4_1') && MODULES.some(m => m.moduleId === 'M4') && (
+          <div style={{ background: D.surface, border: `1px dashed ${D.amber}`, borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 220, color: D.inkSoft, fontSize: 13.5, lineHeight: 1.55 }}>
+              <strong style={{ color: D.ink }}>Want to write code right away?</strong> Modules 1–3 are the story behind
+              computers and languages. You can come back to them — your first line of Python is in Module 4.
+            </div>
+            <button onClick={() => selectUnit('Unit4_1', 'M4')} style={{ background: D.amber, color: '#111A2E', border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+              Start coding → Unit 4.1
+            </button>
           </div>
         )}
 

@@ -32,3 +32,14 @@ export function saveGuestProgress(courseId, unitId) {
     // guest progress is a nice-to-have, never worth crashing over.
   }
 }
+
+// Called once a guest's progress has been moved into a new account.
+export function clearGuestProgress(courseId) {
+  try {
+    const all = readAll();
+    delete all[courseId];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  } catch {
+    // nothing to clear if storage is unavailable
+  }
+}

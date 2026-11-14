@@ -65,6 +65,18 @@ const EX = {
     hints: ["for line in f: name, mark = line.strip().split(\",\"); marks[name] = int(mark)", "Then the best-so-far loop from Unit 7.3."],
     solution: 'marks = {}\nwith open("marks.txt") as f:\n    for line in f:\n        name, mark = line.strip().split(",")\n        marks[name] = int(mark)\ntop = ""\nbest = -1\nfor name, mark in marks.items():\n    if mark > best:\n        best = mark\n        top = name\nprint(f"Students: {len(marks)}")\nprint(f"Average: {sum(marks.values()) / len(marks):.2f}")\nprint(f"Topper: {top} ({best})")',
   },
+  csvmod: {
+    id: "csvmod", kind: "type", title: "Let the csv module split the line",
+    task: <><code>marks.csv</code> starts with a heading line <code>name,mark</code>, and one name is written as <code>"KUMAR, ARUN"</code>, with a comma inside the quotes. <code>split(",")</code> would cut that name in two. Python's <code>csv</code> module knows the rules of such files. <code>next(rows)</code> skips the heading line.</>,
+    show: 'import csv\n\ntotal = 0\nwith open("marks.csv", newline="") as f:\n    rows = csv.reader(f)\n    next(rows)\n    for name, mark in rows:\n        print(name, "->", mark)\n        total += int(mark)\nprint("Total:", total)',
+    tests: [
+      { setup: files({ "marks.csv": 'name,mark\nPRIYA,87\n"KUMAR, ARUN",62\nMEENA,91\n' }), expect: "PRIYA -> 87\nKUMAR, ARUN -> 62\nMEENA -> 91\nTotal: 240" },
+      { setup: files({ "marks.csv": 'name,mark\n"D, RAVI",10\nSITA,30\n' }), expect: "D, RAVI -> 10\nSITA -> 30\nTotal: 40", hidden: true },
+    ],
+    requires: [{ call: "reader", msg: "Read the rows with csv.reader(f)." }],
+    hints: ["Each row arrives as a list of text items: ['PRIYA', '87'].", "mark is still text; int(mark) before adding."],
+    solution: 'import csv\n\ntotal = 0\nwith open("marks.csv", newline="") as f:\n    rows = csv.reader(f)\n    next(rows)\n    for name, mark in rows:\n        print(name, "->", mark)\n        total += int(mark)\nprint("Total:", total)',
+  },
   missing: {
     id: "missing", kind: "fix", title: "The first run has no file",
     task: <>The very first time a program runs, its save file doesn't exist yet. Run it (the test deletes the file first) and read the coach. Catch <code>FileNotFoundError</code> and print <code>No saved data yet</code>; when the file exists, print its contents as before.</>,
@@ -111,7 +123,7 @@ export default function Unit9_3(props) {
         EX.roundtrip, EX.modes, EX.newline,
       ],
     },
-    { label: "Records", kicker: "ONE LINE PER RECORD", title: "Saving and reading records", blocks: [EX.append, EX.analyse, <KeyIdea>Write: <code>f"{"{name}"},{"{mark}"}\n"</code>. Read: <code>line.strip().split(",")</code>, then convert. The file only holds text.</KeyIdea>] },
+    { label: "Records", kicker: "ONE LINE PER RECORD", title: "Saving and reading records", blocks: [EX.append, EX.analyse, <P>Files of comma-separated values are so common they have a name, <strong>CSV</strong>, and spreadsheets save them. Splitting on commas yourself works until a value contains a comma. The standard library's <code>csv</code> module handles that for you:</P>, EX.csvmod, <KeyIdea>Write: <code>f"{"{name}"},{"{mark}"}\n"</code>. Read: <code>line.strip().split(",")</code>, then convert. The file only holds text.</KeyIdea>] },
     { label: "Missing Files", kicker: "THE FIRST RUN", title: "When the file isn't there yet", blocks: [EX.missing, <Note color={T.blue} icon="🗂️">Real CSV data can contain commas inside values. Python's <code>csv</code> module handles that — you'll meet it with Pandas in Module 12.</Note>] },
     { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: expense log", blocks: [EX.expenses] },
   ];

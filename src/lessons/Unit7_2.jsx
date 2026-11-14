@@ -160,6 +160,13 @@ const EX = {
     hints: ["backup = marks puts a second tag on the same list.", "backup = marks.copy()"],
     solution: 'marks = [70, 80, 90]\nbackup = marks.copy()\nmarks[0] = 0\nprint("Marks:", marks)\nprint("Backup:", backup)',
   },
+  same: {
+    id: "same", kind: "predict", title: "Equal, or the very same list?",
+    task: <><code>==</code> asks <em>"do these hold equal values?"</em>. <code>is</code> asks <em>"are these two names on the very same object?"</em>. Trace the program and type its four lines of output.</>,
+    code: 'a = [1, 2, 3]\nb = a\nc = a.copy()\nprint(a == c)\nprint(a is c)\nprint(a is b)\nc.append(4)\nprint(a == c)',
+    hints: ["c is a copy: equal contents, but a different list.", "b = a put a second name on the same list, so a is b.", "After c.append(4) the two lists no longer hold the same values."],
+    solution: "True\nFalse\nTrue\nFalse",
+  },
   grid: {
     id: "grid", kind: "write", title: "A list of lists",
     task: <>Each inner list is one student's marks in two subjects: <code>marks = [[70, 80], [65, 90], [88, 72]]</code>. <code>marks[1][0]</code> is student 2's first subject. Loop over the students and print <code>Student 1: 150</code>, <code>Student 2: 155</code>, <code>Student 3: 160</code>.</>,
@@ -226,6 +233,9 @@ export default function Unit7_2(props) {
         <AliasDemo />,
         EX.alias,
         EX.backup,
+        <P>Two lists can be <strong>equal</strong> without being <strong>the same list</strong>. Python has a separate question for each: <code>==</code> compares the values, <code>is</code> checks whether both names sit on one object.</P>,
+        EX.same,
+        <Note color={T.blue} icon="📌">In everyday code, compare values with <code>==</code>. Keep <code>is</code> for one job: checking for <code>None</code> (<code>if result is None:</code>).</Note>,
         <KeyIdea><code>x = 5</code> moves a tag. <code>a.append(4)</code> or <code>a[0] = 9</code> changes the list itself — every tag on that list sees it. Need an independent list? <code>a.copy()</code>.</KeyIdea>,
       ],
     },

@@ -9,7 +9,7 @@ import { T, CODE_FONT, tint } from "../kit/theme.js";
 function ShapeOfPython() {
   const [step, setStep] = useState(0);
   const stages = [
-    { title: "1 · C, as you know it", lines: [["#include <stdio.h>"], ["int main() ", "{p"], ["    int marks = 72", ";p"], ['    printf("Hello!\\n")', ";p"], ["    if (marks > 40) ", "{p"], ['        printf("Pass\\n")', ";p"], ["    ", "}p"], ["}p"]],
+    { title: "1 · The same program in C", lines: [["#include <stdio.h>"], ["int main() ", "{p"], ["    int marks = 72", ";p"], ['    printf("Hello!\\n")', ";p"], ["    if (marks > 40) ", "{p"], ['        printf("Pass\\n")', ";p"], ["    ", "}p"], ["}p"]],
       caption: "Look at the amber characters. ; says “this statement ended”. { } say “these lines belong together”. The C compiler needs them because, to C, newlines mean nothing." },
     { title: "2 · Python deletes every ;", lines: [["#include <stdio.h>d"], ["int main() ", "{p"], ["    int marks = 72", ";d"], ['    printf("Hello!\\n")', ";d"], ["    if (marks > 40) ", "{p"], ['        printf("Pass\\n")', ";d"], ["    ", "}p"], ["}p"]],
       caption: "In Python, pressing Enter ends the statement. One line = one instruction." },
@@ -141,7 +141,7 @@ const lines = (s) => s.replace(/\r/g, "").split("\n").map((l) => l.trimEnd()).fi
 const EX = {
   c2py: {
     id: "c2py", kind: "fix", title: "Translate C into Python",
-    task: <>This is a line of C. Turn it into Python so it prints <code>Hello!</code>. Run it first and read what Python says.</>,
+    task: <>This line is written in C, an older language (it's fine if you have never used it). Turn it into Python so it prints <code>Hello!</code>. Run it first and read what Python says.</>,
     starter: 'printf("Hello!\\n");',
     tests: [{ expect: "Hello!" }],
     forbids: [{ text: ";", msg: "Python lines don't end with ; — remove it." }, { text: "\\n", msg: "print already moves to a new line by itself; \\n isn't needed." }],
@@ -258,11 +258,11 @@ const QUIZ = [
 export default function Unit4_1(props) {
   const sections = [
     {
-      label: "No ; No { }", kicker: "FROM C TO PYTHON", title: "No semicolons. No braces.",
+      label: "No ; No { }", kicker: "THE SHAPE OF PYTHON", title: "No semicolons. No braces.",
       blocks: [
         <Note color={T.blue} icon="✍️"><strong>How every lesson works now:</strong> you'll write real Python in every section. It runs right here in your browser. Paste is switched off — type everything yourself. Errors are normal; the coach explains each one.</Note>,
         <div style={{ height: 14 }} />,
-        <P>In C, structure is made of punctuation. In Python, it's made of <strong>layout</strong>. Step through one program and watch the punctuation disappear.</P>,
+        <P><strong>If you know C</strong> (or Java), you are used to structure made of punctuation. In Python, it's made of <strong>layout</strong>. Step through one program and watch the punctuation disappear. <strong>Never seen C?</strong> No problem: just notice which characters Python does <em>not</em> need.</P>,
         <ShapeOfPython />,
         <KeyIdea>Python ends a statement with a <strong>new line</strong> (not <code>;</code>) and groups lines with <strong>indentation</strong> (not <code>{"{ }"}</code>). Indentation is grammar, not decoration.</KeyIdea>,
         EX.c2py,

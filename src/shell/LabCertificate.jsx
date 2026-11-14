@@ -65,7 +65,7 @@ export default function LabCertificate({ student, onBack }) {
     let alive = true;
     if (!student) { setPhase('guest'); return; }
     (async () => {
-      const serverUnits = await getProgress(student.rollNo, COURSE_CONFIG.courseId);
+      const serverUnits = await getProgress(student, COURSE_CONFIG.courseId);
       if (!alive) return;
       setStatus(labCertificateStatus(serverUnits));
       setPhase('ready');

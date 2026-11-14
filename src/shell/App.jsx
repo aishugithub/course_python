@@ -4,8 +4,9 @@ import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
 import Certificate from './Certificate.jsx';
 import LabCertificate from './LabCertificate.jsx';
-import { getProgress, saveProgress, submitFeedback } from './api.js';
-import { getGuestProgress, saveGuestProgress } from './guestProgress.js';
+import { fetchProgress, saveProgress, saveProgressMany, submitFeedback } from './api.js';
+import { getGuestProgress, saveGuestProgress, clearGuestProgress } from './guestProgress.js';
+import { loadSession, storeSession, clearSession, cachedProgress, cacheProgress, unsentUnits, addUnsent, clearUnsent } from './session.js';
 import { logEvent } from './analytics.js';
 import { certificateStatus } from './completion.js';
 import { labCertificateStatus } from './labCompletion.js';
@@ -40,6 +41,24 @@ function LoadingScreen({ message = 'Loading…' }) {
 
 const LESSONS = import.meta.glob('../lessons/*.jsx');
 
+// ── Web addresses (2026-11-14) ──
+// The part after # says where the learner is, so a lesson can be linked to,
+// refreshed, and left with the browser's Back button:
+//   …/course_python/                  landing page
+//   …/course_python/#/dashboard       the dashboard
+//   …/course_python/#/unit/Unit6_1    one lesson
+// (# addresses need no server support, so they work on GitHub Pages.)
+function readAddress() {
+  const m = window.location.hash.match(/^#\/unit\/([A-Za-z0-9_.]+)$/);
+  if (m) return { unit: m[1] };
+  return { dashboard: window.location.hash === '#/dashboard' };
+}
+function goTo(hash) {
+  if (window.location.hash !== hash) window.location.hash = hash;
+}
+const UNIT_TITLES = Object.fromEntries(COURSE_CONFIG.modules.flatMap(m => m.units.map(u => [u.unitId, u.title])));
+const SITE_TITLE = 'Foothold — Learn Python';
+
 // view walks: 'landing' -> 'dashboard' (guest or signed-in) -> 'lesson'.
 // 'login' is reachable from either 'landing' or 'dashboard' (guest wanting
 // to save progress), and always returns to 'dashboard' one way or another.
@@ -58,6 +77,83 @@ export default function App() {
   // Where to go after signing in: the dashboard, or back to the report when
   // its sign-in expired mid-way.
   const afterLogin = useRef('dashboard');
+  const studentRef = useRef(null);      // same, for who is signed in
+  const activeUnitRef = useRef(null);   // the address listener needs the current value
+  const [notice, setNotice] = useState('');   // one-line message shown on the sign-in page
+
+  // Units the server did not take (no network, expired sign-in) are kept on
+  // this device and sent again here, the next time the server answers.
+  async function sendUnsent(who) {
+    const waiting = unsentUnits(who.rollNo);
+    if (!waiting.length) return;
+    const r = await saveProgressMany(who, COURSE_CONFIG.courseId, waiting);
+    if (r && r.success) clearUnsent(who.rollNo);
+  }
+
+  function saveToServer(unitId) {
+    return saveProgress(student, COURSE_CONFIG.courseId, unitId).then((r) => {
+      if (r && r.success) return r;
+      addUnsent(student.rollNo, unitId);
+      if (r && r.code === 'SESSION') expireSession();
+      return r;
+    });
+  }
+
+  // The 30-day sign-in ran out: keep what they did on this device, ask them to sign in again.
+  function expireSession() {
+    clearSession();
+    setStudent(null);
+    setActiveUnit(null); setLessonComponent(null); activeUnitRef.current = null;
+    setNotice('Your sign-in has expired. Please sign in again — nothing you did is lost.');
+    goTo('#/dashboard');
+    setView('login');
+  }
+
+  // On first load: bring back a remembered sign-in, then open whatever the
+  // address points at (a shared lesson link opens straight into the lesson).
+  useEffect(() => {
+    const where = readAddress();
+    const saved = loadSession();
+    if (saved) {
+      setStudent(saved);
+      setCompletedUnits([...new Set([...cachedProgress(saved.rollNo), ...unsentUnits(saved.rollNo)])]);
+      setView('dashboard');
+      fetchProgress(saved, COURSE_CONFIG.courseId).then((r) => {
+        if (r.expired) { clearSession(); setStudent(null); setNotice('Your sign-in has expired. Please sign in again — nothing you did is lost.'); setView('login'); return; }
+        if (!r.ok) return;   // server unreachable: keep showing the copy from this device
+        setCompletedUnits(prev => [...new Set([...r.units, ...prev.filter(u => unsentUnits(saved.rollNo).includes(u))])]);
+        sendUnsent(saved);
+      });
+    } else if (where.unit || where.dashboard) {
+      setCompletedUnits(getGuestProgress(COURSE_CONFIG.courseId));
+      setView('dashboard');
+    }
+    if (where.unit) handleSelectUnit(where.unit);
+    const onAddress = () => {
+      const now = readAddress();
+      if (now.unit) {
+        if (now.unit !== activeUnitRef.current) {
+          setView(v => (v === 'landing' ? 'dashboard' : v));
+          handleSelectUnit(now.unit);
+        }
+      } else if (activeUnitRef.current) {
+        activeUnitRef.current = null;
+        setActiveUnit(null); setLessonComponent(null); setLessonError(null);
+      }
+    };
+    window.addEventListener('hashchange', onAddress);
+    return () => window.removeEventListener('hashchange', onAddress);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep a copy of a signed-in learner's progress on this device.
+  useEffect(() => { if (student) cacheProgress(student.rollNo, completedUnits); }, [student, completedUnits]);
+
+  // The browser tab names the lesson that is open.
+  useEffect(() => {
+    document.title = activeUnit && UNIT_TITLES[activeUnit] ? `${UNIT_TITLES[activeUnit]} — Foothold Python` : SITE_TITLE;
+  }, [activeUnit]);
+
+  studentRef.current = student;
 
   // One 'session_start' event per app load -- fires the moment
   // anyone lands here, guest or not, before they've made any choice.
@@ -70,15 +166,18 @@ export default function App() {
     setStudent(null);
     setCompletedUnits(getGuestProgress(COURSE_CONFIG.courseId));
     setView('dashboard');
+    goTo('#/dashboard');
   }
 
-  function handleGoToLogin() { setView('login'); }
+  function handleGoToLogin() { setNotice(''); setView('login'); }
 
   // Signing off just clears who's logged in and sends them back to the
   // Landing screen -- it doesn't touch anything already saved in Sheets,
   // and if they were exploring as a guest before, that local progress is
   // untouched too (it lives under a different key in localStorage).
   function handleSignOff() {
+    clearSession();
+    goTo('');
     setStudent(null);
     setCompletedUnits([]);
     setView('landing');
@@ -86,12 +185,32 @@ export default function App() {
 
   // Called by Login.jsx after either a successful sign-in OR a successful
   // registration -- both return the same { rollNo, name, batch, email } shape.
-  async function handleLoginSuccess(studentData) {
+  // `isNew` (a brand-new account): whatever this learner did as a guest on this
+  // device moves into the account, in one request, and the guest copy is cleared
+  // so the next person on a shared computer does not inherit it. Signing in to
+  // an EXISTING account never pulls guest progress in, for the same reason.
+  // `keep`: remember the sign-in after the browser closes.
+  async function handleLoginSuccess(studentData, { isNew = false, keep = true } = {}) {
+    storeSession(studentData, keep);
+    setNotice('');
     setStudent(studentData);
-    const completed = await getProgress(studentData.rollNo, COURSE_CONFIG.courseId);
+    const r = await fetchProgress(studentData, COURSE_CONFIG.courseId);
+    let completed = r.ok ? r.units : cachedProgress(studentData.rollNo);
+    if (isNew) {
+      const guest = getGuestProgress(COURSE_CONFIG.courseId).filter(u => !completed.includes(u));
+      if (guest.length) {
+        const saved = await saveProgressMany(studentData, COURSE_CONFIG.courseId, guest);
+        if (saved && saved.success) clearGuestProgress(COURSE_CONFIG.courseId);
+        else guest.forEach(u => addUnsent(studentData.rollNo, u));
+        completed = [...completed, ...guest];
+      }
+    }
+    completed = [...new Set([...completed, ...unsentUnits(studentData.rollNo)])];
     setCompletedUnits(completed);
+    sendUnsent(studentData);
     setView(afterLogin.current);
     afterLogin.current = 'dashboard';
+    if (!readAddress().unit) goTo('#/dashboard');
   }
 
   // sessionStorage key that guards the "reload once on a stale chunk" logic
@@ -99,11 +218,15 @@ export default function App() {
   const CHUNK_RELOAD_KEY = 'foothold_chunk_reload';
 
   async function handleSelectUnit(unitId) {
+    const path = `../lessons/${unitId}.jsx`;
+    // A link to a lesson that does not exist (mistyped or removed): show the dashboard.
+    if (!LESSONS[path]) { goTo('#/dashboard'); return; }
     setLoadingLesson(true);
     setLessonError(null);
     setActiveUnit(unitId);
+    activeUnitRef.current = unitId;
+    goTo(`#/unit/${unitId}`);
     try {
-      const path = `../lessons/${unitId}.jsx`;
       const loader = LESSONS[path];
       if (!loader) throw new Error('No lesson file found: ' + unitId);
       const mod = await loader();
@@ -114,7 +237,7 @@ export default function App() {
       // Opened cleanly, so clear any earlier "we already reloaded" marker: a
       // future stale-chunk failure is then allowed to self-heal with a reload.
       try { sessionStorage.removeItem(CHUNK_RELOAD_KEY); } catch { /* ignore */ }
-      logEvent('lesson_open', { unitId, userId: student?.rollNo || '' });
+      logEvent('lesson_open', { unitId, userId: studentRef.current?.rollNo || '' });
     } catch (err) {
       console.error('Could not load lesson:', unitId, err);
 
@@ -142,6 +265,7 @@ export default function App() {
       // fails: surface a real message + a retry, never a silent bounce.
       setLessonComponent(null);
       setActiveUnit(null);
+      activeUnitRef.current = null;
       setLessonError({
         reason: isChunkError
           ? 'This lesson couldn’t be loaded. Your browser may be caching an old version — please refresh with Ctrl+F5 (Cmd+Shift+R on Mac) and try again.'
@@ -167,7 +291,7 @@ export default function App() {
       // backend), so show a brief "saving" state rather than freezing
       // with no feedback.
       setSavingProgress(true);
-      await saveProgress(student.rollNo, COURSE_CONFIG.courseId, activeUnit);
+      await saveToServer(activeUnit);
       setSavingProgress(false);
     } else {
       // Guest: instant, local, no network round-trip.
@@ -181,6 +305,8 @@ export default function App() {
     const after = [...new Set([...completedUnits, activeUnit])];
     setCompletedUnits(after);
     setActiveUnit(null); setLessonComponent(null);
+    activeUnitRef.current = null;
+    goTo('#/dashboard');
     // e-Lab Record: when this submission completes the last requirement (all ten
     // experiments + all five mini-project crucibles + the feedback) — or the final
     // crucible is submitted with everything done — go straight to the e-Lab certificate.
@@ -204,7 +330,7 @@ export default function App() {
   // one today, so this is a no-op until a Crucible unit opts in.
   function handleStageComplete(stageId, payload) {
     if (student) {
-      saveProgress(student.rollNo, COURSE_CONFIG.courseId, stageId);
+      saveToServer(stageId);
     } else {
       saveGuestProgress(COURSE_CONFIG.courseId, stageId);
     }
@@ -235,14 +361,19 @@ export default function App() {
   // The LAB certificate is its own view too, opened from the Dashboard's separate
   // lab-certificate banner. LabCertificate re-verifies the lab track against the Sheet.
   // Also reachable from inside the final mini-project crucible, so close any open lesson first.
-  function handleOpenLabCertificate() { setActiveUnit(null); setLessonComponent(null); setView('labCertificate'); }
+  function handleOpenLabCertificate() { closeLesson(); setView('labCertificate'); }
 
   // The mini-project report (MED23CL202) is its own view, opened from the
   // Dashboard's report card. It saves to Drive through Code.gs with the
   // session token from sign-in, so it is for signed-in students only.
-  function handleOpenReport() { setActiveUnit(null); setLessonComponent(null); setView('report'); }
+  function handleOpenReport() { closeLesson(); setView('report'); }
 
-  function handleBackToDashboard() { setActiveUnit(null); setLessonComponent(null); setLessonError(null); }
+  function closeLesson() {
+    activeUnitRef.current = null;
+    setActiveUnit(null); setLessonComponent(null); setLessonError(null);
+    goTo('#/dashboard');
+  }
+  function handleBackToDashboard() { closeLesson(); }
 
   // A visible failure screen for when a lesson can't be opened. This replaces
   // the old silent "just show the dashboard again" behaviour that looked like a
@@ -275,7 +406,7 @@ export default function App() {
   }
 
   if (view === 'login') {
-    return <Login onLogin={handleLoginSuccess} onBack={handleExploreGuest} />;
+    return <Login onLogin={handleLoginSuccess} onBack={handleExploreGuest} notice={notice} />;
   }
 
   if (view === 'certificate') {
@@ -352,7 +483,7 @@ export default function App() {
     <Dashboard
       student={student}
       completedUnits={completedUnits}
-      onSelectUnit={handleSelectUnit}
+      onSelectUnit={(unitId) => goTo(`#/unit/${unitId}`)}
       onRequestLogin={handleGoToLogin}
       onSignOff={handleSignOff}
       certStatus={certificateStatus(completedUnits)}

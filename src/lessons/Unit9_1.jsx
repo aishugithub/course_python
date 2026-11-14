@@ -45,6 +45,14 @@ const EX = {
     hints: ["The last index is len(marks) - 1 — or simply -1."],
     solution: 'marks = [72, 85, 64]\nprint("Last:", marks[-1])',
   },
+  silent: {
+    id: "silent", kind: "fix", title: "No error, wrong answer",
+    task: <>This program runs without any error, yet for <code>70 80 90</code> it prints <code>Total: 90</code>. Don't guess. Add <code>print(m, total)</code> as the last line inside the loop, run it, and watch the two values change. Fix the bug, then delete your extra print.</>,
+    starter: 'line = input("Marks: ")\ntotal = 0\nfor m in line.split():\n    total = int(m)\nprint("Total:", total)',
+    tests: [{ inputs: ["70 80 90"], expect: "Marks: 70 80 90\nTotal: 240" }, { inputs: ["5 5"], expect: "Marks: 5 5\nTotal: 10", hidden: true }],
+    hints: ["Your debug print shows total is replaced each time round, never added to.", "total = int(m) throws the old total away. Which operator keeps it?"],
+    solution: 'line = input("Marks: ")\ntotal = 0\nfor m in line.split():\n    total += int(m)\nprint("Total:", total)',
+  },
   first: {
     id: "first", kind: "type", title: "try / except",
     task: <>Some errors can't be checked in advance with an if — you only find out when <code>int()</code> tries. Put the risky line inside <code>try:</code>; if a <code>ValueError</code> happens, Python jumps to <code>except ValueError:</code> instead of crashing.</>,
@@ -115,6 +123,15 @@ export default function Unit9_1(props) {
     {
       label: "Tracebacks", kicker: "READ IT BOTTOM-UP", title: "An error message is a bug report",
       blocks: [<P>That red wall of text is Python telling you exactly what went wrong and where. The coach has been translating it for you; now learn to read it yourself:</P>, <Traceback />, EX.zoo1, EX.zoo2],
+    },
+    {
+      label: "Silent Bugs", kicker: "A METHOD, NOT A GUESS", title: "When there is no error message",
+      blocks: [
+        <P>The hardest bugs don't crash: the program runs and quietly prints the wrong answer. There is no traceback to read, so you make the program show you what it is doing:</P>,
+        <P><strong>1.</strong> Use the smallest input that still goes wrong. <strong>2.</strong> Work out by hand what the answer should be. <strong>3.</strong> Put a <code>print( )</code> just before the line you suspect, showing the variables it uses. <strong>4.</strong> Run it and find the first line of output that differs from what you expected: the bug is just above it. <strong>5.</strong> Change one thing, run again, then remove your extra prints.</P>,
+        EX.silent,
+        <KeyIdea>A traceback tells you where a program stopped. A debug <code>print</code> tells you what it was thinking. Never change code at random: look first, then fix.</KeyIdea>,
+      ],
     },
     {
       label: "try / except", kicker: "SURVIVE BAD INPUT", title: "Catching an exception",

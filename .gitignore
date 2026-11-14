@@ -5,3 +5,8 @@ dist/
 
 # Report-building videos: too large for GitHub (they are shared from Google Drive)
 MED PYTHON LAB/Videos explaining the projecct report building/
+
+# Student data: never publish (kept on this computer only)
+course_python - Events.csv
+MED PYTHON LAB/3. Med Students List.xlsx
+MED PYTHON LAB/report_unconfirmed_tags_*.csv

@@ -138,8 +138,9 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
           <p style={{ color: D.inkSoft, fontSize: 15.5, lineHeight: 1.7, margin: 0 }}>
             Foothold is for anyone starting Python from the very beginning — students,
             career-switchers, curious minds, wherever you are. {totalUnits}+ interactive
-            lessons, each built around a single idea you can click, drag, or step through
-            rather than just read.
+            lessons, each built around a single idea: first you watch it work, then you
+            type it, run it and fix it yourself — real Python, in your browser, checked
+            the moment you press Run.
           </p>
         </Card>
       </div>
@@ -173,9 +174,10 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
             research in education — a study of whether active learning through interactive
             content helps beginners learn programming better than reading or watching
             alone. That's why every single lesson here is something
-            you <em>do</em>, not something you sit through. Your anonymous progress through
-            the lessons quietly contributes to this research and helps make the course better
-            for the next learner.
+            you <em>do</em>, not something you sit through. How learners move through the
+            lessons (which ones are opened, finished or skipped) is recorded and studied to
+            make the course better for the next learner; results are only ever reported
+            for groups, never for a named person.
           </p>
         </Card>
       </div>
@@ -185,13 +187,15 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
         <Card>
           <Kicker>Learn your way</Kicker>
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: D.ink }}>
-            Every module is open. No locks, no gates.
+            Every module is open. Go at your own pace.
           </h2>
           <p style={{ color: D.inkSoft, fontSize: 15.5, lineHeight: 1.7, margin: 0 }}>
             Once you're in the Dashboard, click whichever module interests you, in any order.
             That said, since each unit builds on the ones before it, we{' '}
             <strong style={{ color: D.ink }}>recommend going step by step</strong> the first
-            time through — it makes for the smoothest climb.
+            time through — it makes for the smoothest climb. Already know a topic? Skip ahead
+            inside any lesson. Only the Crucibles — the ten challenges that earn your
+            certificate — open one stage at a time.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
             <button onClick={onExploreGuest} style={{ ...primaryBtn, padding: '12px 24px', fontSize: 15 }}>

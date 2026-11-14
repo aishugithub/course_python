@@ -41,7 +41,7 @@ function BlockShape() {
   return (
     <div className="fh-two">
       <div>
-        <div style={{ color: T.orange, fontWeight: 700, marginBottom: 6 }}>⚙️ C — braces mark the block</div>
+        <div style={{ color: T.orange, fontWeight: 700, marginBottom: 6 }}>⚙️ If you know C — braces mark the block</div>
         <pre style={codeBox}>{'if (temp >= 100.4) {\n    printf("Fever\\n");\n}\nprintf("Thank you\\n");'}</pre>
       </div>
       <div>
@@ -127,6 +127,15 @@ const EX = {
     hints: ["else: on its own line, at the same indent as the if."],
     solution: 'marks = int(input("Marks: "))\nif marks >= 40:\n    print("Pass")\nelse:\n    print("Fail")',
   },
+  later: {
+    id: "later", kind: "fix", title: "A branch with nothing in it (yet)",
+    task: <>The plan: students with 40 or more get a prize, but nobody has decided the prize yet, so that branch should do <strong>nothing</strong> for now. Run it: Python refuses a block that holds only a comment. Put <code>pass</code> in the empty branch. For 72 the program should print just <code>Checked</code>.</>,
+    starter: 'marks = int(input("Marks: "))\nif marks >= 40:\n    # decide the prize later\nelse:\n    print("Needs support")\nprint("Checked")',
+    tests: [{ inputs: ["72"], expect: "Marks: 72\nChecked" }, { inputs: ["25"], expect: "Marks: 25\nNeeds support\nChecked", hidden: true }],
+    requires: [{ node: "Pass", msg: "Use pass as the one line inside the empty branch." }],
+    hints: ["A comment is not a statement: every block needs at least one real line.", "Under the comment, at the same indent, write: pass"],
+    solution: 'marks = int(input("Marks: "))\nif marks >= 40:\n    # decide the prize later\n    pass\nelse:\n    print("Needs support")\nprint("Checked")',
+  },
   grade: {
     id: "grade", kind: "write", title: "Grade calculator",
     task: <>Ask <code>Score: </code> and print the grade: <code>A</code> for 90 and above, <code>B</code> for 75 and above, <code>C</code> for 60 and above, otherwise <code>F</code>. Use if / elif / else.</>,
@@ -209,6 +218,8 @@ export default function Unit5_2(props) {
       blocks: [
         <P><code>else:</code> catches every case the if didn't. It never has a condition of its own, and it lines up with its if.</P>,
         EX.passfail,
+        <P>Sometimes a branch has nothing to do <em>yet</em>. A block can't be empty, so Python gives you a line that does nothing at all: <code>pass</code>. You'll see it as a placeholder while a program is still being built.</P>,
+        EX.later,
       ],
     },
     {

@@ -209,7 +209,7 @@ export default function Unit6_1(props) {
         <P><code>while condition:</code> works like <code>if</code>, with one difference: after the body runs, Python goes <strong>back up</strong> and checks again. Step through and watch <code>count</code> change in memory:</P>,
         <Trace />,
         <div className="fh-two" style={{ maxWidth: 820, marginTop: 14 }}>
-          <CodeBlock title="C" code={"int count = 1;\nwhile (count <= 3) {\n    printf(\"%d\\n\", count);\n    count++;\n}"} />
+          <CodeBlock title="If you know C" code={"int count = 1;\nwhile (count <= 3) {\n    printf(\"%d\\n\", count);\n    count++;\n}"} />
           <CodeBlock title="Python" code={"count = 1\nwhile count <= 3:\n    print(count)\n    count += 1"} />
         </div>,
         EX.countdown,
