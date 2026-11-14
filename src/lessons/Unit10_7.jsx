@@ -1,608 +1,149 @@
-// Unit 10.7 — Capstone: Marks Manager 3.0 (Student + Classroom objects)
-import { useState } from "react";
+// Unit 10.7 — Capstone: Marks Manager 3.0 (rebuilt, typing-first)
+// v1 Student class (validated mark, grade(), __str__) → v2 Classroom class
+// + menu, InvalidMarkError caught → v3 Classroom.save / load (files, M9)
+// → Make It: a report card with several subjects.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T } from "../kit/theme.js";
+
+const files = (map) => "import os\n" + Object.entries(map).map(([n, c]) => (c === null ? `if os.path.exists(${JSON.stringify(n)}): os.remove(${JSON.stringify(n)})` : `with open(${JSON.stringify(n)}, "w") as _f: _f.write(${JSON.stringify(c)})`)).join("\n");
+
+// ── Reference simulator ──
+const gradeOf = (m) => (m >= 90 ? "A" : m >= 75 ? "B" : m >= 60 ? "C" : m >= 40 ? "D" : "F");
+function report(pairs) {
+  if (!pairs.length) return ["No students yet"];
+  let total = 0, passed = 0, top = pairs[0][0], best = pairs[0][1]; const out = [];
+  for (const [n, m] of pairs) { out.push(`${n}: ${m} (${gradeOf(m)})`); total += m; if (m >= 40) passed++; if (m > best) { best = m; top = n; } }
+  out.push(`Average: ${(total / pairs.length).toFixed(2)}`, `Topper: ${top} (${best})`, `Passed: ${passed}/${pairs.length}`);
+  return out;
+}
+const sim1 = (names, marks) => {
+  const n = names.split(" "), m = marks.split(" ").map(Number);
+  return [`Names: ${names}`, `Marks: ${marks}`, ...report(n.map((x, i) => [x, m[i]]))].join("\n");
+};
+function simMenu(fileText, inputs, persist) {
+  const out = [], data = [];
+  if (persist) {
+    if (fileText) for (const l of fileText.split("\n")) { if (!l) continue; const [a, b] = l.split(","); data.push([a, Number(b)]); }
+    out.push(`Loaded ${data.length} students`);
+  }
+  const q = [...inputs]; const ask = (p) => { const v = q.shift(); out.push(p + v); return v; };
+  for (;;) {
+    out.push("1. Add  2. Report  3. Exit");
+    const c = ask("Choose: ");
+    if (c === "1") {
+      const name = ask("Name: ").trim().toUpperCase(); const mark = Number(ask("Mark: "));
+      if (mark < 0 || mark > 100) { out.push(`Rejected: ${mark} is not between 0 and 100`); continue; }
+      const at = data.findIndex(([k]) => k === name);
+      if (at >= 0) { data[at][1] = mark; out.push(`Updated ${name}`); } else { data.push([name, mark]); out.push(`Added ${name}`); }
+    } else if (c === "2") out.push(...report(data));
+    else if (c === "3") { if (persist) out.push(`Saved ${data.length} students`); out.push("Bye!"); break; }
+    else out.push("Invalid choice");
+  }
+  return { out: out.join("\n"), file: data.map(([n, m]) => `${n},${m}\n`).join("") };
+}
+
+// ── Code pieces ──
+const ERR = 'class InvalidMarkError(Exception):\n    pass';
+const STUDENT = 'class Student:\n    def __init__(self, name, mark):\n        self.name = name\n        self.set_mark(mark)\n\n    def set_mark(self, mark):\n        if not 0 <= mark <= 100:\n            raise InvalidMarkError(f"{mark} is not between 0 and 100")\n        self.mark = mark\n\n    def grade(self):\n        if self.mark >= 90:\n            return "A"\n        elif self.mark >= 75:\n            return "B"\n        elif self.mark >= 60:\n            return "C"\n        elif self.mark >= 40:\n            return "D"\n        return "F"\n\n    def __str__(self):\n        return f"{self.name}: {self.mark} ({self.grade()})"';
+const STATS = (list) => `    total = 0\n    passed = 0\n    top = ${list}[0]\n    for s in ${list}:\n        print(s)\n        total += s.mark\n        if s.mark >= 40:\n            passed += 1\n        if s.mark > top.mark:\n            top = s\n    print(f"Average: {total / len(${list}):.2f}")\n    print(f"Topper: {top.name} ({top.mark})")\n    print(f"Passed: {passed}/{len(${list})}")`;
+const V1 = `${ERR}\n\n${STUDENT}\n\nnames = input("Names: ").split()\nmarks = input("Marks: ").split()\nstudents = []\nfor n, m in zip(names, marks):\n    students.append(Student(n, int(m)))\nif students:\n${STATS("students")}`;
+const CLASSROOM = (persist) => `class Classroom:\n    def __init__(self):\n        self.students = {}\n\n    def add(self, name, mark):\n        if name in self.students:\n            self.students[name].set_mark(mark)\n            return f"Updated {name}"\n        self.students[name] = Student(name, mark)\n        return f"Added {name}"\n\n    def report(self):\n        if not self.students:\n            print("No students yet")\n            return\n        roster = list(self.students.values())\n    ${STATS("roster").split("\n").join("\n    ")}` + (persist ? `\n\n    def save(self, filename):\n        with open(filename, "w") as f:\n            for s in self.students.values():\n                f.write(f"{s.name},{s.mark}\\n")\n\n    def load(self, filename):\n        try:\n            with open(filename) as f:\n                for line in f:\n                    name, mark = line.strip().split(",")\n                    self.add(name, int(mark))\n        except FileNotFoundError:\n            pass` : "");
+const MENU = (persist) => `\n\nroom = Classroom()\n${persist ? 'room.load("marks.txt")\nprint(f"Loaded {len(room.students)} students")\n' : ""}while True:\n    print("1. Add  2. Report  3. Exit")\n    choice = input("Choose: ")\n    if choice == "1":\n        name = input("Name: ").strip().upper()\n        mark = int(input("Mark: "))\n        try:\n            print(room.add(name, mark))\n        except InvalidMarkError as e:\n            print(f"Rejected: {e}")\n    elif choice == "2":\n        room.report()\n    elif choice == "3":\n${persist ? '        room.save("marks.txt")\n        print(f"Saved {len(room.students)} students")\n' : ""}        print("Bye!")\n        break\n    else:\n        print("Invalid choice")`;
+const V2 = `${ERR}\n\n${STUDENT}\n\n${CLASSROOM(false)}${MENU(false)}`;
+const V3 = `${ERR}\n\n${STUDENT}\n\n${CLASSROOM(true)}${MENU(true)}`;
+
+const S2a = ["2", "1", "priya", "87", "1", "arun", "150", "1", "arun", "35", "1", "PRIYA", "91", "2", "3"];
+const S2b = ["1", "meena", "40", "2", "3"];
+const S3a = ["1", "meena", "91", "2", "3"];
+const mk3 = (fileText, inputs, hidden) => {
+  const s = simMenu(fileText, inputs, true);
+  return { setup: files({ "marks.txt": fileText }), inputs, expect: s.out, hidden,
+    post: `with open("marks.txt") as _f:\n    _g = _f.read()\nassert _g == ${JSON.stringify(s.file)}, "marks.txt should hold NAME,MARK per student: " + repr(_g)` };
+};
+const card = (name, line) => {
+  const pairs = line.split(" ").map((p) => p.split(":")).map(([s, m]) => [s, Number(m)]);
+  const avg = pairs.reduce((a, [, m]) => a + m, 0) / pairs.length;
+  let best = pairs[0], worst = pairs[0];
+  for (const p of pairs) { if (p[1] > best[1]) best = p; if (p[1] < worst[1]) worst = p; }
+  return [`Name: ${name}`, `Subjects: ${line}`, `${name} - average ${avg.toFixed(1)} (${gradeOf(avg)})`, `Best: ${best[0]} (${best[1]})`, `Weakest: ${worst[0]} (${worst[1]})`].join("\n");
 };
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-const insight = (color, children) => (
-  <div style={{ marginTop: 16, background: color + "18", border: `1px solid ${color}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-    🔑 {children}
-  </div>
-);
-const gradeOf = (m) => (m >= 90 ? "A" : m >= 75 ? "B" : m >= 50 ? "C" : "F");
+const EX = {
+  v1: {
+    id: "v1", kind: "write", title: "Version 1 — a Student class",
+    task: <>Write <code>InvalidMarkError</code> and a <code>Student(name, mark)</code> class: <code>set_mark</code> validates 0–100 (also used by <code>__init__</code>), <code>grade()</code> returns A–F (pass mark 40), and <code>__str__</code> returns <code>PRIYA: 87 (B)</code>. Read <code>Names: </code> and <code>Marks: </code>, build a list of Students, print each, then <code>Average: 69.50</code>, <code>Topper: MEENA (91)</code>, <code>Passed: 3/4</code>.</>,
+    minLines: 40,
+    tests: [
+      { inputs: ["PRIYA ARUN MEENA RAVI", "87 62 91 38"], expect: sim1("PRIYA ARUN MEENA RAVI", "87 62 91 38") },
+      { inputs: ["A B", "40 39"], expect: sim1("A B", "40 39"), hidden: true },
+    ],
+    post: "assert str(Student('Z', 75)) == 'Z: 75 (B)'\ntry:\n    Student('Q', 101)\n    raise AssertionError('Student(..., 101) should raise InvalidMarkError')\nexcept InvalidMarkError:\n    pass",
+    requires: [{ node: "ClassDef", min: 2 }],
+    hints: ["Reuse your 10.3 set_mark and 10.6 InvalidMarkError.", "The topper is now a Student object: top = students[0]; if s.mark > top.mark: top = s"],
+    solution: V1,
+  },
+  v2: {
+    id: "v2", kind: "modify", title: "Version 2 — a Classroom class",
+    task: <>The loose list becomes a <code>Classroom</code> class holding a dict of name → Student, with <code>add(name, mark)</code> (returns <code>Added PRIYA</code> or <code>Updated PRIYA</code> — updating uses <code>set_mark</code>, so it's validated too) and <code>report()</code> (prints the report, or <code>No students yet</code>). Replace the input lines with the familiar menu (<code>1. Add  2. Report  3. Exit</code>); an out-of-range mark prints <code>Rejected: 150 is not between 0 and 100</code>.</>,
+    starter: V1,
+    minLines: 64,
+    tests: [{ inputs: S2a, expect: simMenu(null, S2a, false).out }, { inputs: S2b, expect: simMenu(null, S2b, false).out, hidden: true }],
+    post: "_r = Classroom()\nassert _r.add('X', 50) == 'Added X' and _r.add('X', 60) == 'Updated X' and _r.students['X'].mark == 60",
+    requires: [{ node: "ClassDef", min: 3 }, { node: "While" }],
+    hints: ["self.students = {} in Classroom.__init__.", "report(): roster = list(self.students.values()), then the Version 1 report loop over roster.", "Menu: try: print(room.add(name, mark)) except InvalidMarkError as e: print(f\"Rejected: {e}\")"],
+    solution: V2,
+  },
+  v3: {
+    id: "v3", kind: "modify", title: "Version 3 — the classroom remembers",
+    task: <>Give <code>Classroom</code> two more methods: <code>save(filename)</code> (one <code>NAME,MARK</code> line per student) and <code>load(filename)</code> (reads the lines back through <code>self.add</code>; a missing file means an empty class). Load <code>marks.txt</code> at start and print <code>Loaded 2 students</code>; on Exit save, print <code>Saved 3 students</code> and <code>Bye!</code>. The tests check the saved file.</>,
+    starter: V2,
+    minLines: 80,
+    tests: [mk3("PRIYA,87\nARUN,62\n", S3a, false), mk3(null, ["1", "ravi", "64", "3"], true)],
+    requires: [{ node: "With", min: 2 }, { node: "Try", min: 2 }],
+    hints: ["load reuses add — so loaded marks are validated too.", "FileNotFoundError → pass (Unit 9.3)."],
+    solution: V3,
+  },
+  card: {
+    id: "card", kind: "make", title: "Report card",
+    task: <>Write <code>ReportCard(name)</code> holding a dict of subject → mark, with <code>add(subject, mark)</code>, <code>average()</code>, <code>best()</code> and <code>weakest()</code> (each returns a <code>(subject, mark)</code> tuple; first wins ties). Ask <code>Name: </code> and <code>Subjects: </code> (like <code>maths:91 physics:78 chemistry:66</code>). Print <code>Priya - average 78.3 (B)</code> (grade by average, using the A–F rule), <code>Best: maths (91)</code> and <code>Weakest: chemistry (66)</code>.</>,
+    minLines: 28,
+    tests: [
+      { inputs: ["Priya", "maths:91 physics:78 chemistry:66"], expect: card("Priya", "maths:91 physics:78 chemistry:66") },
+      { inputs: ["Arun", "tamil:40 english:40"], expect: card("Arun", "tamil:40 english:40"), hidden: true },
+    ],
+    post: "_c = ReportCard('Z')\n_c.add('a', 10)\n_c.add('b', 30)\nassert _c.average() == 20 and _c.best() == ('b', 30) and _c.weakest() == ('a', 10)",
+    requires: [{ node: "ClassDef" }, { node: "FunctionDef", min: 5 }],
+    hints: ['for part in line.split(): subject, mark = part.split(":"); card.add(subject, int(mark))', "best(): best-so-far over self.marks.items(), returning the (subject, mark) tuple.", "A grade function (or method) for the average — reuse your A–F rule."],
+    solution: 'def grade(mark):\n    if mark >= 90:\n        return "A"\n    elif mark >= 75:\n        return "B"\n    elif mark >= 60:\n        return "C"\n    elif mark >= 40:\n        return "D"\n    return "F"\n\nclass ReportCard:\n    def __init__(self, name):\n        self.name = name\n        self.marks = {}\n\n    def add(self, subject, mark):\n        self.marks[subject] = mark\n\n    def average(self):\n        return sum(self.marks.values()) / len(self.marks)\n\n    def best(self):\n        top = None\n        for subject, mark in self.marks.items():\n            if top is None or mark > top[1]:\n                top = (subject, mark)\n        return top\n\n    def weakest(self):\n        low = None\n        for subject, mark in self.marks.items():\n            if low is None or mark < low[1]:\n                low = (subject, mark)\n        return low\n\ncard = ReportCard(input("Name: "))\nfor part in input("Subjects: ").split():\n    subject, mark = part.split(":")\n    card.add(subject, int(mark))\navg = card.average()\nprint(f"{card.name} - average {avg:.1f} ({grade(avg)})")\nb_subject, b_mark = card.best()\nw_subject, w_mark = card.weakest()\nprint(f"Best: {b_subject} ({b_mark})")\nprint(f"Weakest: {w_subject} ({w_mark})")',
+  },
+};
 
-// ── Section 1: The Mission ──
-function MissionWidget() {
-  const tools = [
-    { tool: "class + __init__", from: "Units 10.1-10.2", why: "a Student object bundles name + mark, built in one line" },
-    { tool: "methods (self)", from: "Unit 10.3", why: "student.grade() — the student grades itself" },
-    { tool: "__str__", from: "Unit 10.3", why: "print(student) shows 'Asha (85, B)', not gibberish" },
-    { tool: "a class that OWNS a list", from: "Units 10.1 + 7.2", why: "Classroom holds a list of Student objects and the operations on them" },
-    { tool: "files + FileNotFoundError", from: "Units 9.3-9.4", why: "Classroom.save() and .load() persist the roster to CSV" },
-    { tool: "menu loop", from: "Module 6", why: "Add / Report / Save & Exit — now calling Classroom methods" },
-  ];
-  const [checked, setChecked] = useState([]);
-  const toggle = (i) => setChecked((p) => p.includes(i) ? p.filter((x) => x !== i) : [...p, i]);
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Third and final rebuild of the Marks Manager. In Module 8 it became modular functions; in Module 9,
-        robust and persistent. Now it becomes <strong style={{ color: C.text }}>object-oriented</strong>: a
-        <code style={{ color: C.teal }}> Student</code> class that grades itself, and a
-        <code style={{ color: C.teal }}> Classroom</code> class that owns them all. Tick your toolkit.
-      </p>
+const QUIZ = [
+  { q: "Why does Classroom.add update with set_mark instead of assigning .mark directly?", options: ["Shorter", "So every change — even an update — passes the same validation", "Faster", "Required by Python"], answer: 1, explain: "One checkpoint for all changes: encapsulation." },
+  { q: "Why does load() call self.add for each line?", options: ["Style", "Loaded data gets the same validation and object-building as typed data", "To print messages", "It must"], answer: 1, explain: "Reuse the method instead of duplicating the logic." },
+  { q: "What did moving from dicts (Module 7–9) to classes give the Marks Manager?", options: ["Speed", "Data and the rules about it live together; each piece has a clear home", "Fewer lines", "Nothing"], answer: 1, explain: "Student knows how to grade itself; Classroom knows how to save itself." },
+  { q: "Which part is polymorphic-ready: print(s) works because…", options: ["print knows Student", "Student defines __str__, which print calls", "Students are strings", "Magic"], answer: 1, explain: "Special methods let your objects plug into Python's built-ins." },
+];
 
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 12 }}>📋 THE SPEC — Marks Manager 3.0</div>
-        <pre style={mono}>
-          {`class Student   → name, mark, grade(), __str__
-class Classroom → holds [Student], with:
-    add(name, mark)   report()   average()
-    save(file)        load(file)
-main menu       → Add / Report / Save & Exit`}
-        </pre>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {tools.map((t, i) => (
-          <div key={i} onClick={() => toggle(i)} style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8,
-            background: checked.includes(i) ? C.green + "14" : C.card,
-            border: `1.5px solid ${checked.includes(i) ? C.green : C.border}`,
-            cursor: "pointer", transition: "all 0.2s",
-          }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-              border: `2px solid ${checked.includes(i) ? C.green : C.muted}`,
-              background: checked.includes(i) ? C.green : "transparent", color: "#fff", fontSize: 13, fontWeight: 700,
-            }}>{checked.includes(i) ? "✓" : ""}</div>
-            <div>
-              <span style={{ fontFamily: "monospace", fontSize: 12.5, color: checked.includes(i) ? C.green : C.text, fontWeight: 600 }}>{t.tool}</span>
-              <span style={{ fontSize: 11.5, color: C.accent, marginLeft: 8 }}>({t.from})</span>
-              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{t.why}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {checked.length === tools.length && (
-        <div style={{ marginTop: 14, padding: "12px 16px", borderRadius: 8, background: C.green + "18", border: `1px solid ${C.green}55`, color: C.green, fontSize: 13, fontWeight: 600, textAlign: "center" }}>
-          🎯 Objects all the way down. Let's build it!
-        </div>
-      )}
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>Objects turn "data + functions" into "things that act".</strong> A
-        Student isn't a name in one dict and a mark in another anymore — it's one thing that knows its own grade
-        and how to describe itself. A Classroom isn't loose variables — it's one thing that manages its students.
-      </>)}
-    </div>
-  );
-}
-
-// ── Section 2: Build in Steps ──
-function StepsWidget() {
-  const [v, setV] = useState(0);
-  const versions = [
-    {
-      label: "v1 — the dict version (9.4)",
-      color: C.red,
-      note: "Where Module 9 left off: a dict of name→mark, with free functions doing the work.",
-      warn: "A 'student' is just a key with a number. The grade logic lives in a separate function you must remember to call with the right value. Data here, behaviour there — they're not connected.",
-      code: `marks = {}          # name -> mark
-
-def grade(mark):
-    if mark >= 90: return "A"
-    elif mark >= 75: return "B"
-    elif mark >= 50: return "C"
-    return "F"
-
-marks["Asha"] = 85
-print("Asha", grade(marks["Asha"]))`,
-    },
-    {
-      label: "v2 — a Student class",
-      color: C.yellow,
-      note: "Units 10.1-10.3: bundle each student's data AND behaviour into one object.",
-      warn: "Much better — a Student grades and describes itself. But the ROSTER is still a loose list plus separate save/load/report functions floating around. Who owns the collection?",
-      code: `class Student:
-    def __init__(self, name, mark):
-        self.name = name
-        self.mark = mark
-    def grade(self):
-        if self.mark >= 90: return "A"
-        elif self.mark >= 75: return "B"
-        elif self.mark >= 50: return "C"
-        else: return "F"
-    def __str__(self):
-        return (self.name + " (" + str(self.mark)
-                + ", " + self.grade() + ")")
-
-students = [Student("Asha", 85), Student("Ravi", 72)]
-for s in students:
-    print(s)          # __str__ does the formatting`,
-    },
-    {
-      label: "v3 — a Classroom class",
-      color: C.green,
-      note: "Unit 10.1's idea applied again: make ONE object that owns the list and all the operations on it.",
-      warn: null,
-      code: `# class Student exactly as in v2 above
-
-class Classroom:
-    def __init__(self):
-        self.students = []          # holds Student objects
-
-    def add(self, name, mark):
-        self.students.append(Student(name, mark))
-
-    def report(self):
-        for s in self.students:
-            print(s)                # each Student's __str__
-
-    def average(self):
-        if not self.students:
-            return 0
-        total = 0
-        for s in self.students:
-            total += s.mark
-        return total / len(self.students)
-
-room = Classroom()
-room.add("Asha", 85)
-room.add("Ravi", 72)
-room.report()
-print("Average:", room.average())`,
-    },
-  ];
-  const cur = versions[v];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Three passes: loose dict → a Student object → a Classroom that owns everything. Each step pulls related
-        data and behaviour into one place.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        {versions.map((ver, i) => (
-          <button key={i} onClick={() => setV(i)} style={{
-            padding: "8px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-            background: v === i ? ver.color + "22" : C.card, color: v === i ? ver.color : C.muted,
-            border: `1.5px solid ${v === i ? ver.color : C.border}`,
-          }}>{ver.label}</button>
-        ))}
-      </div>
-
-      <div style={{ background: C.card, border: `1.5px solid ${cur.color}55`, borderRadius: 10, padding: 16, marginBottom: 12 }}>
-        <div style={{ fontSize: 12.5, color: cur.color, fontWeight: 600, marginBottom: 10, lineHeight: 1.6 }}>{cur.note}</div>
-        <pre style={{ ...mono, maxHeight: 360, overflowY: "auto" }}>{cur.code}</pre>
-      </div>
-
-      {cur.warn ? (
-        <div style={{ background: C.red + "12", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-          ⛔ <strong style={{ color: C.red }}>Why we keep going:</strong> {cur.warn}
-        </div>
-      ) : (
-        <div style={{ background: C.green + "12", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-          ✅ <strong style={{ color: C.green }}>Now it's fully object-oriented:</strong> the Classroom owns its
-          students and every operation on them is a method. Add save()/load() (next tab) and the whole app is two
-          tidy classes instead of scattered variables and functions.
-        </div>
-      )}
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>Group data with the code that works on it.</strong> A Student owns
-        its grade logic; a Classroom owns its roster and reports. That grouping is what keeps a growing program
-        from turning into a pile of loose globals.
-      </>)}
-    </div>
-  );
-}
-
-// ── Section 3: Play It — a live Classroom of Student objects ──
-function PlayWidget() {
-  const [students, setStudents] = useState([{ name: "Asha", mark: 85 }, { name: "Ravi", mark: 72 }]);
-  const [disk, setDisk] = useState([{ name: "Asha", mark: 85 }, { name: "Ravi", mark: 72 }]);
-  const [name, setName] = useState("");
-  const [markText, setMarkText] = useState("");
-  const [log, setLog] = useState([{ t: "sys", s: "room.load('marks.csv') → 2 Student objects" }]);
-
-  const push = (lines) => setLog((l) => [...l.slice(-9), ...lines]);
-
-  const add = () => {
-    const n = name.trim();
-    if (!n) { push([{ t: "err", s: "Name cannot be empty!" }]); return; }
-    if (!/^\d+$/.test(markText.trim())) {
-      push([{ t: "in", s: `> room.add("${n}", "${markText}")` }, { t: "err", s: "  ✗ mark must be a whole number. Not added." }]);
-      return;
-    }
-    const m = parseInt(markText.trim(), 10);
-    if (m < 0 || m > 100) { push([{ t: "in", s: `> room.add("${n}", ${m})` }, { t: "err", s: "  ✗ mark must be 0-100. Not added." }]); return; }
-    setStudents((p) => [...p, { name: n, mark: m }]);
-    push([{ t: "in", s: `> room.add("${n}", ${m})` }, { t: "ok", s: `  ✓ Student("${n}", ${m}) created → ${n} (${m}, ${gradeOf(m)})` }]);
-    setName(""); setMarkText("");
-  };
-  const report = () => {
-    if (students.length === 0) { push([{ t: "in", s: "> room.report()" }, { t: "err", s: "  (no students)" }]); return; }
-    const avg = (students.reduce((a, s) => a + s.mark, 0) / students.length).toFixed(1);
-    push([{ t: "in", s: "> room.report()" },
-      ...students.map((s) => ({ t: "out", s: `  ${s.name} (${s.mark}, ${gradeOf(s.mark)})` })),
-      { t: "out", s: `  Average: ${avg}` }]);
-  };
-  const save = () => { setDisk(students.map((s) => ({ ...s }))); push([{ t: "in", s: "> room.save('marks.csv')" }, { t: "ok", s: `  💾 wrote ${students.length} rows to marks.csv` }]); };
-  const reopen = () => { setStudents(disk.map((s) => ({ ...s }))); push([{ t: "sys", s: "— app closed —" }, { t: "sys", s: `Classroom().load() → ${disk.length} Student objects` }]); };
-
-  const colors = { sys: C.muted, in: C.accent, ok: C.green, out: C.text, err: C.red };
-  const diskText = disk.length ? disk.map((s) => `${s.name},${s.mark}`).join("\n") + "\n" : "(empty)";
-  const unsaved = JSON.stringify(students) !== JSON.stringify(disk);
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A live Classroom holding Student objects. Add students (each becomes a <code style={{ color: C.teal }}>Student</code>),
-        run <code style={{ color: C.accent }}>report()</code> to see every object's __str__ and grade, then Save
-        and reopen to watch them reload as objects.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <div>
-          <label style={{ color: C.muted, fontSize: 11, display: "block", marginBottom: 4 }}>Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya" style={{
-            padding: "9px 12px", borderRadius: 8, background: C.card, color: C.text, fontSize: 13,
-            border: `1.5px solid ${C.border}`, outline: "none", width: 110, fontFamily: "monospace",
-          }} />
-        </div>
-        <div>
-          <label style={{ color: C.muted, fontSize: 11, display: "block", marginBottom: 4 }}>Mark</label>
-          <input value={markText} onChange={(e) => setMarkText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="90" style={{
-            padding: "9px 12px", borderRadius: 8, background: C.card, color: C.text, fontSize: 13,
-            border: `1.5px solid ${C.border}`, outline: "none", width: 90, fontFamily: "monospace",
-          }} />
-        </div>
-        <button onClick={add} style={{ padding: "9px 14px", borderRadius: 8, background: C.green + "22", color: C.green, border: `1.5px solid ${C.green}`, fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}>+ add</button>
-        <button onClick={report} style={{ padding: "9px 14px", borderRadius: 8, background: C.accentGlow, color: "#fff", border: "none", fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}>📋 report</button>
-        <button onClick={save} style={{ padding: "9px 14px", borderRadius: 8, background: unsaved ? C.orange + "22" : C.card, color: unsaved ? C.orange : C.muted, border: `1.5px solid ${unsaved ? C.orange : C.border}`, fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}>💾 save{unsaved ? " *" : ""}</button>
-        <button onClick={reopen} style={{ padding: "9px 14px", borderRadius: 8, background: C.card, color: C.text, border: `1.5px solid ${C.border}`, fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}>🔄 reopen</button>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.25fr 1fr", gap: 12 }}>
-        <div style={{ background: "#010409", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, minHeight: 190 }}>
-          <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>CONSOLE</div>
-          {log.map((e, i) => (
-            <div key={i} style={{ fontFamily: "monospace", fontSize: 11.5, lineHeight: 1.75, color: colors[e.t], whiteSpace: "pre-wrap" }}>{e.s}</div>
-          ))}
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 14, minHeight: 190 }}>
-          <div style={{ color: C.teal, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>📄 marks.csv (on disk)</div>
-          <pre style={{ ...mono, color: C.text, fontSize: 12 }}>{diskText}</pre>
-          {unsaved && <div style={{ color: C.orange, fontSize: 11, marginTop: 8 }}>⚠ unsaved objects in memory — hit 💾 save.</div>}
-        </div>
-      </div>
-
-      {insight(C.green, <>
-        <strong style={{ color: C.green }}>The Classroom coordinates; each Student does its own bit.</strong> report()
-        just loops and lets every Student format and grade itself. Save writes their data; reopen rebuilds them as
-        fresh objects. Small objects, cleanly connected — the whole point of OOP.
-      </>)}
-    </div>
-  );
-}
-
-// ── Section 4: Full Code ──
-function FullCodeWidget() {
-  const code = `# Marks Manager 3.0 — Object-Oriented edition
-# Foothold Module 10 Capstone
-
-class Student:
-    def __init__(self, name, mark):
-        self.name = name
-        self.mark = mark
-
-    def grade(self):
-        if self.mark >= 90:
-            return "A"
-        elif self.mark >= 75:
-            return "B"
-        elif self.mark >= 50:
-            return "C"
-        else:
-            return "F"
-
-    def __str__(self):
-        return self.name + " (" + str(self.mark) + ", " + self.grade() + ")"
-
-
-class Classroom:
-    def __init__(self):
-        self.students = []                 # a list of Student objects
-
-    def add(self, name, mark):
-        self.students.append(Student(name, mark))
-
-    def report(self):
-        if len(self.students) == 0:
-            print("No students yet!")
-            return
-        for s in self.students:
-            print(" ", s)                  # uses Student.__str__
-        print("Average:", self.average())
-
-    def average(self):
-        if len(self.students) == 0:
-            return 0
-        total = 0
-        for s in self.students:
-            total = total + s.mark
-        return total / len(self.students)
-
-    def save(self, filename):
-        with open(filename, "w") as f:
-            for s in self.students:
-                f.write(s.name + "," + str(s.mark) + "\\n")
-        print("Saved", len(self.students), "students.")
-
-    def load(self, filename):
-        try:
-            with open(filename, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line == "":
-                        continue
-                    name, mark = line.split(",")
-                    self.add(name, int(mark))
-        except FileNotFoundError:
-            print("No saved file yet — starting fresh.")
-
-
-# ── main program ──
-room = Classroom()
-room.load("marks.csv")
-
-while True:
-    print()
-    print("1. Add  2. Report  3. Save & Exit")
-    choice = input("Choose: ")
-
-    if choice == "1":
-        name = input("Name: ")
-        mark = int(input("Mark: "))
-        room.add(name, mark)
-    elif choice == "2":
-        room.report()
-    elif choice == "3":
-        room.save("marks.csv")
-        print("Goodbye!")
-        break
-    else:
-        print("Please choose 1, 2 or 3.")`;
-
-  const challenges = [
-    { icon: "🥉", text: "Add a topper() method to Classroom that RETURNS the Student with the highest mark (best-so-far pattern, Unit 7.3), then print(room.topper()) — its __str__ does the rest." },
-    { icon: "🥈", text: "Reuse the ask_mark() validation loop from Unit 9.4 so room.add can never store an invalid mark — or better, put a set_mark guard method (Unit 10.3) inside Student." },
-    { icon: "🥇", text: "Make a Person base class with name, then Student(Person) and Teacher(Person) (Unit 10.4). Give Classroom a mix and let each describe() itself in a report." },
-  ];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The complete two-class program — your Marks Manager, fully object-oriented and still persistent. Run it,
-        add students, exit, run again: the Classroom loads them straight back as Student objects.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16, maxHeight: 440, overflowY: "auto" }}>
-        <pre style={mono}>{code}</pre>
-      </div>
-
-      <div style={{ color: C.orange, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>⚡ CHALLENGE UPGRADES</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {challenges.map((ch, i) => (
-          <div key={i} style={{ display: "flex", gap: 10, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-            <span style={{ fontSize: 16 }}>{ch.icon}</span><span>{ch.text}</span>
-          </div>
-        ))}
-      </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>Look how far the same app has come:</strong> Module 8 gave it
-        functions, Module 9 gave it robustness and files, Module 10 gave it objects. You've now met the full
-        toolkit of core Python — the next module makes you fluent in it: comprehensions, modules, pip, and the
-        wider ecosystem.
-      </>)}
-    </div>
-  );
-}
-
-// ── Quiz ──
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "In Marks Manager 3.0, what does a Classroom object own?",
-      options: ["A single student's mark", "A list of Student objects plus the methods that operate on them", "Only the CSV file", "The grade() function"],
-      answer: 1,
-      explain: "Classroom holds self.students (a list of Student objects) and the operations — add, report, average, save, load — as methods. It owns the collection AND the behaviour.",
-    },
-    {
-      q: "room.report() just does `for s in self.students: print(s)`. How does each line come out nicely formatted?",
-      options: ["report() formats each student", "print(s) calls each Student's __str__ method", "It doesn't — it prints gibberish", "The CSV file formats it"],
-      answer: 1,
-      explain: "print(s) triggers Student.__str__, so each object formats itself as 'Asha (85, B)'. The Classroom doesn't need to know how a student is displayed — the Student decides.",
-    },
-    {
-      q: "Why is `class Student` with a grade() method better than a name→mark dict plus a free grade(mark) function?",
-      options: ["It runs faster", "Data and the behaviour that belongs to it are bundled in one self-contained object", "Dicts can't hold numbers", "Functions are not allowed"],
-      answer: 1,
-      explain: "The object keeps a student's data and its grade logic together. You call asha.grade() with no risk of passing the wrong value — the behaviour travels with the data it needs.",
-    },
-    {
-      q: "Classroom.load() wraps its file reading in try/except FileNotFoundError. Why?",
-      options: ["To make it slower", "So the very first run (no file yet) starts with an empty classroom instead of crashing", "To encrypt the file", "It's not needed"],
-      answer: 1,
-      explain: "On the first run marks.csv doesn't exist, so open() would raise FileNotFoundError. Catching it lets the app start fresh gracefully — the same robustness idea from Unit 9.4, now inside a method.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🏆" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! You can model a whole app as cooperating objects." :
-            score >= 2 ? "Good work! Replay 'Build in Steps' — the dict → Student → Classroom journey is the core idea." :
-              "Worth a replay: 'Build in Steps' and 'Play It'. Objects bundle data with behaviour; a Classroom owns its Students."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.green}22, ${C.purple}22)`,
-          border: `1px solid ${C.green}55`,
-        }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🏆 Module 10 Complete — You Think in Objects!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Classes, __init__ and self, methods, encapsulation, __str__, and inheritance — and an entire app
-            rebuilt as cooperating objects. This is the second great mental model of programming, after functions.<br /><br />
-            <strong style={{ color: C.accent }}>Next: Module 11 — Pythonic Python &amp; the Ecosystem.</strong> You
-            can build anything now; time to build it the <em>Python</em> way — comprehensions, modules, pip, and
-            the huge world of libraries that makes Python, Python.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("`") || q.q.includes("(") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit10_7({ student, onUnitComplete }) {
+export default function Unit10_7(props) {
   const sections = [
-    { id: "mission", label: "The Mission" },
-    { id: "steps", label: "Build in Steps" },
-    { id: "play", label: "Play It" },
-    { id: "code", label: "Full Code" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "The Mission", kicker: "CAPSTONE", title: "Marks Manager 3.0",
+      blocks: [
+        <P>The Marks Manager's final form. In Module 7 it was a dictionary and a loop; Module 8 split it into functions; Module 9 made it robust and persistent. Now each piece of data gets a class that knows its own rules: a <strong>Student</strong> validates and grades itself; a <strong>Classroom</strong> manages, reports, saves and loads its students.</P>,
+        <Note color={T.blue} icon="🧪">Hidden checks call your classes directly (for example <code>Student('Q', 101)</code> must raise InvalidMarkError) and read the file your program saves.</Note>,
+      ],
+    },
+    { label: "Version 1", kicker: "BUILD IN STEPS", title: "Version 1: Student objects", blocks: [EX.v1] },
+    { label: "Version 2", kicker: "ADD ONE IDEA", title: "Version 2: a Classroom", blocks: [EX.v2] },
+    { label: "Version 3", kicker: "ADD ONE MORE", title: "Version 3: save and load", blocks: [EX.v3, <KeyIdea>Every module added one idea to the same program — containers, functions, robustness, objects. That's how real software grows: in working steps.</KeyIdea>] },
+    { label: "Make It", kicker: "ON YOUR OWN", title: "Your program: report card", blocks: [EX.card] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>The Mission: Objects All the Way Down</h3><MissionWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>From Dict to Classroom</h3><StepsWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Play It: A Live Classroom</h3><PlayWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>The Full Code — Run It For Real</h3><FullCodeWidget /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions to close out Module 10.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.7</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Capstone: Marks Manager 3.0</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit10_7" crumb="MODULE 10 › UNIT 10.7" title="Capstone: Marks Manager 3.0" sections={sections} quiz={QUIZ}
+      next={{ title: "Computational Thinking II / Module 11", text: "Module 10 complete! The four pillars and OOP are yours. (Optional first: Module 10's Crucible.)" }} />
   );
 }

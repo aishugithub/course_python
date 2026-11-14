@@ -1,528 +1,152 @@
-import { useState } from "react";
+// Unit 13.1 — Charts with Matplotlib (rebuilt, typing-first)
+// The recipe (data → plot → label → show) with a line chart → bar (complete)
+// → scatter and pie → several lines + legend → a chart straight from a CSV via
+// pandas → subplots → Make It: a two-chart sales dashboard.
+// Charts are checked by inspecting the figure the learner drew (post checks
+// read bar heights, tick labels, line data, titles) — hidden tests swap the CSV.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, Note, CodeBlock } from "../kit/Lesson.jsx";
+import { T } from "../kit/theme.js";
+
+const csvFile = (name, text) => `with open(${JSON.stringify(name)}, "w") as _f:\n    _f.write(${JSON.stringify(text)})`;
+const PLT = { timeoutMs: 20000 };
+const py = (v) => JSON.stringify(v);
+
+// Post-check preamble: grab the drawn figure (and draw it, so tick labels exist)
+const FIG = (n = 1) => `import matplotlib.pyplot as _plt
+assert _plt.get_fignums(), "No chart was drawn — call plt.plot(...), plt.bar(...) etc."
+_fig = _plt.gcf()
+_fig.canvas.draw()
+assert len(_fig.axes) >= ${n}, "Expected ${n} chart${n > 1 ? "s" : ""} in the figure — found " + str(len(_fig.axes)) + "."
+_ax = _fig.axes[0]
+_ticks = lambda a: [t.get_text() for t in a.get_xticklabels()]
+_heights = lambda a: [round(p.get_height(), 2) for p in a.patches]
+`;
+const title = (t, ax = "_ax") => `assert ${ax}.get_title().strip().lower() == ${py(t.toLowerCase())}, "The title should be ${t.replace(/"/g, "'")} — it is '" + ${ax}.get_title() + "'."\n`;
+const labels = (x, y) => `assert _ax.get_xlabel().strip().lower() == ${py(x.toLowerCase())}, "Label the x-axis: ${x}"\nassert _ax.get_ylabel().strip().lower() == ${py(y.toLowerCase())}, "Label the y-axis: ${y}"\n`;
+
+// ── data & reference values ──
+const MARKS = "Name,Dept,Marks\nAsha,CSE,82\nBen,ECE,35\nChen,CSE,67\nDev,MECH,91\nEsha,ECE,58\n";
+const MARKS2 = "Name,Dept,Marks\nFarah,CSE,73\nGopal,MECH,38\nHari,ECE,88\nIsha,CSE,95\nJay,MECH,61\nKavi,ECE,49\nLina,CSE,70\n";
+const SALES = "Date,Item,Category,Qty,Price\n2026-01-05,Pen,Stationery,10,15\n2026-01-07,Notebook,Stationery,5,60\n2026-01-12,Headphones,Electronics,2,1200\n2026-01-20,Mouse,Electronics,3,450\n2026-02-02,Pen,Stationery,20,15\n2026-02-14,Mug,Kitchen,6,250\n2026-02-18,Notebook,Stationery,8,60\n2026-02-25,Mouse,Electronics,1,450\n2026-03-03,Mug,Kitchen,4,250\n2026-03-10,Headphones,Electronics,1,1200\n2026-03-15,Pen,Stationery,15,15\n2026-03-28,Bottle,Kitchen,5,300\n";
+const SALES2 = "Date,Item,Category,Qty,Price\n2026-04-02,Ball,Sports,4,350\n2026-04-09,Racket,Sports,2,1800\n2026-04-15,Pen,Stationery,30,15\n2026-05-01,Lamp,Home,2,950\n2026-05-11,Ball,Sports,6,350\n2026-05-20,Cushion,Home,5,400\n2026-06-03,Racket,Sports,1,1800\n2026-06-17,Lamp,Home,2,950\n2026-06-25,Pen,Stationery,12,15\n";
+const parse = (csv) => { const [head, ...rows] = csv.trim().split("\n"); const k = head.split(","); return rows.map((r) => Object.fromEntries(r.split(",").map((v, i) => [k[i], isNaN(+v) ? v : +v]))); };
+const groupBy = (rows, key, val, agg = "sum") => { const m = new Map(); rows.forEach((r) => { const g = m.get(r[key]) || []; g.push(val(r)); m.set(r[key], g); }); return [...m].map(([k, xs]) => [k, Math.round((agg === "mean" ? xs.reduce((a, b) => a + b, 0) / xs.length : xs.reduce((a, b) => a + b, 0)) * 100) / 100]).sort((a, b) => (a[0] < b[0] ? -1 : 1)); };
+const deptCheck = (csv) => { const g = groupBy(parse(csv), "Dept", (r) => r.Marks, "mean"); return FIG() + title("Average marks by department") + `assert _ticks(_ax) == ${py(g.map((x) => x[0]))}, "One bar per department, in groupby's order: " + str(_ticks(_ax))\nassert _heights(_ax) == ${py(g.map((x) => x[1]))}, "The bar heights should be each department's average mark."\n`; };
+const dashCheck = (csv) => {
+  const rows = parse(csv).map((r) => ({ ...r, Rev: r.Qty * r.Price, Month: r.Date.slice(0, 7) }));
+  const cat = groupBy(rows, "Category", (r) => r.Rev).sort((a, b) => b[1] - a[1]);
+  const mon = groupBy(rows, "Month", (r) => r.Rev);
+  return FIG(2) + `_a1, _a2 = _fig.axes[0], _fig.axes[1]
+assert _ticks(_a1) == ${py(cat.map((x) => x[0]))}, "Left chart: one bar per category, highest revenue first — got " + str(_ticks(_a1))
+assert _heights(_a1) == ${py(cat.map((x) => x[1]))}, "Left chart: bar heights should be the revenue per category."
+assert len(_a2.get_lines()) == 1, "Right chart: draw one line (ax2.plot)."
+assert [round(float(v), 2) for v in _a2.get_lines()[0].get_ydata()] == ${py(mon.map((x) => x[1]))}, "Right chart: the line should be the revenue per month, in date order."
+assert "category" in _a1.get_title().lower(), "Give the left chart a title with the word category."
+assert "month" in _a2.get_title().lower(), "Give the right chart a title with the word month."
+`;
+};
+const bestCat = (csv) => { const rows = parse(csv); const c = groupBy(rows, "Category", (r) => r.Qty * r.Price).sort((a, b) => b[1] - a[1]); return `Best category: ${c[0][0]}`; };
+
+const EX = {
+  line: {
+    ...PLT, id: "line", kind: "type", title: "Your first chart",
+    task: <>Every matplotlib chart follows one recipe: <strong>data → plot → label → show</strong>. <code>plt.plot(x, y)</code> draws a line; <code>marker="o"</code> puts a dot on each point.</>,
+    show: 'import matplotlib.pyplot as plt\n\ndays = ["Mon", "Tue", "Wed", "Thu", "Fri"]\nsteps = [4200, 6800, 5100, 9000, 7300]\n\nplt.plot(days, steps, marker="o")\nplt.title("Steps this week")\nplt.xlabel("Day")\nplt.ylabel("Steps")\nplt.show()',
+    tests: [{ post: FIG() + title("Steps this week") + labels("Day", "Steps") + `assert len(_ax.get_lines()) == 1, "Draw one line with plt.plot."\nassert list(_ax.get_lines()[0].get_ydata()) == [4200, 6800, 5100, 9000, 7300], "Plot the steps list as y."\n` }],
+    hints: ["The chart appears under the output. plt.show() displays it (in a script it opens a window)."],
+    solution: 'import matplotlib.pyplot as plt\n\ndays = ["Mon", "Tue", "Wed", "Thu", "Fri"]\nsteps = [4200, 6800, 5100, 9000, 7300]\n\nplt.plot(days, steps, marker="o")\nplt.title("Steps this week")\nplt.xlabel("Day")\nplt.ylabel("Steps")\nplt.show()',
+  },
+  bar: {
+    ...PLT, id: "bar", kind: "complete", title: "A bar chart",
+    task: <>Bars compare amounts between categories. Fill the blanks: draw the bars with <code>plt.bar</code>, title the chart <code>Rainfall by month</code>, and label the axes <code>Month</code> and <code>Rainfall (mm)</code>. Then change the bar colour with <code>color="teal"</code>.</>,
+    starter: 'import matplotlib.pyplot as plt\n\nmonths = ["Jan", "Feb", "Mar", "Apr"]\nrain = [12, 30, 55, 80]\n\nplt.___(months, rain)\nplt.title(___)\nplt.xlabel(___)\nplt.ylabel(___)\nplt.show()',
+    tests: [{ post: FIG() + title("Rainfall by month") + labels("Month", "Rainfall (mm)") + `assert _ticks(_ax) == ["Jan", "Feb", "Mar", "Apr"], "One bar per month."\nassert _heights(_ax) == [12, 30, 55, 80], "Bar heights should be the rain list."\nimport matplotlib.colors as _mc\nassert _mc.to_hex(_ax.patches[0].get_facecolor()) == _mc.to_hex("teal"), "Make the bars teal: plt.bar(months, rain, color=\\"teal\\")"\n` }],
+    hints: ['plt.bar(months, rain, color="teal")', 'plt.title("Rainfall by month")'],
+    solution: 'import matplotlib.pyplot as plt\n\nmonths = ["Jan", "Feb", "Mar", "Apr"]\nrain = [12, 30, 55, 80]\n\nplt.bar(months, rain, color="teal")\nplt.title("Rainfall by month")\nplt.xlabel("Month")\nplt.ylabel("Rainfall (mm)")\nplt.show()',
+  },
+  scatter: {
+    ...PLT, id: "scatter", kind: "write", title: "Is there a link?",
+    task: <>A <strong>scatter</strong> plot shows whether two measurements move together. Six students: hours studied <code>[1, 2, 3, 4, 5, 6]</code>, scores <code>[35, 48, 52, 63, 71, 80]</code>. Draw them with <code>plt.scatter</code>, title <code>Study vs score</code>, x label <code>Hours</code>, y label <code>Score</code>. Then print <code>Each extra hour: about 9.0 marks</code> — the average rise per hour, (last score − first score) / (last hour − first hour), 1 decimal place.</>,
+    tests: [{ expect: "Each extra hour: about 9.0 marks", post: FIG() + title("Study vs score") + labels("Hours", "Score") + `assert len(_ax.collections) == 1, "Use plt.scatter for the points."\nassert len(_ax.collections[0].get_offsets()) == 6, "Plot all six students."\n` }],
+    requires: [{ call: "scatter" }],
+    hints: ["plt.scatter(hours, scores)", "rise = (scores[-1] - scores[0]) / (hours[-1] - hours[0])"],
+    solution: 'import matplotlib.pyplot as plt\n\nhours = [1, 2, 3, 4, 5, 6]\nscores = [35, 48, 52, 63, 71, 80]\n\nplt.scatter(hours, scores)\nplt.title("Study vs score")\nplt.xlabel("Hours")\nplt.ylabel("Score")\nplt.show()\n\nrise = (scores[-1] - scores[0]) / (hours[-1] - hours[0])\nprint(f"Each extra hour: about {rise:.1f} marks")',
+  },
+  pie: {
+    ...PLT, id: "pie", kind: "write", title: "Parts of a whole",
+    task: <>A <strong>pie</strong> shows how a whole splits into parts. A day: Sleep 8 hours, Class 6, Study 3, Phone 4, Other 3. Draw <code>plt.pie(hours, labels=activities, autopct="%1.0f%%")</code> (autopct writes each slice's percentage) and title it <code>My day</code>.</>,
+    tests: [{ post: FIG() + title("My day") + `from matplotlib.patches import Wedge as _W\n_w = [p for p in _ax.patches if isinstance(p, _W)]\nassert len(_w) == 5, "Five slices: Sleep, Class, Study, Phone, Other."\n_t = [t.get_text() for t in _ax.texts]\nassert "Sleep" in _t and "Phone" in _t, "Label the slices: labels=activities"\nassert any(x.endswith("%") for x in _t), "Show percentages with autopct=\\"%1.0f%%\\""\n` }],
+    requires: [{ call: "pie" }],
+    hints: ['activities = ["Sleep", "Class", "Study", "Phone", "Other"]', "hours = [8, 6, 3, 4, 3]"],
+    solution: 'import matplotlib.pyplot as plt\n\nactivities = ["Sleep", "Class", "Study", "Phone", "Other"]\nhours = [8, 6, 3, 4, 3]\n\nplt.pie(hours, labels=activities, autopct="%1.0f%%")\nplt.title("My day")\nplt.show()',
+  },
+  legend: {
+    ...PLT, id: "legend", kind: "type", title: "Two lines and a legend",
+    task: <>Call <code>plt.plot</code> twice to draw two lines on the same axes. Give each a <code>label=</code>, and <code>plt.legend()</code> shows which is which.</>,
+    show: 'import matplotlib.pyplot as plt\n\nmonths = ["Jan", "Feb", "Mar", "Apr", "May"]\nlast_year = [120, 135, 150, 140, 160]\nthis_year = [130, 150, 170, 175, 190]\n\nplt.plot(months, last_year, marker="o", label="2025")\nplt.plot(months, this_year, marker="o", label="2026")\nplt.title("Sales: this year vs last")\nplt.legend()\nplt.show()',
+    tests: [{ post: FIG() + title("Sales: this year vs last") + `assert len(_ax.get_lines()) == 2, "Draw two lines."\nassert _ax.get_legend() is not None, "Call plt.legend()."\nassert [t.get_text() for t in _ax.get_legend().get_texts()] == ["2025", "2026"], "Label the lines 2025 and 2026."\n` }],
+    hints: ["The legend uses the label= of each line."],
+    solution: 'import matplotlib.pyplot as plt\n\nmonths = ["Jan", "Feb", "Mar", "Apr", "May"]\nlast_year = [120, 135, 150, 140, 160]\nthis_year = [130, 150, 170, 175, 190]\n\nplt.plot(months, last_year, marker="o", label="2025")\nplt.plot(months, this_year, marker="o", label="2026")\nplt.title("Sales: this year vs last")\nplt.legend()\nplt.show()',
+  },
+  fromcsv: {
+    ...PLT, id: "fromcsv", kind: "write", title: "From a CSV to a chart",
+    task: <>Pandas (M12) + matplotlib together. Load <code>marks.csv</code>, compute each department's average mark with <code>groupby</code>, and draw it as a bar chart: <code>plt.bar(avg.index, avg.values)</code>, titled <code>Average marks by department</code>. Hidden tests use a different marks.csv.</>,
+    show: MARKS, showLabel: "marks.csv — ALREADY IN THE FOLDER",
+    tests: [{ setup: csvFile("marks.csv", MARKS), post: deptCheck(MARKS) }, { setup: csvFile("marks.csv", MARKS2), post: deptCheck(MARKS2), hidden: true }],
+    requires: [{ call: "read_csv" }, { call: "groupby" }, { call: "bar" }],
+    hints: ['avg = df.groupby("Dept")["Marks"].mean()', "plt.bar(avg.index, avg.values)"],
+    solution: 'import pandas as pd\nimport matplotlib.pyplot as plt\n\ndf = pd.read_csv("marks.csv")\navg = df.groupby("Dept")["Marks"].mean()\nplt.bar(avg.index, avg.values)\nplt.title("Average marks by department")\nplt.ylabel("Average mark")\nplt.show()',
+  },
+  subplots: {
+    ...PLT, id: "subplots", kind: "complete", title: "Side by side: subplots",
+    task: <><code>fig, (ax1, ax2) = plt.subplots(1, 2)</code> makes a figure with 1 row and 2 charts, each with its own <em>axes</em> object. On an axes, the methods are the same except titles and labels gain <code>set_</code>: <code>ax1.set_title(…)</code>. Fill the blanks: bars on the left, a line on the right.</>,
+    starter: 'import matplotlib.pyplot as plt\n\ndays = ["Mon", "Tue", "Wed", "Thu", "Fri"]\ncups = [3, 2, 4, 1, 2]\nsleep = [6, 7, 5, 8, 7]\n\nfig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))\nax1.___(days, cups)\nax1.___("Coffee")\nax2.___(days, sleep, marker="o")\nax2.___("Sleep")\nplt.show()',
+    tests: [{ post: FIG(2) + `_a1, _a2 = _fig.axes[0], _fig.axes[1]\nassert _heights(_a1) == [3, 2, 4, 1, 2], "Left: ax1.bar(days, cups)"\nassert len(_a2.get_lines()) == 1, "Right: ax2.plot(days, sleep, marker=\\"o\\")"\n` + title("Coffee", "_a1") + title("Sleep", "_a2") }],
+    hints: ["ax1.bar(days, cups)", 'ax1.set_title("Coffee")', 'ax2.plot(...) and ax2.set_title("Sleep")'],
+    solution: 'import matplotlib.pyplot as plt\n\ndays = ["Mon", "Tue", "Wed", "Thu", "Fri"]\ncups = [3, 2, 4, 1, 2]\nsleep = [6, 7, 5, 8, 7]\n\nfig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))\nax1.bar(days, cups)\nax1.set_title("Coffee")\nax2.plot(days, sleep, marker="o")\nax2.set_title("Sleep")\nplt.show()',
+  },
+  dashboard: {
+    ...PLT, id: "dashboard", kind: "make", title: "Sales dashboard",
+    task: <>Load the shop's <code>sales.csv</code> (12.2) and add Revenue (Qty × Price) and Month (<code>Date.str[:7]</code>). Make <code>plt.subplots(1, 2, figsize=(11, 4))</code>: on the left, revenue per Category as bars, <strong>highest first</strong>, titled <code>Revenue by category</code>; on the right, revenue per Month as a line with markers, titled <code>Revenue by month</code>. Print <code>Best category: Electronics</code>. Hidden tests use another shop's file.</>,
+    minLines: 16,
+    tests: [{ setup: csvFile("sales.csv", SALES), expect: bestCat(SALES), post: dashCheck(SALES) }, { setup: csvFile("sales.csv", SALES2), expect: bestCat(SALES2), post: dashCheck(SALES2), hidden: true }],
+    requires: [{ call: "subplots" }, { call: "groupby", min: 2 }],
+    hints: ['by_cat = df.groupby("Category")["Revenue"].sum().sort_values(ascending=False)', 'monthly = df.groupby("Month")["Revenue"].sum()', "ax1.bar(by_cat.index, by_cat.values); ax2.plot(monthly.index, monthly.values, marker=\"o\")", "by_cat.index[0] is the best category"],
+    solution: 'import pandas as pd\nimport matplotlib.pyplot as plt\n\ndf = pd.read_csv("sales.csv")\ndf["Revenue"] = df["Qty"] * df["Price"]\ndf["Month"] = df["Date"].str[:7]\nby_cat = df.groupby("Category")["Revenue"].sum().sort_values(ascending=False)\nmonthly = df.groupby("Month")["Revenue"].sum()\n\nfig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))\nax1.bar(by_cat.index, by_cat.values, color="teal")\nax1.set_title("Revenue by category")\nax2.plot(monthly.index, monthly.values, marker="o")\nax2.set_title("Revenue by month")\nplt.show()\n\nprint(f"Best category: {by_cat.index[0]}")',
+  },
 };
 
-const NAMES = ["Asha", "Ravi", "Meera", "Karan"];
-const MARKS = [88, 45, 72, 91];
-const PIE_COLORS = [C.teal, C.orange, C.purple, C.green];
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-const CSV_TEXT = `Name,Marks,Subject
-Asha,88,Math
-Ravi,45,CS
-Meera,72,Math
-Karan,91,CS`;
+const QUIZ = [
+  { q: "Which chart compares amounts between categories?", options: ["Line", "Bar", "Scatter", "Pie"], answer: 1, explain: "Bars for categories; lines for change over time." },
+  { q: "Which chart shows whether two measurements move together?", options: ["Pie", "Bar", "Scatter", "Histogram"], answer: 2, explain: "Each point is one student: x = hours, y = score." },
+  { q: "What does plt.legend() need to show names?", options: ["Nothing", "A label= on each plot call", "A title", "Two charts"], answer: 1, explain: "plt.plot(x, y, label=\"2026\")" },
+  { q: "On an axes object (ax), the title is set with…", options: ["ax.title(\"…\")", "ax.set_title(\"…\")", "plt.ax(\"…\")", "ax.name = \"…\""], answer: 1, explain: "plt.title becomes ax.set_title, plt.xlabel becomes ax.set_xlabel." },
+  { q: "plt.subplots(2, 3) makes…", options: ["2 charts", "6 charts in 2 rows and 3 columns", "3 charts", "A 2×3 inch figure"], answer: 1, explain: "Rows first, then columns." },
+];
 
-const FULL_TYPES = {
-  bar: `import matplotlib.pyplot as plt
-
-names = ["Asha", "Ravi", "Meera", "Karan"]
-marks = [88, 45, 72, 91]
-hours = [5, 2, 4, 6]
-
-plt.bar(names, marks)
-plt.show()`,
-  line: `import matplotlib.pyplot as plt
-
-names = ["Asha", "Ravi", "Meera", "Karan"]
-marks = [88, 45, 72, 91]
-hours = [5, 2, 4, 6]
-
-plt.plot(names, marks)
-plt.show()`,
-  scatter: `import matplotlib.pyplot as plt
-
-names = ["Asha", "Ravi", "Meera", "Karan"]
-marks = [88, 45, 72, 91]
-hours = [5, 2, 4, 6]
-
-plt.scatter(hours, marks)
-plt.show()`,
-  pie: `import matplotlib.pyplot as plt
-
-names = ["Asha", "Ravi", "Meera", "Karan"]
-marks = [88, 45, 72, 91]
-hours = [5, 2, 4, 6]
-
-plt.pie(marks, labels=names)
-plt.show()`,
-};
-
-// ── Full runnable program toggle ─────────────────────────────────────────────
-function FullCode({ code, note }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <button onClick={() => setOpen(!open)} style={{ padding: "5px 12px", borderRadius: 6, background: open ? C.green + "18" : "transparent", border: `1px solid ${C.green}66`, color: C.green, fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}>
-        {open ? "▾ Hide" : "▸ Show"} the full runnable program
-      </button>
-      {open && (
-        <div style={{ marginTop: 8 }}>
-          <pre style={{ background: "#0A0E14", border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.7, margin: 0, whiteSpace: "pre" , overflowX: "auto" }}>{code}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{note || "Complete as shown — paste into a .py file and run."}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CsvFile() {
-  return (
-    <div style={{ background: C.card, border: `1px dashed ${C.yellow}66`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
-      <div style={{ color: C.yellow, fontSize: 11.5, fontWeight: 700, marginBottom: 6 }}>📄 marks.csv — create this file first, in the SAME folder as your .py file</div>
-      <pre style={{ fontFamily: "monospace", fontSize: 11.5, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{CSV_TEXT}</pre>
-      <div style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>Type it in Notepad / VS Code and save as <code style={{ color: C.text }}>marks.csv</code>. Without it, read_csv stops with FileNotFoundError.</div>
-    </div>
-  );
-}
-
-// ── Section 1: The Need ──────────────────────────────────────────────────────
-function TheNeed() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A DataFrame full of numbers is precise but hard to <em>feel</em>. Which student is struggling? Is the class
-        improving? A <strong style={{ color: C.text }}>chart</strong> answers at a glance.{" "}
-        <strong style={{ color: C.teal }}>Matplotlib</strong> is Python's foundational plotting library — a few
-        lines turn a column into a picture.
-      </p>
-
-      <div style={{ display: "flex", gap: 16, alignItems: "center", justifyContent: "center", background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ fontFamily: "monospace", fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
-          88, 45,<br />72, 91
-        </div>
-        <div style={{ color: C.accent, fontSize: 22 }}>→</div>
-        <svg width="200" height="90" role="img">
-          {MARKS.map((m, i) => (
-            <rect key={i} x={10 + i * 48} y={90 - (m / 100) * 80} width={34} height={(m / 100) * 80} fill={C.accent} rx="2" />
-          ))}
-        </svg>
-      </div>
-
-      <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>import matplotlib.pyplot as plt.</strong> Almost every chart follows
-        one recipe: give plt some data, label it, and call plt.show(). Learn the recipe once, vary the chart type.
-      </div>
-    </div>
-  );
-}
-
-// ── Install-first callout ────────────────────────────────────────────────────
-function InstallFirst({ pkgs, mod, check }) {
-  const [env, setEnv] = useState("win");
-  const [showErr, setShowErr] = useState(false);
-  const envs = {
-    win: { label: "Windows (cmd)", lines: ["env\\Scripts\\activate", "pip install " + pkgs, 'python -c "' + check + '"'], prompt: "(env) C:\\project>" },
-    ps: { label: "PowerShell", lines: [".\\env\\Scripts\\Activate.ps1", "pip install " + pkgs, 'python -c "' + check + '"'], prompt: "(env) PS C:\\project>" },
-    nix: { label: "macOS / Linux", lines: ["source env/bin/activate", "pip install " + pkgs, 'python3 -c "' + check + '"'], prompt: "(env) ~/project$" },
-    nb: { label: "Jupyter / Colab", lines: ["%pip install " + pkgs, check.replace("; ", "\n")], prompt: "In [1]:" },
-  };
-  const e = envs[env];
-  return (
-    <div style={{ background: C.card, border: `1.5px solid ${C.yellow}55`, borderRadius: 10, padding: 14, marginBottom: 16 }}>
-      <div style={{ color: C.yellow, fontWeight: 700, fontSize: 12.5, marginBottom: 6 }}>📥 Step 0 — install it first (one time per project)</div>
-      <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6, marginBottom: 10 }}>
-        <code style={{ color: C.text }}>{mod}</code> is not part of the standard library, so <code style={{ color: C.text }}>import</code> fails
-        until you pip-install it. Activate your project's venv (Unit 11.1), then run:
-      </div>
-      <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
-        {Object.entries(envs).map(([k, v]) => (
-          <button key={k} onClick={() => setEnv(k)} style={{
-            flex: 1, minWidth: 90, padding: "6px 4px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600,
-            background: env === k ? C.yellow + "22" : C.surface, color: env === k ? C.yellow : C.muted,
-            border: `1px solid ${env === k ? C.yellow : C.border}`,
-          }}>{v.label}</button>
-        ))}
-      </div>
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11.5, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
-        {e.lines.map((l, i) => (
-          <div key={i}><span style={{ color: env === "nb" ? C.accent : C.green }}>{env === "nb" ? "" : e.prompt + " "}</span>{l}</div>
-        ))}
-      </pre>
-      <div style={{ color: C.muted, fontSize: 11.5, lineHeight: 1.6, marginTop: 8 }}>
-        {env === "nb"
-          ? "In a notebook use %pip (with the %) so the package lands in the same Python the notebook is running. Colab already has most of these — the command just confirms it."
-          : "The last line is a quick check: if it prints a version number, the install worked. You only install once per venv; after that, just activate and import."}
-      </div>
-      <button onClick={() => setShowErr(!showErr)} style={{ marginTop: 8, padding: "5px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${C.red}55`, color: C.red, fontSize: 11, cursor: "pointer" }}>
-        {showErr ? "▾" : "▸"} Got ModuleNotFoundError?
-      </button>
-      {showErr && (
-        <div style={{ marginTop: 8, fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.red, margin: "0 0 6px", whiteSpace: "pre-wrap" }}>{"ModuleNotFoundError: No module named '" + mod.split(".")[0] + "'"}</pre>
-          Python can't find the package in the interpreter that ran your file. Usual causes: (1) you never ran pip install,
-          (2) you installed it while the venv was <em>not</em> active, so it went to the global Python, or (3) VS Code is
-          running a different interpreter — pick the env one via Ctrl+Shift+P → "Python: Select Interpreter".
-          Safest form: <code style={{ color: C.text }}>python -m pip install {pkgs}</code> — it installs into exactly the
-          python you'll run.
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Section 2: Anatomy of a plot ─────────────────────────────────────────────
-function Anatomy() {
-  return (
-    <div>
-      <InstallFirst pkgs="matplotlib pandas" mod="matplotlib" check="import matplotlib; print(matplotlib.__version__)" />
-
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        The universal Matplotlib recipe — five lines that cover most charts you'll ever make:
-      </p>
-
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.9, margin: "0 0 14px", whiteSpace: "pre" }}>{`import matplotlib.pyplot as plt
-
-names = ["Asha", "Ravi", "Meera", "Karan"]
-marks = [88, 45, 72, 91]
-
-plt.bar(names, marks)      # 1. the data + chart type
-plt.title("Class Marks")   # 2. a title
-plt.xlabel("Student")      # 3. label the x-axis
-plt.ylabel("Marks")        # 4. label the y-axis
-plt.show()                 # 5. render it`}</pre>
-
-      <div style={{ background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.teal }}>Swap line 1 to change the chart:</strong>{" "}
-        <code style={{ color: C.teal }}>plt.plot</code> (line), <code style={{ color: C.teal }}>plt.bar</code> (bars),{" "}
-        <code style={{ color: C.teal }}>plt.scatter</code> (dots), <code style={{ color: C.teal }}>plt.pie</code> (pie).
-        The labels and show() stay the same.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 3: Chart types ───────────────────────────────────────────────────
-function ChartTypes() {
-  const [type, setType] = useState("bar");
-
-  const bar = (
-    <svg width="260" height="150" role="img">
-      {MARKS.map((m, i) => (
-        <g key={i}>
-          <rect x={20 + i * 60} y={130 - (m / 100) * 110} width={40} height={(m / 100) * 110} fill={C.teal} rx="2" />
-          <text x={40 + i * 60} y={145} fontSize="9" fill={C.muted} textAnchor="middle">{NAMES[i].slice(0, 4)}</text>
-        </g>
-      ))}
-    </svg>
-  );
-  const line = (
-    <svg width="260" height="150" role="img">
-      <polyline fill="none" stroke={C.orange} strokeWidth="2.5"
-        points={MARKS.map((m, i) => `${25 + i * 70},${130 - (m / 100) * 110}`).join(" ")} />
-      {MARKS.map((m, i) => <circle key={i} cx={25 + i * 70} cy={130 - (m / 100) * 110} r="4" fill={C.orange} />)}
-    </svg>
-  );
-  const scatter = (
-    <svg width="260" height="150" role="img">
-      {[[30, 90], [80, 45], [140, 72], [200, 91], [110, 60], [170, 30]].map(([x, m], i) => (
-        <circle key={i} cx={x} cy={130 - (m / 100) * 110} r="5" fill={C.purple} opacity="0.8" />
-      ))}
-    </svg>
-  );
-  const pie = (() => {
-    // Math=2, CS=2 → simple halves; show 4 slices by student for variety
-    const total = MARKS.reduce((a, b) => a + b, 0);
-    let start = 0;
-    const cx = 75, cy = 75, r = 60;
-    return (
-      <svg width="260" height="150" role="img">
-        {MARKS.map((m, i) => {
-          const frac = m / total;
-          const end = start + frac * 2 * Math.PI;
-          const x1 = cx + r * Math.sin(start), y1 = cy - r * Math.cos(start);
-          const x2 = cx + r * Math.sin(end), y2 = cy - r * Math.cos(end);
-          const large = frac > 0.5 ? 1 : 0;
-          const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-          const s = start; start = end;
-          return <path key={i} d={path} fill={PIE_COLORS[i]} stroke={C.bg} strokeWidth="1.5" />;
-        })}
-        {NAMES.map((n, i) => (
-          <g key={i}>
-            <rect x={160} y={20 + i * 24} width={12} height={12} fill={PIE_COLORS[i]} rx="2" />
-            <text x={178} y={30 + i * 24} fontSize="11" fill={C.muted}>{n}</text>
-          </g>
-        ))}
-      </svg>
-    );
-  })();
-
-  const types = {
-    bar: { label: "Bar", color: C.teal, code: "plt.bar(names, marks)", svg: bar, note: "Compare quantities across categories — the go-to for marks per student." },
-    line: { label: "Line", color: C.orange, code: "plt.plot(names, marks)", svg: line, note: "Show a trend or change over a sequence — great for progress over time." },
-    scatter: { label: "Scatter", color: C.purple, code: "plt.scatter(hours, marks)", svg: scatter, note: "Reveal a relationship between two numbers — e.g. study hours vs marks." },
-    pie: { label: "Pie", color: C.green, code: "plt.pie(marks, labels=names)", svg: pie, note: "Show parts of a whole — each slice's share of the total. Use sparingly." },
-  };
-  const t = types[type];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Same recipe, four pictures. Pick the chart that matches your question. Tap to preview.
-      </p>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-        {Object.entries(types).map(([k, tv]) => (
-          <button key={k} onClick={() => setType(k)} style={{
-            flex: 1, minWidth: 80, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600,
-            background: type === k ? tv.color + "22" : C.card,
-            border: `1.5px solid ${type === k ? tv.color : C.border}`, color: type === k ? tv.color : C.muted,
-          }}>{tv.label}</button>
-        ))}
-      </div>
-
-      <div style={{ background: "#0A0E14", border: `1.5px solid ${t.color}44`, borderRadius: 10, padding: 16, marginBottom: 12, display: "flex", justifyContent: "center" }}>
-        {t.svg}
-      </div>
-
-      <pre style={{ background: C.card, border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 12, color: C.text, margin: "0 0 10px" }}>{t.code}</pre>
-      <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 6 }}>📎 This one line replaces <code style={{ color: C.text }}>plt.bar(...)</code> in the recipe from the previous tab — everything else stays.</div>
-      <FullCode code={FULL_TYPES[type]} />
-
-      <div style={{ background: t.color + "14", border: `1px solid ${t.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-        {t.note}
-      </div>
-    </div>
-  );
-}
-
-// ── Section 4: From DataFrame to chart ───────────────────────────────────────
-function FromDataFrame() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The real workflow ties it all together: read data with Pandas (Module 12), then plot a column directly.
-      </p>
-
-      <CsvFile />
-
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.85, margin: "0 0 14px", whiteSpace: "pre" }}>{`import pandas as pd
-import matplotlib.pyplot as plt
-
-df = pd.read_csv("marks.csv")
-
-df.plot(x="Name", y="Marks", kind="bar")
-plt.title("Class Marks")
-plt.show()`}</pre>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
-        <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.7 }}>
-          Pandas even has plotting built in: <code style={{ color: C.teal }}>df.plot(kind="bar")</code> calls
-          Matplotlib for you. And <strong style={{ color: C.text }}>Seaborn</strong> and{" "}
-          <strong style={{ color: C.text }}>Plotly</strong> (coming next) build on this same foundation to make
-          prettier and interactive charts with even less code.
-        </div>
-      </div>
-
-      <div style={{ background: C.green + "15", border: `1px solid ${C.green}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.green }}>Data in, picture out.</strong> read_csv → filter/summarise → plot.
-        That three-step pipeline is the heartbeat of data analysis — and exactly what your visualization lab builds.
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "What is the standard import line for Matplotlib?",
-      options: [
-        "import matplotlib",
-        "import matplotlib.pyplot as plt",
-        "from matplotlib import *",
-        "import plt",
-      ],
-      answer: 1,
-      explain: "import matplotlib.pyplot as plt is the near-universal convention — everyone writes plt.bar, plt.plot, plt.show.",
-    },
-    {
-      q: "To change from a bar chart to a line chart, what do you change?",
-      options: [
-        "Everything",
-        "Just the plotting call — plt.bar(...) becomes plt.plot(...); labels and show() stay",
-        "The import line",
-        "You must use a different library",
-      ],
-      answer: 1,
-      explain: "The recipe is stable: swap plt.bar for plt.plot (or scatter, pie) and keep the title, labels, and plt.show().",
-    },
-    {
-      q: "Which chart best shows the RELATIONSHIP between study hours and marks?",
-      options: ["Pie", "Scatter", "A single bar", "None"],
-      answer: 1,
-      explain: "A scatter plot places each (hours, marks) pair as a dot, revealing whether more hours tends to mean higher marks.",
-    },
-    {
-      q: "What does  plt.show()  do?",
-      options: [
-        "Loads the data",
-        "Renders and displays the figure you've built up",
-        "Saves the file",
-        "Imports matplotlib",
-      ],
-      answer: 1,
-      explain: "You build a figure with plt calls, then plt.show() actually draws it on screen. Without it, nothing appears.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You can turn any dataset into a picture." :
-            score >= 2 ? "Good — replay Chart Types to match the chart to the question." :
-              "Revisit the Anatomy and Chart Types, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 13.1 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            The Matplotlib recipe, four chart types, and the read → analyse → plot pipeline.<br /><br />
-            Next in this module: Seaborn for statistical charts and Plotly for interactive ones — both build on
-            what you just learned.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function Unit13_1({ student, onUnitComplete }) {
+export default function Unit13_1(props) {
   const sections = [
-    { id: "need", label: "The Need" },
-    { id: "anatomy", label: "The Recipe" },
-    { id: "types", label: "Chart Types" },
-    { id: "df", label: "From Data to Chart" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    { label: "The Recipe", kicker: "DATA → PLOT → LABEL → SHOW", title: "Your first chart", blocks: [
+      <P>A table of numbers tells; a chart convinces. <strong>matplotlib</strong> is Python's original charting library — almost every other one (seaborn, pandas' .plot) is built on it.</P>,
+      EX.line,
+    ] },
+    { label: "Chart Types", kicker: "PICK THE RIGHT ONE", title: "Bar, scatter, pie", blocks: [
+      <CodeBlock title="which chart?" code={'plt.plot(x, y)        # line    — change over time\nplt.bar(names, values) # bar     — compare categories\nplt.scatter(x, y)      # scatter — is there a link?\nplt.pie(values)        # pie     — parts of a whole (few parts!)'} />,
+      EX.bar, EX.scatter, EX.pie,
+    ] },
+    { label: "Legends", kicker: "SEVERAL SERIES", title: "Two lines, one chart", blocks: [EX.legend] },
+    { label: "From Data", kicker: "PANDAS + MATPLOTLIB", title: "Charts from a CSV", blocks: [EX.fromcsv, <KeyIdea>The usual flow: load (read_csv) → summarise (groupby) → plot the summary (index on x, values on y).</KeyIdea>] },
+    { label: "Subplots", kicker: "fig, ax", title: "Several charts in one figure", blocks: [EX.subplots] },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: sales dashboard", blocks: [
+      EX.dashboard,
+      <Note color={T.blue} icon="💾">On your own computer, plt.savefig("dashboard.png", dpi=150) saves the figure as an image for a report — call it before plt.show().</Note>,
+    ] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Numbers into Pictures</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>The Matplotlib Recipe</h3><Anatomy /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Four Chart Types</h3><ChartTypes /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>From DataFrame to Chart</h3><FromDataFrame /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on plotting with Matplotlib.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📊</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 13 › UNIT 13.1</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Charts with Matplotlib</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit13_1" crumb="MODULE 13 › 1" title="Charts with Matplotlib" sections={sections} quiz={QUIZ}
+      next={{ title: "13.2 — Statistical Charts with Seaborn", text: "Distributions, comparisons and correlations — one line each." }} />
   );
 }

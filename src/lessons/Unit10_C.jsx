@@ -1,758 +1,104 @@
-// Unit10_C — 🔥 The Crucible: Module 10 (Object-Oriented Programming)
-// Classes, __init__, self, methods, __str__, inheritance. Temper asks students
-// to DEFINE a class with __init__ + a method; hidden tests instantiate & call it.
-import { useState, useRef } from "react";
+// Unit10_C — The Crucible: Module 10 (rebuilt, typing-first)
+// Spark: objects as name tags, __str__, is vs ==; inheritance, overriding,
+// super() and polymorphism. Flame: a class-level list shared by every
+// student; a child class that forgets super().__init__. Forge: abstract
+// Shape with Circle / Rectangle / Square. Temper: a parking lot with Vehicle
+// subclasses, ParkingLot and LotFullError (post checks use the classes).
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import CrucibleShell from "../kit/Crucible.jsx";
+
+function parking(cmds) {
+  const out = [], lot = new Map(); let earned = 0;
+  const fee = (v, h) => (v.t === "car" ? 20 * h : v.t === "bike" ? 10 * h : 50 * h + 25 * v.axles);
+  for (const line of cmds) {
+    out.push(`Command: ${line}`);
+    const p = line.split(/\s+/).filter(Boolean);
+    if (p.length === 1 && p[0] === "done") break;
+    if (p.length === 1 && p[0] === "status") { out.push(`${lot.size}/3 spaces used`); continue; }
+    const parkOk = p[0] === "park" && ((p.length === 3 && (p[1] === "car" || p[1] === "bike")) || (p.length === 4 && p[1] === "truck" && /^\d+$/.test(p[3])));
+    const leaveOk = p[0] === "leave" && p.length === 3 && /^\d+$/.test(p[2]);
+    if (parkOk) {
+      const plate = p[2];
+      if (lot.has(plate)) out.push(`${plate} is already parked`);
+      else if (lot.size >= 3) out.push("Lot full");
+      else { lot.set(plate, { t: p[1], axles: +(p[3] || 0) }); out.push(`Parked ${p[1]} ${plate}`); }
+    } else if (leaveOk) {
+      const plate = p[1];
+      if (!lot.has(plate)) out.push(`No vehicle ${plate}`);
+      else { const f = fee(lot.get(plate), +p[2]); lot.delete(plate); earned += f; out.push(`${plate} paid Rs ${f}`); }
+    } else out.push("Unknown command");
+  }
+  out.push(`Earned: Rs ${earned}`);
+  return out.join("\n");
+}
+const parkTest = (cmds, extra = {}) => ({ inputs: cmds, expect: parking(cmds), ...extra });
+
+const EX = {
+  spark1: {
+    id: "spark1", kind: "predict", title: "Objects and name tags",
+    code: 'class Box:\n    def __init__(self, label, items=0):\n        self.label = label\n        self.items = items\n\n    def add(self, n):\n        self.items += n\n\n    def __str__(self):\n        return f"{self.label}[{self.items}]"\n\na = Box("A")\nb = Box("B", 3)\nc = a\nc.add(2)\na.add(1)\nboxes = [a, b, c]\nprint(a, b, c)\nprint(len(boxes), a is c, a == b)\nb = Box("B", 3)\nprint(b.items + boxes[1].items)',
+    task: <>How many Box objects exist by the end — and which names point at which?</>,
+    hints: ["c = a makes no new box: c and a are two names for the same object.", "print uses __str__ for each object.", "The last b = Box(\"B\", 3) is a brand-new box; boxes[1] still points at the old one."],
+    solution: "A[3] B[3] A[3]\n3 True False\n6",
+  },
+  spark2: {
+    id: "spark2", kind: "predict", title: "Inheritance and super()",
+    code: 'class Animal:\n    def __init__(self, name):\n        self.name = name\n\n    def speak(self):\n        return "..."\n\n    def intro(self):\n        return f"{self.name} says {self.speak()}"\n\nclass Dog(Animal):\n    def speak(self):\n        return "Woof"\n\nclass Puppy(Dog):\n    def __init__(self, name, age):\n        super().__init__(name)\n        self.age = age\n\n    def speak(self):\n        return super().speak() + "!" * self.age\n\nfor pet in [Animal("Cat"), Dog("Rex"), Puppy("Bit", 2)]:\n    print(pet.intro())\nprint(isinstance(Puppy("x", 1), Animal))',
+    task: <><code>intro</code> is written once, in Animal. Which <code>speak</code> does it call for each pet?</>,
+    hints: ["self.speak() calls the speak of the object's own class — the most specific one.", "Puppy's speak takes Dog's \"Woof\" and adds age exclamation marks.", "A Puppy is a Dog, and a Dog is an Animal."],
+    solution: "Cat says ...\nRex says Woof\nBit says Woof!!\nTrue",
+  },
+  marks: {
+    id: "marks", kind: "fix", title: "Everyone shares one list",
+    task: <>Asha should average 85.0 and Ben 40.0 — but both get 70.0. A list written directly in the class body belongs to the <em>class</em>, shared by every student. Give each student their own list.</>,
+    starter: 'class Student:\n    marks = []\n\n    def __init__(self, name):\n        self.name = name\n\n    def add_mark(self, m):\n        self.marks.append(m)\n\n    def average(self):\n        return sum(self.marks) / len(self.marks)\n\nasha = Student("Asha")\nben = Student("Ben")\nasha.add_mark(90)\nasha.add_mark(80)\nben.add_mark(40)\nprint(f"{asha.name}: {asha.average():.1f}")\nprint(f"{ben.name}: {ben.average():.1f}")',
+    tests: [{ expect: "Asha: 85.0\nBen: 40.0" }],
+    post: "_s = Student('x')\nassert _s.marks == [], 'A new Student must start with an empty list of marks.'",
+    hints: ["Where should a value that belongs to ONE object be created?", "In __init__: self.marks = [] — and delete the class-level line."],
+    solution: 'class Student:\n    def __init__(self, name):\n        self.name = name\n        self.marks = []\n\n    def add_mark(self, m):\n        self.marks.append(m)\n\n    def average(self):\n        return sum(self.marks) / len(self.marks)\n\nasha = Student("Asha")\nben = Student("Ben")\nasha.add_mark(90)\nasha.add_mark(80)\nben.add_mark(40)\nprint(f"{asha.name}: {asha.average():.1f}")\nprint(f"{ben.name}: {ben.average():.1f}")',
+  },
+  savings: {
+    id: "savings", kind: "fix", title: "The savings account that won't open",
+    task: <>A Savings account is an Account that must keep a minimum balance. Run it: it crashes the moment it touches <code>self.balance</code>. Read the coach, fix it, and check the three withdrawals come out as shown.</>,
+    starter: 'class Account:\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self.balance = balance\n\n    def withdraw(self, amount):\n        if amount > self.balance:\n            raise ValueError("Insufficient funds")\n        self.balance -= amount\n\nclass Savings(Account):\n    def __init__(self, owner, balance=0, minimum=1000):\n        self.minimum = minimum\n\n    def withdraw(self, amount):\n        if self.balance - amount < self.minimum:\n            raise ValueError("Below minimum balance")\n        self.balance -= amount\n\ns = Savings("Asha", 5000)\nfor amount in [3000, 1500, 500]:\n    try:\n        s.withdraw(amount)\n        print("Withdrew", amount, "- left", s.balance)\n    except ValueError as e:\n        print("Refused", amount, "-", e)',
+    tests: [{ expect: "Withdrew 3000 - left 2000\nRefused 1500 - Below minimum balance\nWithdrew 500 - left 1500" }],
+    post: "_x = Savings('x', 100, 50)\nassert _x.owner == 'x' and _x.balance == 100, 'Savings must set owner and balance through the parent.'\ntry:\n    _x.withdraw(60)\n    raise AssertionError('Going below the minimum must raise ValueError.')\nexcept ValueError:\n    pass",
+    hints: ["Savings.__init__ replaces Account.__init__ — so owner and balance are never set.", "First line of Savings.__init__: super().__init__(owner, balance)"],
+    solution: 'class Account:\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self.balance = balance\n\n    def withdraw(self, amount):\n        if amount > self.balance:\n            raise ValueError("Insufficient funds")\n        self.balance -= amount\n\nclass Savings(Account):\n    def __init__(self, owner, balance=0, minimum=1000):\n        super().__init__(owner, balance)\n        self.minimum = minimum\n\n    def withdraw(self, amount):\n        if self.balance - amount < self.minimum:\n            raise ValueError("Below minimum balance")\n        self.balance -= amount\n\ns = Savings("Asha", 5000)\nfor amount in [3000, 1500, 500]:\n    try:\n        s.withdraw(amount)\n        print("Withdrew", amount, "- left", s.balance)\n    except ValueError as e:\n        print("Refused", amount, "-", e)',
+  },
+  shapes: {
+    id: "shapes", kind: "complete", title: "Shapes that know their area",
+    task: <>Shape is an abstract parent: its <code>area</code> refuses to work, so every child must override it. Fill the blanks — a Square is a Rectangle with equal sides, so it only needs to call the parent's <code>__init__</code>.</>,
+    starter: 'import math\n\nclass Shape:\n    def area(self):\n        raise NotImplementedError("Each shape must define area()")\n\n    def __str__(self):\n        return f"{type(self).__name__} with area {self.area():.2f}"\n\nclass Circle(Shape):\n    def __init__(self, r):\n        self.r = r\n\n    def area(self):\n        return ___\n\nclass Rectangle(Shape):\n    def __init__(self, w, h):\n        self.w = w\n        self.h = h\n\n    def ___(self):\n        return self.w * self.h\n\nclass Square(___):\n    def __init__(self, side):\n        super().__init__(___, ___)\n\nshapes = [Circle(1), Rectangle(2, 3.5), Square(4)]\ntotal = 0\nfor s in shapes:\n    print(s)\n    total += s.area()\nprint(f"Total area: {total:.2f}")',
+    tests: [{ expect: "Circle with area 3.14\nRectangle with area 7.00\nSquare with area 16.00\nTotal area: 26.14" }],
+    post: "assert isinstance(Square(2), Rectangle), 'Square should inherit from Rectangle.'\ntry:\n    Shape().area()\n    raise AssertionError('Shape().area() should still raise NotImplementedError.')\nexcept NotImplementedError:\n    pass",
+    hints: ["math.pi * self.r ** 2", "def area(self): in Rectangle", "class Square(Rectangle): … super().__init__(side, side)"],
+    solution: 'import math\n\nclass Shape:\n    def area(self):\n        raise NotImplementedError("Each shape must define area()")\n\n    def __str__(self):\n        return f"{type(self).__name__} with area {self.area():.2f}"\n\nclass Circle(Shape):\n    def __init__(self, r):\n        self.r = r\n\n    def area(self):\n        return math.pi * self.r ** 2\n\nclass Rectangle(Shape):\n    def __init__(self, w, h):\n        self.w = w\n        self.h = h\n\n    def area(self):\n        return self.w * self.h\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        super().__init__(side, side)\n\nshapes = [Circle(1), Rectangle(2, 3.5), Square(4)]\ntotal = 0\nfor s in shapes:\n    print(s)\n    total += s.area()\nprint(f"Total area: {total:.2f}")',
+  },
+  parking: {
+    id: "parking", kind: "make", title: "Parking lot",
+    task: <>Build it with classes. <code>Vehicle(plate)</code> has <code>fee(hours)</code> that raises <code>NotImplementedError</code>; <code>Car</code> (Rs 20 per hour) and <code>Bike</code> (Rs 10 per hour) override it; <code>Truck(plate, axles)</code> pays 50 per hour + 25 per axle. Write <code>LotFullError</code>, and <code>ParkingLot(capacity)</code> with <code>park(vehicle)</code> (raises ValueError if that plate is already parked, then LotFullError if full) and <code>leave(plate, hours)</code> (returns the fee and frees the space; KeyError for an unknown plate). Main: a lot of 3; read <code>Command: </code> lines until <code>done</code> — <code>park car KA01</code>, <code>park truck MH12 3</code>, <code>leave KA01 2</code>, <code>status</code> — with the messages below; anything else → <code>Unknown command</code>; finally <code>Earned: Rs 315</code>.</>,
+    minLines: 50,
+    tests: [
+      parkTest(["park car KA01", "park bike TN22", "park truck MH12 3", "park car DL05", "status", "leave KA01 2", "leave XX99 1", "park car DL05", "park bike TN22", "leave MH12 4", "fly away", "done"]),
+      parkTest(["leave A1 1", "park bus Z1", "park truck T1 x", "status", "done"], { hidden: true, why: "Unknown vehicle types and a non-number axle count are Unknown command." }),
+      parkTest(["park bike B1", "leave B1 3", "park bike B1", "leave B1 1", "done"], { hidden: true, why: "A vehicle that has left can park again." }),
+    ],
+    post: "assert Car('A').fee(3) == 60 and Bike('B').fee(3) == 30 and Truck('T', 2).fee(1) == 100, 'fee() is wrong for Car, Bike or Truck.'\nassert isinstance(Truck('T', 1), Vehicle), 'Truck should be a Vehicle.'\ntry:\n    Vehicle('V').fee(1)\n    raise AssertionError('Vehicle.fee should raise NotImplementedError.')\nexcept NotImplementedError:\n    pass\n_lot = ParkingLot(1)\n_lot.park(Car('P1'))\ntry:\n    _lot.park(Car('P2'))\n    raise AssertionError('A full lot should raise LotFullError.')\nexcept LotFullError:\n    pass\nassert _lot.leave('P1', 2) == 40, 'leave() returns the fee.'\ntry:\n    _lot.leave('P1', 1)\n    raise AssertionError('Leaving twice should raise KeyError.')\nexcept KeyError:\n    pass",
+    requires: [{ node: "ClassDef", min: 6 }, { node: "Raise", min: 2 }],
+    hints: ["ParkingLot keeps self.parked = {} (plate → vehicle) and self.capacity.", "park: if vehicle.plate in self.parked: raise ValueError; if len(self.parked) >= self.capacity: raise LotFullError", "Main: parts = line.split(); build Car(parts[2]) / Bike(...) / Truck(parts[2], int(parts[3])) only when the shape is right, else Unknown command."],
+    solution: 'class LotFullError(Exception):\n    pass\n\nclass Vehicle:\n    def __init__(self, plate):\n        self.plate = plate\n\n    def fee(self, hours):\n        raise NotImplementedError("each vehicle sets its own fee")\n\nclass Car(Vehicle):\n    def fee(self, hours):\n        return 20 * hours\n\nclass Bike(Vehicle):\n    def fee(self, hours):\n        return 10 * hours\n\nclass Truck(Vehicle):\n    def __init__(self, plate, axles):\n        super().__init__(plate)\n        self.axles = axles\n\n    def fee(self, hours):\n        return 50 * hours + 25 * self.axles\n\nclass ParkingLot:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.parked = {}\n\n    def park(self, vehicle):\n        if vehicle.plate in self.parked:\n            raise ValueError(vehicle.plate)\n        if len(self.parked) >= self.capacity:\n            raise LotFullError()\n        self.parked[vehicle.plate] = vehicle\n\n    def leave(self, plate, hours):\n        vehicle = self.parked.pop(plate)\n        return vehicle.fee(hours)\n\nlot = ParkingLot(3)\nearned = 0\nwhile True:\n    parts = input("Command: ").split()\n    if parts == ["done"]:\n        break\n    if parts == ["status"]:\n        print(f"{len(lot.parked)}/{lot.capacity} spaces used")\n        continue\n    vehicle = None\n    if len(parts) == 3 and parts[0] == "park" and parts[1] == "car":\n        vehicle = Car(parts[2])\n    elif len(parts) == 3 and parts[0] == "park" and parts[1] == "bike":\n        vehicle = Bike(parts[2])\n    elif len(parts) == 4 and parts[0] == "park" and parts[1] == "truck" and parts[3].isdigit():\n        vehicle = Truck(parts[2], int(parts[3]))\n    if vehicle is not None:\n        try:\n            lot.park(vehicle)\n            print(f"Parked {parts[1]} {vehicle.plate}")\n        except ValueError:\n            print(f"{vehicle.plate} is already parked")\n        except LotFullError:\n            print("Lot full")\n    elif len(parts) == 3 and parts[0] == "leave" and parts[2].isdigit():\n        try:\n            paid = lot.leave(parts[1], int(parts[2]))\n            earned += paid\n            print(f"{parts[1]} paid Rs {paid}")\n        except KeyError:\n            print(f"No vehicle {parts[1]}")\n    else:\n        print("Unknown command")\nprint(f"Earned: Rs {earned}")',
+  },
 };
 
-const UNIT_ID = "Unit10_C";
-const STAGES = [
-  { id: "spark", label: "Spark", icon: "✨", tag: "Predict, Trace & Spot" },
-  { id: "flame", label: "Flame", icon: "🔥", tag: "Bug Hunt" },
-  { id: "forge", label: "Forge", icon: "⚒️", tag: "Assemble the Class" },
-  { id: "temper", label: "Temper", icon: "🗡️", tag: "Write Real Python" },
+export const EXERCISES = EX; // for src/kit/selfTest.js
+
+const QUIZ = [
+  { q: "b = a for an object, then b.x = 5. What is a.x?", options: ["Unchanged", "5 — same object", "Error", "None"], answer: 1, explain: "Assignment never copies objects; both names point at one." },
+  { q: "A child class defines its own __init__. When does the parent's __init__ run?", options: ["Always, automatically", "Only if the child calls super().__init__(…)", "Never", "After the child's"], answer: 1, explain: "Forgetting super().__init__ leaves the parent's attributes unset." },
+  { q: "A list written in the class body (not in __init__)…", options: ["Belongs to each object", "Is shared by every object of the class", "Is copied per object", "Is an error"], answer: 1, explain: "Create per-object data in __init__ with self." },
 ];
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-
-// ── Hint box: reveals one nudge at a time, never the answer ──
-// Display order for a question's options. A fixed shuffle seeded by the question's
-// own text, so the right answer is not always first, yet the order never jumps
-// between renders or between visits.
-function optionOrder(n, seedText) {
-  let h = 2166136261;
-  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
-  const idx = [...Array(n).keys()];
-  for (let i = n - 1; i > 0; i--) {
-    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
-    const j = h % (i + 1);
-    [idx[i], idx[j]] = [idx[j], idx[i]];
-  }
-  return idx;
-}
-
-function Hints({ hints, shown, onMore }) {
-  return (
-    <div style={{ marginTop: 10 }}>
-      {hints.slice(0, shown).map((h, i) => (
-        <div key={i} style={{ background: C.yellow + "14", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "8px 12px", fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 6 }}>
-          💡 Hint {i + 1}: {h}
-        </div>
-      ))}
-      {shown < hints.length && (
-        <button onClick={onMore} style={{
-          padding: "6px 12px", borderRadius: 7, fontSize: 12, cursor: "pointer",
-          background: C.card, color: C.yellow, border: `1px solid ${C.yellow}55`,
-        }}>💡 Need a nudge? ({shown}/{hints.length} hints used)</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 1: Spark — predict / trace-the-state / spot-the-lie ──
-function SparkStage({ onPass }) {
-  const questions = [
-    {
-      kind: "mcq",
-      code: "class Counter:\n    def __init__(self):\n        self.n = 0\n    def bump(self):\n        self.n = self.n + 1\n\nc = Counter()\nc.bump()\nc.bump()\nprint(c.n)",
-      options: ["0", "1", "2", "Error"],
-      answer: 2,
-      hints: ["__init__ sets self.n to 0 when the object is created.", "Each bump() adds 1 to the SAME object's n. Two bumps..."],
-      why: "__init__ starts n at 0; each c.bump() increments this object's own self.n. Two calls → 2. The state lives on the object between calls.",
-    },
-    {
-      kind: "trace",
-      code: "class Box:\n    def __init__(self, v):\n        self.v = v\n    def double(self):\n        return self.v * 2\n\nb = Box(5)\nprint(b.double() + b.v)",
-      expect: "15",
-      prompt: "Trace the method and the attribute: what number is printed? Type it below.",
-      hints: ["b.double() returns self.v * 2 — and self.v is 5.", "Add that to b.v (which is still 5)."],
-      why: "b.double() returns 5 * 2 = 10; b.v is 5. 10 + 5 = 15. The method reads the object's own v, and so does b.v.",
-    },
-    {
-      kind: "lie",
-      code: 'class Animal:\n    def speak(self):\n        return "..."\n\nclass Dog(Animal):\n    def speak(self):\n        return "Woof"\n\nd = Dog()',
-      claims: [
-        'd.speak() returns "Woof" — Dog\'s method overrides Animal\'s.',
-        "Dog inherits from Animal, so a Dog is-a Animal.",
-        "Dog's speak() deletes Animal's speak() from memory.",
-      ],
-      lieIndex: 2,
-      hints: ["Overriding means the child's version is FOUND FIRST — but does that remove the parent's?", "Animal still has its speak(); an Animal() instance would use it. Overriding hides, it doesn't delete."],
-      why: "Claims 1 and 2 are true (child-first lookup; is-a). The lie: overriding does NOT delete Animal.speak() — the parent keeps its own method; Dog's just wins for Dog objects.",
-    },
-  ];
-  const [solved, setSolved] = useState([]);
-  const [picked, setPicked] = useState({});
-  const [typed, setTyped] = useState({});
-  const [typedWrong, setTypedWrong] = useState({});
-  const [hintCount, setHintCount] = useState({});
-
-  const bumpHint = (qi) =>
-    setHintCount((h) => ({ ...h, [qi]: Math.min((h[qi] || 0) + 1, questions[qi].hints.length) }));
-
-  const pick = (qi, oi) => {
-    if (solved.includes(qi)) return;
-    const q = questions[qi];
-    const correct = q.kind === "lie" ? oi === q.lieIndex : oi === q.answer;
-    if (correct) {
-      setSolved((s) => [...s, qi]);
-      setPicked((p) => ({ ...p, [qi]: null }));
-    } else {
-      setPicked((p) => ({ ...p, [qi]: oi }));
-      bumpHint(qi);
-    }
-  };
-
-  const checkTyped = (qi) => {
-    if (solved.includes(qi)) return;
-    if ((typed[qi] || "").trim() === questions[qi].expect) {
-      setSolved((s) => [...s, qi]);
-      setTypedWrong((w) => ({ ...w, [qi]: false }));
-    } else {
-      setTypedWrong((w) => ({ ...w, [qi]: true }));
-      bumpHint(qi);
-    }
-  };
-
-  const allDone = solved.length === questions.length;
-  const tagFor = (q) => (q.kind === "trace" ? " · TRACE IT" : q.kind === "lie" ? " · SPOT THE LIE" : "");
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Warm up: predict an object's state after two method calls, trace a method plus an attribute, and spot
-        the false claim about inheritance. ✨
-      </p>
-
-      {questions.map((q, qi) => {
-        const isSolved = solved.includes(qi);
-        return (
-          <div key={qi} style={{ background: C.card, border: `1.5px solid ${isSolved ? C.green : C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ color: C.orange, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>
-                CHALLENGE {qi + 1} OF 3{tagFor(q)}
-              </span>
-              {isSolved && <span style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>✓ solved</span>}
-            </div>
-            <pre style={{ ...mono, background: C.surface, borderRadius: 8, padding: 12, border: `1px solid ${C.border}`, marginBottom: 10 }}>{q.code}</pre>
-
-            {q.kind === "mcq" && (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {optionOrder(q.options.length, q.code).map((oi) => {
-                  const opt = q.options[oi];
-                  let bg = C.surface, border = C.border, col = C.text;
-                  if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-                  else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
-                  return (
-                    <button key={oi} onClick={() => pick(qi, oi)} style={{
-                      padding: "8px 16px", borderRadius: 8, fontFamily: "monospace", fontSize: 12.5,
-                      background: bg, border: `1.5px solid ${border}`, color: col, whiteSpace: "pre-wrap", textAlign: "left",
-                      cursor: isSolved ? "default" : "pointer", transition: "all 0.2s",
-                    }}>{opt}</button>
-                  );
-                })}
-              </div>
-            )}
-
-            {q.kind === "lie" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {optionOrder(q.claims.length, q.code).map((oi) => {
-                  const cl = q.claims[oi];
-                  let bg = C.surface, border = C.border, col = C.text;
-                  if (isSolved && oi === q.lieIndex) { bg = C.red + "18"; border = C.red; col = C.red; }
-                  else if (isSolved) { bg = C.green + "10"; border = C.green + "55"; col = C.muted; }
-                  else if (picked[qi] === oi) { bg = C.yellow + "14"; border = C.yellow; col = C.yellow; }
-                  return (
-                    <button key={oi} onClick={() => pick(qi, oi)} style={{
-                      textAlign: "left", padding: "9px 14px", borderRadius: 8, fontSize: 13, lineHeight: 1.5,
-                      background: bg, border: `1.5px solid ${border}`, color: col,
-                      cursor: isSolved ? "default" : "pointer",
-                    }}>{isSolved && oi === q.lieIndex ? "🤥 " : isSolved ? "✓ " : ""}{cl}</button>
-                  );
-                })}
-              </div>
-            )}
-
-            {q.kind === "trace" && (
-              <div>
-                <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8 }}>{q.prompt}</div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    value={typed[qi] || ""}
-                    onChange={(e) => setTyped((t) => ({ ...t, [qi]: e.target.value }))}
-                    onKeyDown={(e) => e.key === "Enter" && checkTyped(qi)}
-                    disabled={isSolved}
-                    spellCheck={false}
-                    style={{
-                      width: 120, padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", fontSize: 14,
-                      background: "#010409", color: isSolved ? C.green : C.text, outline: "none",
-                      border: `1.5px solid ${isSolved ? C.green : typedWrong[qi] ? C.red : C.border}`,
-                    }} />
-                  {!isSolved && (
-                    <button onClick={() => checkTyped(qi)} style={{
-                      padding: "8px 18px", borderRadius: 8, background: C.accentGlow, border: "none",
-                      color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer",
-                    }}>Check</button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {isSolved
-              ? <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: C.green + "12", border: `1px solid ${C.green}44`, fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>✓ {q.why}</div>
-              : (hintCount[qi] || 0) > 0 && <Hints hints={q.hints} shown={hintCount[qi] || 0} onMore={() => bumpHint(qi)} />}
-          </div>
-        );
-      })}
-
-      {allDone && (
-        <button onClick={onPass} style={{
-          width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
-        }}>✨ Spark caught! Light the Flame →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 2: Flame — bug hunts (click the line, pick the fix) ──
-function FlameStage({ onPass }) {
-  const bugs = [
-    {
-      intro: "This should print the student's name — instead it crashes with NameError: name 'name' is not defined. Click the buggy line.",
-      lines: ["class Student:", "    def __init__(self, name):", "        self.name = name", "    def show(self):", "        print(name)", "", 's = Student("Asha")', "s.show()"],
-      buggyLine: 4,
-      lineHints: {
-        1: "The constructor's parameter list is fine.",
-        2: "self.name = name correctly stores the name ON the object.",
-        3: "The method header is fine — show(self) has its self.",
-        6: "Creating the student is fine.",
-        7: "The call is fine — the crash is inside show().",
-      },
-      fixes: ["        print(self.name)", "        print(Student.name)", "        return name"],
-      fixAnswer: 0,
-      fixHints: ["Inside a method, a bare `name` is neither a local nor a global here — so Python can't find it.", "The name lives on the object as self.name. Methods reach their object's data through self."],
-      why: "Inside show(), `name` doesn't exist — it was a parameter of __init__, not show. The data is stored as self.name, so print(self.name) is the fix.",
-    },
-    {
-      intro: "Calling p.greet() crashes with TypeError: greet() takes 0 positional arguments but 1 was given. Click the buggy line.",
-      lines: ["class Person:", "    def __init__(self, name):", "        self.name = name", "    def greet():", '        print("Hi!")', "", 'p = Person("Rao")', "p.greet()"],
-      buggyLine: 3,
-      lineHints: {
-        1: "__init__ has its self — it's fine.",
-        2: "Storing the name is correct.",
-        4: "The print is fine — the problem is the method header above it.",
-        7: "The call p.greet() looks innocent, but Python secretly passes p as an argument...",
-      },
-      fixes: ["    def greet(self):", "    def greet(p):  # wrong", "call it as Person.greet()"],
-      fixAnswer: 0,
-      fixHints: ["p.greet() is shorthand for greet(p) — Python passes the object as the first argument automatically.", "The method must have a parameter (self) to RECEIVE that object. Without it, Python sees 1 arg given but 0 expected."],
-      why: "p.greet() passes p in as the first argument, but greet() declares no parameter to catch it — hence '0 positional arguments but 1 given'. Every method needs self.",
-    },
-  ];
-  const [cur, setCur] = useState(0);
-  const [foundLine, setFoundLine] = useState(false);
-  const [wrongLine, setWrongLine] = useState(null);
-  const [fixPicked, setFixPicked] = useState(null);
-  const [fixedCount, setFixedCount] = useState(0);
-  const [hintCount, setHintCount] = useState(0);
-  const b = bugs[cur];
-  const solvedThis = fixPicked === b.fixAnswer;
-
-  const clickLine = (i) => {
-    if (foundLine) return;
-    if (i === b.buggyLine) { setFoundLine(true); setWrongLine(null); }
-    else setWrongLine(i);
-  };
-  const pickFix = (i) => {
-    if (solvedThis) return;
-    setFixPicked(i);
-    if (i !== b.fixAnswer) setHintCount((h) => Math.min(h + 1, b.fixHints.length));
-  };
-  const nextBug = () => {
-    setFixedCount((n) => n + 1);
-    if (cur < bugs.length - 1) {
-      setCur(cur + 1); setFoundLine(false); setWrongLine(null); setFixPicked(null); setHintCount(0);
-    }
-  };
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Two classic OOP bugs: reaching for data without self, and defining a method without self. Bug
-        {" "}{Math.min(fixedCount + 1, bugs.length)} of {bugs.length}. 🔥
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.orange, fontSize: 12, fontWeight: 600, marginBottom: 10, lineHeight: 1.6 }}>{b.intro}</div>
-        <div style={{ background: C.surface, borderRadius: 8, border: `1px solid ${C.border}`, padding: 8 }}>
-          {b.lines.map((l, i) => {
-            let border = "transparent", bg = "transparent";
-            if (foundLine && i === b.buggyLine) { border = C.green; bg = C.green + "18"; }
-            else if (wrongLine === i) { border = C.red; bg = C.red + "12"; }
-            return (
-              <div key={i} onClick={() => clickLine(i)} style={{
-                fontFamily: "monospace", fontSize: 12.5, lineHeight: 2, padding: "2px 10px",
-                borderRadius: 6, cursor: foundLine ? "default" : "pointer",
-                borderLeft: `3px solid ${border}`, background: bg, color: C.text, whiteSpace: "pre",
-                minHeight: l === "" ? 14 : undefined,
-              }}>{i + 1}  {l}</div>
-            );
-          })}
-        </div>
-        {wrongLine !== null && !foundLine && (
-          <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: C.yellow + "14", border: `1px solid ${C.yellow}44`, fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-            💡 {b.lineHints[wrongLine] || "Not that one — keep hunting!"}
-          </div>
-        )}
-
-        {foundLine && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {optionOrder(b.fixes.length, b.intro).map((i) => {
-                const f = b.fixes[i];
-                let bg = C.surface, border = C.border, col = C.text;
-                if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
-                else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
-                return (
-                  <button key={i} onClick={() => pickFix(i)} style={{
-                    textAlign: "left", padding: "9px 14px", borderRadius: 8, fontFamily: "monospace", fontSize: 12.5,
-                    background: bg, border: `1.5px solid ${border}`, color: col,
-                    cursor: solvedThis ? "default" : "pointer",
-                  }}>{f}</button>
-                );
-              })}
-            </div>
-            {!solvedThis && hintCount > 0 && (
-              <Hints hints={b.fixHints} shown={hintCount} onMore={() => setHintCount((h) => Math.min(h + 1, b.fixHints.length))} />
-            )}
-            {solvedThis && (
-              <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: C.green + "12", border: `1px solid ${C.green}44`, fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>✓ {b.why}</div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {solvedThis && cur < bugs.length - 1 && (
-        <button onClick={nextBug} style={{
-          padding: "10px 24px", borderRadius: 8, background: C.accentGlow, border: "none",
-          color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer",
-        }}>Next bug →</button>
-      )}
-      {solvedThis && cur === bugs.length - 1 && (
-        <button onClick={onPass} style={{
-          width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
-        }}>🔥 Both bugs extinguished! To the Forge →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 3: Forge — Parsons: assemble a full class + usage ──
-function ForgeStage({ onPass }) {
-  const target = [
-    { code: "class Circle:", defines: "def_open", needs: [] },
-    { code: "    def __init__(self, r):", defines: "init", needs: ["def_open"] },
-    { code: "        self.r = r", defines: "body", needs: ["init"] },
-    { code: "    def area(self):", defines: "area_open", needs: ["body"] },
-    { code: "        return 3.14 * self.r * self.r", defines: "def_done", needs: ["area_open"] },
-    { code: "print(Circle(10).area())", defines: null, needs: ["def_done"] },
-  ];
-  const MSG = {
-    def_open: "there's no class above it to belong to — indented lines need their class header first",
-    init: "self.r = r is __init__'s body — the def __init__ header must come first",
-    body: "area() is a method of the class, but the class must open (and __init__ set r) before it",
-    area_open: "return 3.14 * self.r * self.r is area's body — it needs its own def area(self): above",
-    def_done: "you can't create Circle(10) and call .area() before the class (and its methods) exist",
-  };
-  const shuffled = [4, 1, 5, 0, 3, 2]; // fixed shuffle so the puzzle is stable
-  const [order, setOrder] = useState(shuffled);
-  const [verdict, setVerdict] = useState(null);
-  const [solved, setSolved] = useState(false);
-
-  const move = (idx, dir) => {
-    if (solved) return;
-    const j = idx + dir;
-    if (j < 0 || j >= order.length) return;
-    const next = [...order];
-    [next[idx], next[j]] = [next[j], next[idx]];
-    setOrder(next); setVerdict(null);
-  };
-
-  const check = () => {
-    const defined = new Set();
-    for (const li of order) {
-      const line = target[li];
-      const missing = line.needs.find((n) => !defined.has(n));
-      if (missing) {
-        setVerdict({ ok: false, msg: `“${line.code.trim()}” can't go there — ${MSG[missing]}.` });
-        return;
-      }
-      if (line.defines) defined.add(line.defines);
-    }
-    setVerdict({ ok: true, msg: "class → __init__ → attribute → method → create-and-call. Circle(10).area() prints 314.0 — a complete class, forged." });
-    setSolved(true);
-  };
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Hammer these scrambled lines into a working class: open the class, write __init__ to store the radius,
-        add an area() method, then create one and call it. Use ↑↓. The body lines belong to their def, and
-        methods belong to their class. ⚒️
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
-        {order.map((li, idx) => (
-          <div key={li} style={{
-            display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", borderRadius: 8,
-            background: solved ? C.green + "10" : C.surface, border: `1px solid ${solved ? C.green + "55" : C.border}`,
-            marginBottom: 6,
-          }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <button onClick={() => move(idx, -1)} disabled={solved || idx === 0} style={{
-                border: "none", background: "transparent", color: idx === 0 ? C.border : C.orange,
-                cursor: idx === 0 || solved ? "default" : "pointer", fontSize: 12, lineHeight: 1, padding: 2,
-              }}>▲</button>
-              <button onClick={() => move(idx, 1)} disabled={solved || idx === order.length - 1} style={{
-                border: "none", background: "transparent", color: idx === order.length - 1 ? C.border : C.orange,
-                cursor: idx === order.length - 1 || solved ? "default" : "pointer", fontSize: 12, lineHeight: 1, padding: 2,
-              }}>▼</button>
-            </div>
-            <pre style={{ ...mono, fontSize: 12.5 }}>{target[li].code}</pre>
-          </div>
-        ))}
-      </div>
-
-      {!solved && (
-        <button onClick={check} style={{
-          padding: "10px 24px", borderRadius: 8, background: C.accentGlow, border: "none",
-          color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer",
-        }}>⚒️ Strike! (check my order)</button>
-      )}
-
-      {verdict && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, fontSize: 12.5, lineHeight: 1.6, background: verdict.ok ? C.green + "14" : C.yellow + "14", border: `1px solid ${verdict.ok ? C.green : C.yellow}44`, color: verdict.ok ? C.green : C.muted }}>
-          {verdict.ok ? "✓ " : "💡 "}{verdict.msg}
-        </div>
-      )}
-
-      {solved && (
-        <button onClick={onPass} style={{
-          width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12,
-        }}>⚒️ Forged! Now temper the blade →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 4: Temper — DEFINE a class; tests instantiate & call it ──
-function TemperStage({ onPass }) {
-  const TESTS = [
-    { pre: "", post: "\nr = Rectangle(3, 4)\nprint(r.area())", expect: "12", label: "Rectangle(3, 4).area() → 12" },
-    { pre: "", post: "\nprint(Rectangle(5, 5).area())", expect: "25", label: "hidden: a square 5×5 → 25" },
-    { pre: "", post: "\nprint(Rectangle(2, 3).area() + 1)", expect: "7", label: "hidden: your RETURN value is used in math" },
-  ];
-  const [code, setCode] = useState("# define class Rectangle here\n");
-  const [status, setStatus] = useState("idle");
-  const [message, setMessage] = useState("");
-  const [hintCount, setHintCount] = useState(0);
-  const pyRef = useRef(null);
-  const hints = [
-    "class Rectangle: with def __init__(self, w, h): storing self.w = w and self.h = h.",
-    "def area(self): return self.w * self.h — RETURN it, don't print (the third test does math with your return value).",
-  ];
-
-  async function getPyodide() {
-    if (pyRef.current) return pyRef.current;
-    if (window.__crucible_pyodide) { pyRef.current = window.__crucible_pyodide; return pyRef.current; }
-    if (!window.loadPyodide) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
-        s.onload = resolve; s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-    const py = await window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
-    window.__crucible_pyodide = py; pyRef.current = py;
-    return py;
-  }
-
-  async function run() {
-    setStatus("loading");
-    setMessage("Heating the forge… (first run downloads real Python, ~6 MB — be patient!)");
-    let py;
-    try { py = await getPyodide(); }
-    catch {
-      setStatus("fallback");
-      setMessage("Couldn't load the Python engine (slow connection?). No problem — pass the fallback puzzle below instead.");
-      return;
-    }
-    setStatus("running"); setMessage("Running your code against the tests…");
-    try {
-      for (const t of TESTS) {
-        py.runPython("import sys, io\nsys.stdout = io.StringIO()");
-        try {
-          py.runPython(t.pre + code + t.post);
-        } catch (e) {
-          const lines = String(e.message || e).trim().split("\n");
-          setStatus("error");
-          setMessage(`Test "${t.label}" — Python error:\n` + lines[lines.length - 1]);
-          setHintCount((h) => Math.min(h + 1, hints.length));
-          return;
-        }
-        const out = py.runPython("sys.stdout.getvalue()");
-        if (String(out).trim() !== t.expect) {
-          setStatus("failed");
-          setMessage(`Test "${t.label}" — expected exactly:\n${t.expect}\nyour output:\n${String(out).trim() || "(nothing printed)"}`);
-          setHintCount((h) => Math.min(h + 1, hints.length));
-          return;
-        }
-      }
-      setStatus("passed");
-      setMessage("All three tests passed. Unseen code created Rectangle objects and called your area() method — and it held. That's a class doing its job.");
-    } catch (e) {
-      setStatus("error"); setMessage("Unexpected error: " + String(e));
-    }
-  }
-
-  // Fallback mini-Parsons (used only if Pyodide can't load)
-  const fbTarget = [
-    { code: "class Rectangle:", defines: "def_open", needs: [] },
-    { code: "    def __init__(self, w, h):", defines: "init", needs: ["def_open"] },
-    { code: "        self.w = w", defines: "body1", needs: ["init"] },
-    { code: "        self.h = h", defines: "body2", needs: ["body1"] },
-    { code: "    def area(self):", defines: "area_open", needs: ["body2"] },
-    { code: "        return self.w * self.h", defines: "def_done", needs: ["area_open"] },
-    { code: "print(Rectangle(3, 4).area())", defines: null, needs: ["def_done"] },
-  ];
-  const [fbOrder, setFbOrder] = useState([5, 1, 6, 0, 3, 2, 4]);
-  const [fbSolved, setFbSolved] = useState(false);
-  const fbMove = (idx, dir) => {
-    const j = idx + dir;
-    if (j < 0 || j >= fbOrder.length || fbSolved) return;
-    const next = [...fbOrder];
-    [next[idx], next[j]] = [next[j], next[idx]];
-    setFbOrder(next);
-  };
-  const fbCheck = () => {
-    const defined = new Set();
-    for (const li of fbOrder) {
-      if (fbTarget[li].needs.find((n) => !defined.has(n))) return;
-      if (fbTarget[li].defines) defined.add(fbTarget[li].defines);
-    }
-    setFbSolved(true);
-  };
-
-  const passed = status === "passed" || fbSolved;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        The final tempering: write a whole <strong style={{ color: C.text }}>class</strong> from scratch. The
-        hidden tests will build objects from it and call your method. 🗡️
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.orange}55`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
-        <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>📜 YOUR TASK</div>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-          Define a class <code style={{ color: C.teal }}>Rectangle</code> whose <code style={{ color: C.teal }}>__init__(self, w, h)</code>{" "}
-          stores width and height, and whose method <code style={{ color: C.teal }}>area(self)</code>{" "}
-          <strong style={{ color: C.text }}>returns</strong> w × h. The tests create rectangles and call area()
-          — and one does math with the result, so return, don't print.
-        </div>
-      </div>
-
-      {status !== "fallback" && (
-        <>
-          <textarea value={code} onChange={(e) => setCode(e.target.value)} spellCheck={false} rows={8} style={{
-            width: "100%", boxSizing: "border-box", background: "#010409", color: C.text,
-            border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 12,
-            fontFamily: "monospace", fontSize: 13.5, lineHeight: 1.7, outline: "none", resize: "vertical",
-          }} />
-          <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-            <button onClick={run} disabled={status === "loading" || status === "running"} style={{
-              padding: "10px 24px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 14,
-              background: status === "loading" || status === "running" ? C.card : C.green,
-              color: status === "loading" || status === "running" ? C.muted : "#0D1117",
-              cursor: status === "loading" || status === "running" ? "default" : "pointer",
-            }}>{status === "loading" || status === "running" ? "⏳ Working…" : "▶ Run the tests"}</button>
-            {status === "passed" && <span style={{ color: C.green, fontWeight: 700, fontSize: 13 }}>✓ 3/3 tests passed</span>}
-          </div>
-        </>
-      )}
-
-      {message && (
-        <pre style={{
-          ...mono, marginTop: 12, padding: "10px 14px", borderRadius: 8, fontSize: 12.5,
-          background: status === "passed" ? C.green + "14" : status === "failed" || status === "error" ? C.red + "10" : C.card,
-          border: `1px solid ${status === "passed" ? C.green : status === "failed" || status === "error" ? C.red + "66" : C.border}`,
-          color: status === "passed" ? C.green : C.muted,
-        }}>{message}</pre>
-      )}
-
-      {(status === "failed" || status === "error") && hintCount > 0 && (
-        <Hints hints={hints} shown={hintCount} onMore={() => setHintCount((h) => Math.min(h + 1, hints.length))} />
-      )}
-
-      {status === "fallback" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, marginTop: 4 }}>
-          {fbOrder.map((li, idx) => (
-            <div key={li} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", borderRadius: 8, background: C.surface, border: `1px solid ${fbSolved ? C.green + "55" : C.border}`, marginBottom: 6 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <button onClick={() => fbMove(idx, -1)} style={{ border: "none", background: "transparent", color: C.orange, cursor: "pointer", fontSize: 12, padding: 2 }}>▲</button>
-                <button onClick={() => fbMove(idx, 1)} style={{ border: "none", background: "transparent", color: C.orange, cursor: "pointer", fontSize: 12, padding: 2 }}>▼</button>
-              </div>
-              <pre style={{ ...mono, fontSize: 12.5 }}>{fbTarget[li].code}</pre>
-            </div>
-          ))}
-          {!fbSolved && <button onClick={fbCheck} style={{ padding: "8px 18px", borderRadius: 8, background: C.accentGlow, border: "none", color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Check order</button>}
-          {fbSolved && <div style={{ color: C.green, fontWeight: 700, fontSize: 13, marginTop: 6 }}>✓ Correct order — tempered the old-fashioned way!</div>}
-        </div>
-      )}
-
-      {passed && (
-        <button onClick={onPass} style={{
-          width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12,
-        }}>🗡️ Tempered! Claim your badge →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Badge screen ──
-function BadgeScreen({ claimed, onClaim }) {
-  return (
-    <div style={{ textAlign: "center", padding: 24 }}>
-      <div style={{ fontSize: 64 }}>🔥</div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: C.orange, marginTop: 8 }}>TEMPERED IN THE M10 CRUCIBLE</div>
-      <div style={{ color: C.muted, fontSize: 14, marginTop: 10, lineHeight: 1.8, maxWidth: 480, margin: "10px auto 0" }}>
-        Predicted an object's state across method calls. Caught the missing-self bug twice over. Assembled a
-        full class from scrambled lines. Then wrote a class from scratch that unseen code built objects from and
-        called — and it held. Object-oriented thinking, <em>forged into skill</em>.
-      </div>
-      <div style={{
-        marginTop: 20, padding: 20, borderRadius: 12, display: "inline-block",
-        background: `linear-gradient(135deg, ${C.orange}22, ${C.red}22)`,
-        border: `1px solid ${C.orange}66`,
-      }}>
-        <div style={{ fontSize: 32 }}>🏅</div>
-        <div style={{ color: C.text, fontWeight: 700, fontSize: 14, marginTop: 6 }}>Crucible Badge · Module 10</div>
-        <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Spark ✓ · Flame ✓ · Forge ✓ · Temper ✓</div>
-      </div>
-      <div style={{ color: C.muted, fontSize: 13, marginTop: 18, lineHeight: 1.7 }}>
-        You can build your own kinds of things now — classes with state and behaviour. Next, the forge makes you
-        <strong style={{ color: C.orange }}> fluent</strong>: Module 11 — Pythonic Python &amp; the Ecosystem
-        (comprehensions, modules, pip, and the world of libraries). 🔥
-      </div>
-      {!claimed && (
-        <button onClick={onClaim} style={{
-          marginTop: 20, padding: "12px 28px", borderRadius: 10, border: "none",
-          background: `linear-gradient(135deg, ${C.orange}, ${C.red})`,
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
-        }}>🏅 Claim the badge (records completion)</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit10_C({ student, onUnitComplete, challengeProgress = [], onStageComplete }) {
-  const persisted = STAGES.filter((s) => challengeProgress.includes(`${UNIT_ID}@${s.id}`)).map((s) => s.id);
-  const [doneStages, setDoneStages] = useState(persisted);
-  const [active, setActive] = useState(() => {
-    const firstOpen = STAGES.findIndex((s) => !persisted.includes(s.id));
-    return firstOpen === -1 ? STAGES.length : firstOpen;
-  });
-
-  const isUnlocked = (idx) => idx === 0 || doneStages.includes(STAGES[idx - 1].id);
-
-  const [claimed, setClaimed] = useState(challengeProgress.includes(UNIT_ID));
-
-  const passStage = (idx) => {
-    const stage = STAGES[idx];
-    if (!doneStages.includes(stage.id)) {
-      setDoneStages((p) => [...p, stage.id]);
-      onStageComplete && onStageComplete(`${UNIT_ID}@${stage.id}`);
-    }
-    setActive(idx + 1);
-  };
-
-  const claimBadge = () => {
-    setClaimed(true);
-    onUnitComplete && onUnitComplete();
-  };
-
-  const stageBody = [
-    <SparkStage key="s" onPass={() => passStage(0)} />,
-    <FlameStage key="f" onPass={() => passStage(1)} />,
-    <ForgeStage key="g" onPass={() => passStage(2)} />,
-    <TemperStage key="t" onPass={() => passStage(3)} />,
-  ];
-
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.orange}44`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${C.orange}, ${C.red})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🔥</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.orange, letterSpacing: 1, fontWeight: 700 }}>MODULE 10 › THE CRUCIBLE</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Where knowledge is forged into skill</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{doneStages.length} / {STAGES.length} stages</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(doneStages.length / STAGES.length) * 100}%`, background: `linear-gradient(90deg, ${C.orange}, ${C.red})`, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ background: C.orange + "10", border: `1px solid ${C.orange}33`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-          ⚔️ <strong style={{ color: C.orange }}>Optional — counts toward the course certificate.</strong> Your lesson
-          progress is already safe. But stages unlock one by one, hints replace answers, and only the worthy
-          earn the badge. Forge your Module 10 skills. Ready?
-        </div>
-
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {STAGES.map((s, i) => {
-            const done = doneStages.includes(s.id);
-            const unlocked = isUnlocked(i);
-            const isActive = active === i;
-            return (
-              <button key={s.id} onClick={() => unlocked && setActive(i)} disabled={!unlocked} style={{
-                flex: 1, minWidth: 100, padding: "10px 6px", borderRadius: 7,
-                background: isActive ? `linear-gradient(135deg, ${C.orange}, ${C.red})` : "transparent",
-                border: "none", color: isActive ? "#0D1117" : unlocked ? C.text : C.muted,
-                cursor: unlocked ? "pointer" : "not-allowed", fontSize: 12,
-                fontWeight: isActive ? 800 : 500, opacity: unlocked ? 1 : 0.5,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 2, transition: "all 0.2s",
-              }}>
-                <span style={{ fontSize: 15 }}>{done ? "✅" : unlocked ? s.icon : "🔒"}</span>
-                <span>{s.label}</span>
-                <span style={{ fontSize: 9.5, opacity: 0.8 }}>{s.tag}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {active >= STAGES.length
-            ? <BadgeScreen claimed={claimed} onClaim={claimBadge} />
-            : isUnlocked(active)
-              ? stageBody[active]
-              : <div style={{ textAlign: "center", color: C.muted, padding: 40 }}>🔒 Locked — pass the previous stage first.</div>}
-        </div>
-      </div>
-    </div>
-  );
+export default function Unit10_C(props) {
+  return <CrucibleShell {...props} unitId="Unit10_C" module="Module 10" title="The Crucible: Objects" spark={[EX.spark1, EX.spark2]} flame={[EX.marks, EX.savings]} forge={[EX.shapes]} temper={[EX.parking]} quiz={QUIZ} />;
 }

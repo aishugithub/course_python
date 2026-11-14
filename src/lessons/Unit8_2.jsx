@@ -1,451 +1,189 @@
-// Unit 8.2 — Parameters & Return Values (data in, answers out)
+// Unit 8.2 — Parameters & Return Values (rebuilt on the typing-first lesson kit)
+// Parameters vs arguments → return hands a value back → print vs return (None)
+// → returning a bool, early return → default parameters, keyword arguments,
+// missing-argument TypeError → docstrings → bill-splitter make-task.
+
 import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note, CodeBlock } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
-};
-
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-const insight = (color, children) => (
-  <div style={{ marginTop: 16, background: color + "18", border: `1px solid ${color}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-    🔑 {children}
-  </div>
-);
-
-// ── Widget 1: Need — one function per message vs one parameter ──
-function NeedWidget() {
-  const [n, setN] = useState(2);
-  const msgs = ["Silence please!", "Lunch break!", "Games period!", "School over!"];
-  const names = ["morning", "lunch", "games", "closing"];
-
+// ── Widget: arguments fill parameters, return sends a value back ──
+function CallFlow() {
+  const [l, setL] = useState(5);
+  const [w, setW] = useState(3);
   return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Unit 8.1's <code style={{ color: C.teal }}>announce()</code> says the same thing every time. But
-        morning needs "Silence please!" and lunch needs "Lunch break!". Without a way to pass information
-        in, you're back to copy-paste — one function per message. Drag the slider.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>different messages = <strong style={{ color: C.accent }}>{n}</strong></label>
-        <input type="range" min={1} max={4} value={n} onChange={(e) => setN(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>❌ ONE FUNCTION EACH</div>
-          <pre style={mono}>
-            {Array.from({ length: n }, (_, i) => `def announce_${names[i]}():\n    print("${msgs[i]}")`).join("\n\n")}
-            {`\n\n# ${n} function${n > 1 ? "s" : ""}, ${n > 1 ? "all nearly identical" : "so far so good..."} 😬`}
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>✅ ONE FUNCTION + A PARAMETER</div>
-          <pre style={mono}>
-            {`def announce(message):\n    print(message)\n\n`}
-            {Array.from({ length: n }, (_, i) => `announce("${msgs[i]}")`).join("\n")}
-          </pre>
-          <div style={{ color: C.green, fontSize: 11.5, marginTop: 10 }}>One definition handles all {n} — and any future message too.</div>
-        </div>
-      </div>
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>A parameter is a slot for information the caller sends in.</strong> The
-        function becomes a machine: same mechanism, different inputs, different results — like a mixer that
-        grinds whatever you put in, not just one fixed chutney.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 2: Arguments flow into parameter slots ──
-function ParamWidget() {
-  const students = [["PRIYA", 87], ["ARUN", 62], ["MEENA", 91]];
-  const [sel, setSel] = useState(0);
-  const [name, mark] = students[sel];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Two words that sound alike but sit on opposite sides: the <strong style={{ color: C.teal }}>parameter</strong> is
-        the empty locker in the def; the <strong style={{ color: C.orange }}>argument</strong> is the value the
-        call sends. Click a student and watch the values fly into the slots.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {students.map(([n], i) => (
-          <button key={n} onClick={() => setSel(i)} style={{
-            padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-            background: sel === i ? C.accentGlow : C.card, color: sel === i ? "#fff" : C.muted,
-            border: `1.5px solid ${sel === i ? C.accent : C.border}`,
-          }}>{n}</button>
-        ))}
-      </div>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <pre style={mono}>
-          {`def welcome(`}<span style={{ color: C.teal, fontWeight: 700 }}>name</span>{`, `}<span style={{ color: C.teal, fontWeight: 700 }}>mark</span>{`):    # parameters — empty lockers\n    print(name, "scored", mark)\n\nwelcome(`}<span style={{ color: C.orange, fontWeight: 700 }}>"{name}"</span>{`, `}<span style={{ color: C.orange, fontWeight: 700 }}>{mark}</span>{`)      # arguments — the values sent`}
+    <div className="fh-two">
+      <div>
+        <pre style={{ margin: 0, fontFamily: CODE_FONT, fontSize: 15, lineHeight: 1.8, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 14px" }}>
+          {"def area("}<span style={{ color: T.teal, fontWeight: 700 }}>length</span>{", "}<span style={{ color: T.teal, fontWeight: 700 }}>width</span>{"):\n    "}<span style={{ color: T.purple, fontWeight: 700 }}>return</span>{" length * width\n\nresult = area("}<span style={{ color: T.orange, fontWeight: 700 }}>{l}</span>{", "}<span style={{ color: T.orange, fontWeight: 700 }}>{w}</span>{")\nprint(result)"}
         </pre>
-      </div>
-
-      <div style={{ background: C.card, border: `1px solid ${C.teal}44`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>INSIDE THE CALL — the parameter lockers fill up</div>
-        <div style={{ display: "flex", gap: 24, justifyContent: "center", alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 11, color: C.orange, fontFamily: "monospace", marginBottom: 6 }}>"{name}" ⬇</div>
-            <div style={{ fontSize: 10, color: C.teal, fontWeight: 700 }}>name</div>
-            <div style={{ border: `2px solid ${C.teal}`, borderRadius: 8, padding: "8px 16px", fontFamily: "monospace", fontSize: 14, color: C.text, background: C.teal + "12" }}>"{name}"</div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 11, color: C.orange, fontFamily: "monospace", marginBottom: 6 }}>{mark} ⬇</div>
-            <div style={{ fontSize: 10, color: C.teal, fontWeight: 700 }}>mark</div>
-            <div style={{ border: `2px solid ${C.teal}`, borderRadius: 8, padding: "8px 16px", fontFamily: "monospace", fontSize: 14, color: C.text, background: C.teal + "12" }}>{mark}</div>
-          </div>
-          <div style={{ fontSize: 22, color: C.muted }}>→</div>
-          <div>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>OUTPUT</div>
-            <div style={{ fontFamily: "monospace", fontSize: 13, color: C.green }}>{name} scored {mark}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.8 }}>
-        Order matters: the 1st argument fills the 1st parameter, 2nd fills 2nd.
-        <code style={{ color: C.red }}> welcome(87, "PRIYA")</code> would happily print
-        <code style={{ color: C.red }}> 87 scored PRIYA</code> — Python trusts your ordering.
-      </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>Each call fills the lockers fresh.</strong> Parameters are
-        brand-new variables created at the moment of the call, loaded with that call's arguments — which is
-        why one function can serve every student in the class.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 3: return vs print — the vending machine ──
-function ReturnWidget() {
-  const [mode, setMode] = useState("print");
-  const isPrint = mode === "print";
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        A GST calculator for the canteen: bill = price + 18% tax. Below, the same function written two
-        ways. One only <em>shows</em> the answer; one <em>hands it back</em> so the program can keep
-        working with it. Toggle and compare what lands in <code style={{ color: C.teal }}>bill</code>.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <button onClick={() => setMode("print")} style={{
-          padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-          background: isPrint ? C.accentGlow : C.card, color: isPrint ? "#fff" : C.muted,
-          border: `1.5px solid ${isPrint ? C.accent : C.border}`,
-        }}>with print</button>
-        <button onClick={() => setMode("return")} style={{
-          padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-          background: !isPrint ? C.accentGlow : C.card, color: !isPrint ? "#fff" : C.muted,
-          border: `1.5px solid ${!isPrint ? C.accent : C.border}`,
-        }}>with return</button>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${isPrint ? C.red : C.green}55`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: isPrint ? C.red : C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>
-            {isPrint ? "❌ SHOWS, BUT KEEPS NOTHING" : "✅ HANDS THE ANSWER BACK"}
-          </div>
-          <pre style={mono}>
-            {isPrint
-              ? `def add_gst(price):\n    print(price * 1.18)\n\nbill = add_gst(200)\nprint(bill)`
-              : `def add_gst(price):\n    return price * 1.18\n\nbill = add_gst(200)\nprint(bill)`}
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>▶ OUTPUT</div>
-          {isPrint ? (
-            <>
-              <pre style={mono}>
-                <span style={{ color: C.green }}>236.0</span>
-                {"\n"}<span style={{ color: C.red, fontWeight: 700 }}>None</span>
-              </pre>
-              <div style={{ color: C.red, fontSize: 12, marginTop: 10, lineHeight: 1.7 }}>
-                236.0 flashed on screen — but the function handed back nothing, so
-                <code style={{ color: C.red }}> bill</code> caught <code style={{ color: C.red }}>None</code>.
-                The answer is gone. 😱
-              </div>
-            </>
-          ) : (
-            <>
-              <pre style={mono}><span style={{ color: C.green }}>236.0</span></pre>
-              <div style={{ color: C.green, fontSize: 12, marginTop: 10, lineHeight: 1.7 }}>
-                <code style={{ color: C.green }}>bill</code> holds 236.0 — a real value the program can
-                keep using:
-              </div>
-              <pre style={{ ...mono, marginTop: 8 }}>
-                {`# add_gst() is the function defined above\ntotal = add_gst(200) + add_gst(150)\n`}<span style={{ color: C.green }}># 236.0 + 177.0 = 413.0 ✨</span>
-              </pre>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.8 }}>
-        Think vending machine: <code style={{ color: C.orange }}>price</code> goes in the coin slot,
-        <code style={{ color: C.teal }}> return</code> drops the item into your hand. A machine that only
-        <em> displays</em> "here's your juice!" on its screen but never dispenses it — that's print without return.
-      </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>print talks to humans; return talks to your program.</strong> And
-        one more superpower: <code style={{ color: C.teal }}>return</code> ends the function <em>immediately</em> —
-        the moment it fires, execution jumps back to the caller with the value.
-      </>)}
-    </div>
-  );
-}
-
-// ── Widget 4: Build It — grade() machine over the class dict ──
-function BuildWidget() {
-  const [arun, setArun] = useState(62);
-  const entries = [["PRIYA", 87], ["ARUN", arun], ["MEENA", 91], ["DIVYA", 45]];
-  const grade = (m) => (m >= 90 ? "A" : m >= 75 ? "B" : m >= 50 ? "C" : "F");
-  const gcolor = { A: C.green, B: C.accent, C: C.yellow, F: C.red };
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The full machine: mark in → grade out. One <code style={{ color: C.accent }}>grade()</code> function,
-        called once per student by the Module 7 dict loop. Notice how each <code style={{ color: C.teal }}>return</code> exits
-        instantly — no elif even needed after it (we keep them for readability). Drag Arun across the boundaries.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>marks["ARUN"] = <strong style={{ color: C.accent }}>{arun}</strong></label>
-        <input type="range" min={0} max={100} value={arun} onChange={(e) => setArun(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>🐍 THE PROGRAM</div>
-          <pre style={mono}>
-            {`def grade(mark):\n    if mark >= 90:\n        return "A"\n    elif mark >= 75:\n        return "B"\n    elif mark >= 50:\n        return "C"\n    else:\n        return "F"\n\nmarks = {"PRIYA": 87, "ARUN": ${arun},\n         "MEENA": 91, "DIVYA": 45}\nfor name in marks:\n    print(name, grade(marks[name]))`}
-          </pre>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 10 }}>▶ OUTPUT</div>
-          <pre style={mono}>
-            {entries.map(([n, m]) => (
-              <span key={n}>
-                <span style={{ color: C.text }}>{n} </span>
-                <span style={{ color: gcolor[grade(m)], fontWeight: 700 }}>{grade(m)}{"\n"}</span>
-              </span>
-            ))}
-          </pre>
-          <div style={{ marginTop: 12, fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
-            4 calls, 4 fresh <code style={{ color: C.teal }}>mark</code> lockers, 4 returned grades.
-            The grading rule lives in ONE place — change 90 to 85 once, every student re-grades.
-          </div>
-        </div>
-      </div>
-
-      {insight(C.green, <>
-        <strong style={{ color: C.green }}>Functions turn rules into reusable machines.</strong> Modules 5-7
-        gave you decisions, loops and collections; parameters and return let you package them into named
-        tools. One question left: while grade() runs, WHERE does its <code style={{ color: C.teal }}>mark</code> locker
-        live? Next unit opens the call stack.
-      </>)}
-    </div>
-  );
-}
-
-// ── Quiz ──
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: 'def double(x):\n    return x * 2\n\nprint(double(5))\n\nWhat does this print?',
-      options: ["5", "10", "x * 2", "None"],
-      answer: 1,
-      explain: "The argument 5 fills the parameter x; return hands back 10, which print displays.",
-    },
-    {
-      q: 'def welcome(name, mark):\n    print(name, "scored", mark)\n\nwelcome("RAJ", 78)\n\nIn this code, what is 78?',
-      options: ["A parameter", "An argument", "A return value", "A keyword"],
-      answer: 1,
-      explain: "Values sent in the CALL are arguments; the empty slots in the def (name, mark) are parameters. 78 fills the parameter mark.",
-    },
-    {
-      q: 'def show_total(a, b):\n    print(a + b)\n\nresult = show_total(2, 3)\nprint(result)\n\nWhat does the last line print?',
-      options: ["5", "None", "2 3", "An error"],
-      answer: 1,
-      explain: "show_total PRINTS 5 but returns nothing — so result catches None. To keep the answer, the function must RETURN it.",
-    },
-    {
-      q: 'def f(a, b):\n    return a - b\n\nprint(f(10, 3))\n\nWhat does this print?',
-      options: ["7", "-7", "13", "None"],
-      answer: 0,
-      explain: "Order matters: the 1st argument 10 fills a, the 2nd argument 3 fills b. a - b = 7. f(3, 10) would give -7.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! Data in, answers out — mastered." :
-            score >= 2 ? "Good work! If print-vs-return caught you, replay 'return vs print' — the None surprise is the lesson." :
-              "Worth a replay: 'Arguments In' for parameter vs argument, and 'return vs print' for why None appears."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 8.2 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Your functions now take inputs through parameters and hand answers back with return — true
-            reusable machines.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 8.3 — Scope & the Call Stack.</strong> When
-            grade() runs, where does its mark locker actually live? And why does it vanish afterwards?
-            Time to extend Unit 4.2's memory picture into its final form: the stack.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("\n") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s", fontFamily: "monospace",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit8_2({ student, onUnitComplete }) {
-  const sections = [
-    { id: "need", label: "Why?" },
-    { id: "params", label: "Arguments In" },
-    { id: "return", label: "return vs print" },
-    { id: "build", label: "Build It" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
-  ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>One Machine, Many Inputs</h3><NeedWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Arguments Fill Parameter Lockers</h3><ParamWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>return vs print: The Vending Machine</h3><ReturnWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Build It: The grade() Machine</h3><BuildWidget /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions to check your understanding of Unit 8.2.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 8 › UNIT 8.2</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Parameters & Return Values</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
+        <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+          {[["length", l, setL], ["width", w, setW]].map(([n, v, set]) => (
+            <label key={n} style={{ fontFamily: CODE_FONT, fontSize: 14 }}>{n} = <strong>{v}</strong><input type="range" min={1} max={12} value={v} onChange={(e) => set(Number(e.target.value))} style={{ width: 130, accentColor: T.navy, display: "block" }} /></label>
           ))}
         </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
+      </div>
+      <div style={{ fontSize: 14.5, color: T.slate, lineHeight: 1.75 }}>
+        <div>1. The <strong style={{ color: T.orange }}>arguments</strong> {l} and {w} travel into the <strong style={{ color: T.teal }}>parameters</strong>: <code>length = {l}</code>, <code>width = {w}</code> (in order).</div>
+        <div>2. The body computes <code>{l} * {w}</code>.</div>
+        <div>3. <strong style={{ color: T.purple }}>return</strong> sends <strong>{l * w}</strong> back to the call, which is replaced by that value: <code>result = {l * w}</code>.</div>
+        <div style={{ marginTop: 8, fontFamily: CODE_FONT, background: T.termBg, color: T.termText, borderRadius: 8, padding: "8px 12px", display: "inline-block" }}>{l * w}</div>
       </div>
     </div>
+  );
+}
+
+// ── Exercise specs ──
+const share = (total, people, tip) => (total * (1 + tip / 100)) / people;
+const EX = {
+  area: {
+    id: "area", kind: "type", title: "Data in, answer out",
+    task: <>A function with two parameters and a return value. The call is replaced by whatever the function returns, so it can be used anywhere a value can.</>,
+    show: 'def area(length, width):\n    return length * width\n\nprint(area(5, 3))\nroom = area(4, 4)\nprint(room + area(2, 3))',
+    tests: [{ expect: "15\n22" }],
+    requires: [{ node: "Return" }],
+    hints: ["area(4, 4) is 16, area(2, 3) is 6."],
+    solution: 'def area(length, width):\n    return length * width\n\nprint(area(5, 3))\nroom = area(4, 4)\nprint(room + area(2, 3))',
+  },
+  grade: {
+    id: "grade", kind: "write", title: "grade(mark)",
+    task: <>Write <code>grade(mark)</code> that <strong>returns</strong> (not prints) the letter: <code>A</code> ≥ 90, <code>B</code> ≥ 75, <code>C</code> ≥ 60, <code>D</code> ≥ 40, else <code>F</code>. Then, for <code>marks = [95, 72, 40, 39]</code>, print <code>95 -&gt; A</code> and so on.</>,
+    tests: [{ expect: "95 -> A\n72 -> C\n40 -> D\n39 -> F" }],
+    post: "assert grade(75) == 'B', 'grade(75) should return \"B\"'\nassert grade(60) == 'C', 'grade(60) should return \"C\"'\nassert grade(0) == 'F'\nassert grade(90) == 'A'",
+    requires: [{ node: "FunctionDef" }, { node: "Return" }],
+    hints: ["Each branch can return straight away: if mark >= 90: return \"A\"", 'for m in marks: print(f"{m} -> {grade(m)}")'],
+    solution: 'def grade(mark):\n    if mark >= 90:\n        return "A"\n    elif mark >= 75:\n        return "B"\n    elif mark >= 60:\n        return "C"\n    elif mark >= 40:\n        return "D"\n    else:\n        return "F"\n\nmarks = [95, 72, 40, 39]\nfor m in marks:\n    print(f"{m} -> {grade(m)}")',
+  },
+  printret: {
+    id: "printret", kind: "fix", title: "The None trap",
+    task: <>Run it: the total is printed, and then <code>Grand total: None</code>. Fix the function so the caller gets the number back.</>,
+    starter: 'def bill(price, qty):\n    print(price * qty)\n\ntotal = bill(150, 3)\nprint("Grand total:", total)',
+    tests: [{ expect: "Grand total: 450" }],
+    requires: [{ node: "Return" }],
+    hints: ["A function with no return gives back None.", "Replace print with return inside the function."],
+    solution: 'def bill(price, qty):\n    return price * qty\n\ntotal = bill(150, 3)\nprint("Grand total:", total)',
+  },
+  iseven: {
+    id: "iseven", kind: "write", title: "A function that answers yes/no",
+    task: <>Write <code>is_even(n)</code> returning <code>True</code> or <code>False</code>. Then ask <code>Numbers: </code> (one line) and use it to print <code>Even count: 3</code>.</>,
+    tests: [{ inputs: ["4 7 10 13 22"], expect: "Numbers: 4 7 10 13 22\nEven count: 3" }, { inputs: ["1 3"], expect: "Numbers: 1 3\nEven count: 0", hidden: true }],
+    post: "assert is_even(0) is True and is_even(5) is False, 'is_even should return True or False'",
+    requires: [{ node: "FunctionDef" }],
+    hints: ["return n % 2 == 0 — the comparison already IS True or False.", "if is_even(int(p)): count += 1"],
+    solution: 'def is_even(n):\n    return n % 2 == 0\n\ncount = 0\nfor p in input("Numbers: ").split():\n    if is_even(int(p)):\n        count += 1\nprint(f"Even count: {count}")',
+  },
+  firstfail: {
+    id: "firstfail", kind: "write", title: "return stops the function",
+    task: <><code>return</code> ends the function immediately — even inside a loop. Write <code>first_fail(marks)</code> that returns the first mark below 40, or <code>None</code> if there isn't one. For <code>[72, 38, 25]</code> print <code>First fail: 38</code>; for <code>[72, 85]</code> print <code>First fail: None</code>.</>,
+    tests: [{ expect: "First fail: 38\nFirst fail: None" }],
+    post: "assert first_fail([10]) == 10\nassert first_fail([]) is None",
+    requires: [{ node: "Return", min: 2 }],
+    hints: ["for m in marks: if m < 40: return m", "After the loop (only reached if nothing failed): return None"],
+    solution: 'def first_fail(marks):\n    for m in marks:\n        if m < 40:\n            return m\n    return None\n\nprint("First fail:", first_fail([72, 38, 25]))\nprint("First fail:", first_fail([72, 85]))',
+  },
+  defaults: {
+    id: "defaults", kind: "type", title: "Default values",
+    task: <>A parameter can have a <strong>default</strong>, used when the call leaves it out. Parameters with defaults come last.</>,
+    show: 'def greet(name, greeting="Hello"):\n    return f"{greeting}, {name}!"\n\nprint(greet("Priya"))\nprint(greet("Arun", "Vanakkam"))',
+    tests: [{ expect: "Hello, Priya!\nVanakkam, Arun!" }],
+    hints: ["The first call doesn't pass a greeting, so the default is used."],
+    solution: 'def greet(name, greeting="Hello"):\n    return f"{greeting}, {name}!"\n\nprint(greet("Priya"))\nprint(greet("Arun", "Vanakkam"))',
+  },
+  keywords: {
+    id: "keywords", kind: "write", title: "Keyword arguments",
+    task: <>Write <code>ticket(movie, seats=1, price=150)</code> returning <code>f"{"{movie}"}: {"{seats}"} x Rs {"{price}"} = Rs {"{seats * price}"}"</code>. Call it three ways: just <code>"Leo"</code>; <code>"Jailer"</code> with <code>seats=3</code>; and <code>"Kalki"</code> with <code>price=200</code> only — using <strong>keyword arguments</strong> (<code>name=value</code> in the call).</>,
+    tests: [{ expect: "Leo: 1 x Rs 150 = Rs 150\nJailer: 3 x Rs 150 = Rs 450\nKalki: 1 x Rs 200 = Rs 200" }],
+    post: "assert ticket('X', price=10, seats=2) == 'X: 2 x Rs 10 = Rs 20', 'ticket should return the text, using both keyword arguments'",
+    requires: [{ node: "keyword", msg: "Use keyword arguments in your calls, like seats=3." }],
+    hints: ['def ticket(movie, seats=1, price=150):\n    return f"{movie}: {seats} x Rs {price} = Rs {seats * price}"', 'print(ticket("Kalki", price=200)) — the keyword lets you skip seats.'],
+    solution: 'def ticket(movie, seats=1, price=150):\n    return f"{movie}: {seats} x Rs {price} = Rs {seats * price}"\n\nprint(ticket("Leo"))\nprint(ticket("Jailer", seats=3))\nprint(ticket("Kalki", price=200))',
+  },
+  missing: {
+    id: "missing", kind: "fix", title: "One argument short",
+    task: <>Run it and read the coach. Fix the <strong>call</strong> so it prints <code>Area: 12</code>.</>,
+    starter: 'def area(length, width):\n    return length * width\n\nprint("Area:", area(4))',
+    tests: [{ expect: "Area: 12" }],
+    hints: ["area needs two values: length and width. 4 × 3 = 12."],
+    solution: 'def area(length, width):\n    return length * width\n\nprint("Area:", area(4, 3))',
+  },
+  docstring: {
+    id: "docstring", kind: "type", title: "Docstrings",
+    task: <>A string right under the <code>def</code> line documents the function. Python stores it, and <code>help()</code> and code editors show it to anyone using your function.</>,
+    show: 'def celsius(f):\n    """Convert Fahrenheit to Celsius, rounded to 1 decimal."""\n    return round((f - 32) * 5 / 9, 1)\n\nprint(celsius(98.6))\nprint(celsius.__doc__)',
+    tests: [{ expect: "37.0\nConvert Fahrenheit to Celsius, rounded to 1 decimal." }],
+    hints: ["Triple quotes, indented like the body."],
+    solution: 'def celsius(f):\n    """Convert Fahrenheit to Celsius, rounded to 1 decimal."""\n    return round((f - 32) * 5 / 9, 1)\n\nprint(celsius(98.6))\nprint(celsius.__doc__)',
+  },
+  splitter: {
+    id: "splitter", kind: "make", title: "Bill splitter",
+    task: <>Write <code>per_person(total, people=2, tip=0)</code> with a docstring, returning each person's share: the total plus <code>tip</code> percent, divided by <code>people</code>. Ask <code>Bill: </code> (decimal) and <code>People: </code>, and print three lines with 2 decimals: <code>Split: Rs 450.00</code>, <code>With 10% tip: Rs 495.00</code> (use <code>tip=10</code> as a keyword argument), and <code>Just you: Rs 900.00</code> (<code>people=1</code>).</>,
+    minLines: 9,
+    tests: [
+      { inputs: ["900", "2"], expect: `Bill: 900\nPeople: 2\nSplit: Rs ${share(900, 2, 0).toFixed(2)}\nWith 10% tip: Rs ${share(900, 2, 10).toFixed(2)}\nJust you: Rs ${share(900, 1, 0).toFixed(2)}` },
+      { inputs: ["1200", "3"], expect: `Bill: 1200\nPeople: 3\nSplit: Rs ${share(1200, 3, 0).toFixed(2)}\nWith 10% tip: Rs ${share(1200, 3, 10).toFixed(2)}\nJust you: Rs ${share(1200, 1, 0).toFixed(2)}`, hidden: true },
+    ],
+    post: "assert per_person(100) == 50, 'per_person(100) should use people=2 by default'\nassert per_person.__doc__, 'Add a docstring'",
+    requires: [{ node: "FunctionDef" }, { node: "keyword", min: 2, msg: "Call with keyword arguments: tip=10 and people=1." }],
+    hints: ["return total * (1 + tip / 100) / people", 'print(f"With 10% tip: Rs {per_person(bill, people, tip=10):.2f}")'],
+    solution: 'def per_person(total, people=2, tip=0):\n    """Each person\'s share of a bill, including a tip percentage."""\n    return total * (1 + tip / 100) / people\n\nbill = float(input("Bill: "))\npeople = int(input("People: "))\nprint(f"Split: Rs {per_person(bill, people):.2f}")\nprint(f"With 10% tip: Rs {per_person(bill, people, tip=10):.2f}")\nprint(f"Just you: Rs {per_person(bill, people=1):.2f}")',
+  },
+};
+
+export const EXERCISES = EX; // for src/kit/selfTest.js
+
+const QUIZ = [
+  { q: "In def add(a, b) and the call add(2, 3), what are 2 and 3?", options: ["Parameters", "Arguments", "Returns", "Defaults"], answer: 1, explain: "Arguments are the values in the call; parameters are the names in the def." },
+  { q: "What does a function return if it has no return statement?", options: ["0", "\"\"", "None", "Error"], answer: 2, explain: "That's why result = show_total() gives None." },
+  { q: "What does this print?", code: "def f(x):\n    return x * 2\n    print(\"done\")\n\nprint(f(4))", options: ["8 then done", "8", "done", "None"], answer: 1, explain: "return ends the function; the print after it never runs." },
+  { q: "def greet(name, msg=\"Hi\"). Which call is valid?", options: ["greet()", "greet(\"Ravi\")", "greet(msg=\"Yo\")", "greet(\"Ravi\", \"Yo\", \"!\")"], answer: 1, explain: "name has no default, so it must be given; msg can be left out." },
+  { q: "Why are keyword arguments useful?", options: ["They're faster", "You can skip defaults and say which value is which, in any order", "They make variables global", "They avoid return"], answer: 1, explain: "ticket(\"Kalki\", price=200) skips seats and is self-explaining." },
+  { q: "Where does a docstring go?", options: ["Above the def", "First line inside the function body", "At the end of the file", "In a comment"], answer: 1, explain: "The first string in the body becomes the function's __doc__." },
+];
+
+export default function Unit8_2(props) {
+  const sections = [
+    {
+      label: "In & Out", kicker: "PARAMETERS · RETURN", title: "Send values in, get an answer back",
+      blocks: [
+        <P>Functions in 8.1 did the same thing every time. Real functions take <strong>inputs</strong> (parameters) and give back an <strong>output</strong> (the return value) — like a function in maths: f(x) = 2x.</P>,
+        <CallFlow />,
+        EX.area,
+        EX.grade,
+      ],
+    },
+    {
+      label: "print vs return", kicker: "THE NONE TRAP", title: "Showing a value is not giving it back",
+      blocks: [
+        <P><code>print</code> shows a value on the screen, for a human. <code>return</code> hands it to the code that called the function, for further use. A function without <code>return</code> gives back <code>None</code>.</P>,
+        EX.printret,
+        EX.iseven,
+        EX.firstfail,
+        <KeyIdea>Let functions <strong>return</strong> results and let the caller decide whether to print them. A function that returns can be reused in calculations, conditions and other functions; one that prints can't.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Defaults & Keywords", kicker: "FLEXIBLE CALLS", title: "Default values and keyword arguments",
+      blocks: [
+        EX.defaults,
+        EX.keywords,
+        EX.missing,
+        <div className="fh-two" style={{ maxWidth: 840, marginTop: 14 }}>
+          <CodeBlock title="you've used these already" code={'print("a", "b", sep="-")   # keyword argument\nprint("x", end="")          # end has a default: "\\n"\nround(3.14159, 2)           # ndigits has a default: none'} />
+          <CodeBlock title="rules" code={"def f(a, b=2): ...   # defaults go last\nf(1)          # b = 2\nf(1, 5)       # b = 5\nf(b=5, a=1)   # keywords: any order"} />
+        </div>,
+      ],
+    },
+    {
+      label: "Docstrings", kicker: "DOCUMENT IT", title: "Tell people what your function does",
+      blocks: [EX.docstring],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: bill splitter",
+      blocks: [<P>One function with two defaults and a docstring, called three different ways.</P>, EX.splitter],
+    },
+  ];
+  return (
+    <LessonShell {...props} unitId="Unit8_2" crumb="MODULE 8 › UNIT 8.2" title="Parameters & Return Values" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 8.3 — Scope & the Call Stack", text: "Where do a function's variables live — and where do they go when it returns?" }} />
   );
 }

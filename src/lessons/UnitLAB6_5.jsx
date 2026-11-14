@@ -35,11 +35,11 @@ import { useState, useRef } from "react";
 
 // ── Brand palette — the Crucible's fire tones (orange/red) ──
 const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+  bg: "#F1EEE6", surface: "#FFFFFF", card: "#FAF8F3",
+  accent: "#1F5FAD", accentGlow: "#16294A",
+  green: "#1F7A4D", yellow: "#A86B12", purple: "#6D4BC4",
+  red: "#B0322F", orange: "#C2651A", teal: "#0E7C86",
+  text: "#16294A", muted: "#40506A", border: "#E7E0D2",
 };
 
 const UNIT_ID = "UnitLAB6_5";
@@ -473,7 +473,7 @@ function SparkStage({ data, onPass }) {
                     spellCheck={false}
                     style={{
                       width: 120, padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", fontSize: 14,
-                      background: "#010409", color: isSolved ? C.green : C.text, outline: "none",
+                      background: "#FFFDF8", color: isSolved ? C.green : C.text, outline: "none",
                       border: `1.5px solid ${isSolved ? C.green : typedWrong[qi] ? C.red : C.border}`,
                     }} />
                   {!isSolved && (
@@ -496,7 +496,7 @@ function SparkStage({ data, onPass }) {
       {allDone && (
         <button onClick={onPass} style={{
           width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
+          color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer",
         }}>✨ Spark caught! Light the Flame →</button>
       )}
     </div>
@@ -600,7 +600,7 @@ function FlameStage({ data, onPass }) {
       {solvedThis && cur === bugs.length - 1 && (
         <button onClick={onPass} style={{
           width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
+          color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer",
         }}>🔥 Bugs extinguished! To the Forge →</button>
       )}
     </div>
@@ -685,7 +685,7 @@ function ForgeStage({ data, onPass }) {
       {solved && (
         <button onClick={onPass} style={{
           width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12,
+          color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12,
         }}>⚒️ Forged! Now temper the blade →</button>
       )}
     </div>
@@ -812,7 +812,7 @@ function TemperStage({ data, onPass }) {
       {status !== "fallback" && (
         <>
           <textarea value={code} onChange={(e) => setCode(e.target.value)} spellCheck={false} rows={10} style={{
-            width: "100%", boxSizing: "border-box", background: "#010409", color: C.text,
+            width: "100%", boxSizing: "border-box", background: "#FFFDF8", color: C.text,
             border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 12,
             fontFamily: "monospace", fontSize: 13.5, lineHeight: 1.7, outline: "none", resize: "vertical",
           }} />
@@ -820,7 +820,7 @@ function TemperStage({ data, onPass }) {
             <button onClick={run} disabled={status === "loading" || status === "running"} style={{
               padding: "10px 24px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 14,
               background: status === "loading" || status === "running" ? C.card : C.green,
-              color: status === "loading" || status === "running" ? C.muted : "#0D1117",
+              color: status === "loading" || status === "running" ? C.muted : "#FFFFFF",
               cursor: status === "loading" || status === "running" ? "default" : "pointer",
             }}>{status === "loading" || status === "running" ? "⏳ Working…" : "▶ Run the tests"}</button>
             {status === "passed" && <span style={{ color: C.green, fontWeight: 700, fontSize: 13 }}>✓ {TESTS.length}/{TESTS.length} tests passed</span>}
@@ -860,7 +860,7 @@ function TemperStage({ data, onPass }) {
       {passed && (
         <button onClick={onPass} style={{
           width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none",
-          color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12,
+          color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12,
         }}>🗡️ Tempered! Finish this track →</button>
       )}
     </div>
@@ -923,7 +923,7 @@ function TrackRunner({ track, challengeProgress, onStageComplete, claimed, onCla
             <button key={s.id} onClick={() => unlocked && setActive(i)} disabled={!unlocked} style={{
               flex: 1, minWidth: 100, padding: "10px 6px", borderRadius: 7,
               background: isActive ? `linear-gradient(135deg, ${C.orange}, ${C.red})` : "transparent",
-              border: "none", color: isActive ? "#0D1117" : unlocked ? C.text : C.muted,
+              border: "none", color: isActive ? "#FFFFFF" : unlocked ? C.text : C.muted,
               cursor: unlocked ? "pointer" : "not-allowed", fontSize: 12,
               fontWeight: isActive ? 800 : 500, opacity: unlocked ? 1 : 0.5,
               display: "flex", flexDirection: "column", alignItems: "center", gap: 2, transition: "all 0.2s",
@@ -970,7 +970,7 @@ function TrackDonePanel({ track, claimed, onClaim }) {
           <button onClick={onClaim} style={{
             padding: "12px 28px", borderRadius: 10, border: "none",
             background: `linear-gradient(135deg, ${C.orange}, ${C.red})`,
-            color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer",
+            color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer",
           }}>🏅 Submit checkpoint to my record</button>
           <div style={{ color: C.muted, fontSize: 11.5, marginTop: 10 }}>One track per crucible is all you need — you can still come back and try the others.</div>
         </div>

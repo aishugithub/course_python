@@ -1,466 +1,309 @@
+// Unit 5.3 — Combining Conditions (rebuilt on the typing-first lesson kit)
+// and → or / not (truth table, the `== "Sat" or "Sun"` bug) → ranges
+// (0 <= m <= 100) and the conditional expression → nested if → short-circuit.
+
 import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
-};
+const codeBox = { margin: 0, fontFamily: CODE_FONT, fontSize: 14.5, lineHeight: 1.7, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 14px", whiteSpace: "pre-wrap" };
+const slider = { width: "100%", accentColor: T.navy };
+const chip = (v) => ({ flex: 1, textAlign: "center", padding: "8px 10px", borderRadius: 8, fontFamily: CODE_FONT, fontWeight: 700, background: tint(v ? T.green : T.red, "14"), border: `1.5px solid ${v ? T.green : T.red}`, color: v ? T.green : T.red });
 
-// ── Combining Conditions ──────────────────────────────────────────────────────
-function LoanEligibility() {
-  const [age, setAge] = useState(22);
-  const [income, setIncome] = useState(15000);
-
-  const ageOk = age >= 18;
-  const incomeOk = income >= 20000;
-  const eligible = ageOk && incomeOk;
-
+// ── Widget: and — both must hold ──
+function LoanCheck() {
+  const [age, setAge] = useState(23);
+  const [income, setIncome] = useState(20000);
+  const a = age >= 21, b = income >= 25000;
   return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Real decisions usually depend on MORE than one condition. A bank might approve a loan only if the
-        applicant is an adult AND earns enough. Adjust the sliders and watch each condition evaluate
-        separately before combining.
-      </p>
-
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>age = <strong style={{ color: C.accent }}>{age}</strong></label>
-        <input type="range" min={0} max={80} value={age} onChange={(e) => setAge(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
+    <div className="fh-two">
+      <div>
+        <label style={{ fontFamily: CODE_FONT }}>age = <strong>{age}</strong></label>
+        <input type="range" min={15} max={70} value={age} onChange={(e) => setAge(Number(e.target.value))} style={slider} />
+        <label style={{ fontFamily: CODE_FONT }}>income = <strong>{income}</strong></label>
+        <input type="range" min={0} max={60000} step={1000} value={income} onChange={(e) => setIncome(Number(e.target.value))} style={slider} />
       </div>
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>income = ₹<strong style={{ color: C.accent }}>{income}</strong>/month</label>
-        <input type="range" min={0} max={50000} step={1000} value={income} onChange={(e) => setIncome(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, color: C.text, marginBottom: 14 }}>
-        {`age = 25\nincome = 30000\n\nif age >= 18 and income >= 20000:\n    print("Eligible")\nelse:\n    print("Not eligible")`}
-      </pre>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <div style={{ flex: 1, background: (ageOk ? C.green : C.red) + "18", border: `1px solid ${(ageOk ? C.green : C.red)}44`, borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: C.muted }}>age &gt;= 18</div>
-          <div style={{ color: ageOk ? C.green : C.red, fontWeight: 700, fontFamily: "monospace" }}>{String(ageOk)}</div>
+      <div>
+        <pre style={codeBox}>{"if age >= 21 and income >= 25000:\n    print(\"Approved\")\nelse:\n    print(\"Rejected\")"}</pre>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+          <div style={chip(a)}>age &gt;= 21<br />{String(a ? "True" : "False")}</div>
+          <strong style={{ fontFamily: CODE_FONT }}>and</strong>
+          <div style={chip(b)}>income &gt;= 25000<br />{b ? "True" : "False"}</div>
+          <strong>→</strong>
+          <div style={chip(a && b)}>{a && b ? "Approved" : "Rejected"}</div>
         </div>
-        <div style={{ alignSelf: "center", color: C.muted, fontFamily: "monospace" }}>and</div>
-        <div style={{ flex: 1, background: (incomeOk ? C.green : C.red) + "18", border: `1px solid ${(incomeOk ? C.green : C.red)}44`, borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: C.muted }}>income &gt;= 20000</div>
-          <div style={{ color: incomeOk ? C.green : C.red, fontWeight: 700, fontFamily: "monospace" }}>{String(incomeOk)}</div>
-        </div>
-      </div>
-
-      <div style={{ background: (eligible ? C.green : C.red) + "18", border: `1.5px solid ${(eligible ? C.green : C.red)}55`, borderRadius: 10, padding: 14, textAlign: "center", fontFamily: "monospace", fontSize: 15, fontWeight: 700, color: eligible ? C.green : C.red }}>
-        &gt; {eligible ? "Eligible" : "Not eligible"}
-      </div>
-
-      <div style={{ marginTop: 16, background: C.accent + "18", border: `1px solid ${C.accent}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.accent }}>Key idea:</strong> <code style={{ color: C.accent }}>and</code>{" "}
-        needs BOTH sides True; if either check fails, the whole condition is False, no matter how good the other one is.
       </div>
     </div>
   );
 }
 
-// ── Nested If ────────────────────────────────────────────────────────────────
-function NestedEligibility() {
-  // Two facts every student here already tracks about themselves.
-  const [attendance, setAttendance] = useState(82);
-  const [internal, setInternal] = useState(26);
-
-  // Mirrors the Python below exactly, so the live result is always trustworthy.
-  let message;
-  if (attendance >= 75) {
-    if (internal >= 20) message = "Eligible - hall ticket issued";
-    else message = "Eligible, but internals are low - meet your mentor";
-  } else {
-    if (internal >= 20) message = "Shortage - apply for condonation";
-    else message = "Not eligible - repeat the semester";
-  }
-
-  // Which branch of the OUTER if we are in — used to highlight the live path.
-  const outerTrue = attendance >= 75;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        An <code style={{ color: C.accent }}>if</code> can contain ANOTHER <code style={{ color: C.accent }}>if</code> inside it —
-        this is called nesting. Each level of nesting gets its own extra indentation.
-      </p>
-
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Here is a rule you already live under. The college checks{" "}
-        <strong style={{ color: C.accent }}>attendance</strong> first. Only then does it look at your{" "}
-        <strong style={{ color: C.accent }}>internal marks</strong> — and what low internals MEAN
-        depends entirely on which side of the attendance rule you landed on. Move both sliders and
-        watch all four outcomes.
-      </p>
-
-      <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 180 }}>
-          <label style={{ color: C.muted, fontSize: 11 }}>
-            attendance = <strong style={{ color: outerTrue ? C.green : C.red }}>{attendance}%</strong>
-            <span style={{ color: C.border }}> (need 75)</span>
-          </label>
-          <input type="range" min={0} max={100} value={attendance} onChange={(e) => setAttendance(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 180 }}>
-          <label style={{ color: C.muted, fontSize: 11 }}>
-            internal = <strong style={{ color: internal >= 20 ? C.green : C.red }}>{internal}</strong>
-            <span style={{ color: C.border }}> / 40 (need 20)</span>
-          </label>
-          <input type="range" min={0} max={40} value={internal} onChange={(e) => setInternal(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-        </div>
-      </div>
-
-      <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8 }}>
-{`attendance = 80
-internal = 25
-
-if attendance >= 75:
-    if internal >= 20:
-        print("Eligible - hall ticket issued")
-    else:
-        print("Eligible, but internals are low - meet your mentor")
-else:
-    if internal >= 20:
-        print("Shortage - apply for condonation")
-    else:
-        print("Not eligible - repeat the semester")`}
-      </pre>
-
-      <div style={{ marginTop: 14, background: C.green + "18", border: `1.5px solid ${C.green}55`, borderRadius: 10, padding: 14, textAlign: "center", fontFamily: "monospace", fontSize: 14, color: C.green }}>
-        &gt; {message}
-      </div>
-
-      <div style={{ marginTop: 16, background: C.yellow + "18", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.yellow }}>Key idea:</strong> the inner if only even gets CHECKED if the
-        outer if's condition was True — nesting means "this decision only matters in this specific situation."
-        Notice that <code style={{ color: C.accent }}>internal {"<"} 20</code> appears in BOTH branches, but
-        means something completely different in each: on one side it's advice, on the other it decides your
-        semester. That is why this cannot be flattened into a single{" "}
-        <code style={{ color: C.accent }}>and</code> condition.
-      </div>
-    </div>
+// ── Widget: the and / or / not truth table ──
+function TruthTable() {
+  const [p, setP] = useState(true);
+  const [q, setQ] = useState(false);
+  const tog = (v, set, name) => (
+    <button onClick={() => set(!v)} style={{ ...chip(v), cursor: "pointer", flex: "0 0 auto", minWidth: 120 }}>{name} = {v ? "True" : "False"}</button>
   );
-}
-
-// ── Short-Circuit Evaluation ──────────────────────────────────────────────────
-function ShortCircuitDemo() {
-  const [x, setX] = useState(5);
-  const willDivide = x !== 0;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Python evaluates <code style={{ color: C.accent }}>and</code> / <code style={{ color: C.accent }}>or</code> left
-        to right, and STOPS as soon as the final answer is already certain — this is called{" "}
-        <strong style={{ color: C.accent }}>short-circuit evaluation</strong>, and it can protect your program from crashing.
-      </p>
-
-      <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, color: C.text, marginBottom: 14 }}>
-        {`x = 4\nif x != 0 and 10 / x > 1:\n    print("big enough")`}
-      </pre>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>x = <strong style={{ color: C.accent }}>{x}</strong></label>
-        <input type="range" min={-5} max={5} value={x} onChange={(e) => setX(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{
-          background: (willDivide ? C.green : C.red) + "18", border: `1.5px solid ${(willDivide ? C.green : C.red)}55`,
-          borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 13, color: willDivide ? C.green : C.red,
-        }}>
-          Step 1: x != 0 &nbsp;→&nbsp; {String(willDivide)}
-        </div>
-        <div style={{
-          background: (willDivide ? C.accent : C.border) + "18", border: `1.5px solid ${(willDivide ? C.accent : C.border)}55`,
-          borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 13, color: willDivide ? C.accent : C.muted,
-        }}>
-          Step 2: 10 / x &gt; 1 &nbsp;→&nbsp; {willDivide ? String(10 / x > 1) : "NEVER EVALUATED — Python already knows the answer is False"}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16, background: (willDivide ? C.accent : C.green) + "18", border: `1px solid ${(willDivide ? C.accent : C.green)}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        {willDivide
-          ? <>Since x isn't 0, Python goes on to check the second condition normally.</>
-          : <>🛡️ <strong style={{ color: C.green }}>This is the safety benefit:</strong> because x == 0 already makes the whole{" "}
-              <code style={{ color: C.green }}>and</code> False, Python never even TRIES to compute{" "}
-              <code style={{ color: C.green }}>10 / x</code> — avoiding a ZeroDivisionError entirely. If the order
-              were reversed, this program would crash when x is 0.</>}
-      </div>
-    </div>
-  );
-}
-
-// ── Nested vs Combined ────────────────────────────────────────────────────────
-function NestedVsCombined() {
-  const [combined, setCombined] = useState(false);
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The loan check from earlier could be written as two nested ifs, OR as one combined condition using{" "}
-        <code style={{ color: C.accent }}>and</code>. Both do exactly the same thing — but one is easier to read.
-      </p>
-
-      <button onClick={() => setCombined((v) => !v)} style={{
-        width: "100%", padding: "10px", borderRadius: 8,
-        background: combined ? C.purple + "22" : C.card,
-        border: `1.5px solid ${combined ? C.purple : C.border}`,
-        color: combined ? C.purple : C.text, fontWeight: 600, fontSize: 13, cursor: "pointer", marginBottom: 14,
-      }}>
-        {combined ? "◀ Show nested version" : "▶ Show combined version"}
-      </button>
-
-      <pre style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, color: C.text, lineHeight: 1.8 }}>
-{combined
-  ? `age = 25
-income = 30000
-
-if age >= 18 and income >= 20000:
-    print("Eligible")
-else:
-    print("Not eligible")`
-  : `age = 25
-income = 30000
-
-if age >= 18:
-    if income >= 20000:
-        print("Eligible")
-    else:
-        print("Not eligible")
-else:
-    print("Not eligible")`}
-      </pre>
-
-      <div style={{ marginTop: 14, background: C.yellow + "18", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        {combined
-          ? <>💡 The combined version is shorter and avoids repeating <code style={{ color: C.yellow }}>print("Not eligible")</code> twice — generally preferred when both conditions must ALWAYS be checked together.</>
-          : <>💡 The nested version works too, but notice "Not eligible" had to be written twice — once for each way of failing. Nesting is more useful when the inner check should ONLY happen in certain outer situations (like the weather example).</>}
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "In age >= 18 and income >= 20000, what happens if age is 16?",
-      options: [
-        "Python still checks income before deciding",
-        "The whole expression is immediately False — income is never even checked",
-        "It raises an error",
-        "It depends on income's value",
-      ],
-      answer: 1,
-      explain: "and short-circuits: once the left side is False, the overall result MUST be False, so Python skips checking the right side entirely.",
-    },
-    {
-      q: "What is a nested if?",
-      options: [
-        "An if statement written entirely on one line",
-        "An if statement placed inside the block of another if (or else)",
-        "Two if statements joined with and",
-        "An if statement with no else",
-      ],
-      answer: 1,
-      explain: "Nesting means putting one if/else structure inside another — the inner check only happens when the outer condition already led us into that branch.",
-    },
-    {
-      q: "Why does short-circuit evaluation make x != 0 and 10 / x > 1 safe even when x is 0?",
-      options: [
-        "Python automatically fixes division by zero",
-        "Because x != 0 is False, Python never evaluates 10 / x at all, avoiding the crash",
-        "Because 10 / 0 equals 0 in Python",
-        "It isn't actually safe — this code still crashes",
-      ],
-      answer: 1,
-      explain: "and stops evaluating as soon as it finds a False — so putting the safety check (x != 0) FIRST prevents the risky operation from ever running when it would fail.",
-    },
-    {
-      q: "When is a combined condition (using and) generally preferred over nested ifs?",
-      options: [
-        "Never — nested ifs are always better",
-        "When both conditions must always be checked together and the same outcome applies either way",
-        "Only when there are more than 3 conditions",
-        "Only inside functions",
-      ],
-      answer: 1,
-      explain: "Combining with and/or reads more cleanly when the logic is 'both must hold' — nesting is better reserved for cases where the inner check only matters in a specific outer situation.",
-    },
+  const rows = [
+    ["p and q", p && q, "True only when BOTH are True"],
+    ["p or q", p || q, "True when AT LEAST ONE is True"],
+    ["not p", !p, "Flips True ↔ False"],
   ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    const final = score + (selected === questions[current].answer ? 1 : 0);
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{final >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {final} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {final === 4 ? "Perfect! Nested logic and short-circuiting are second nature to you now." :
-            final >= 2 ? "Good work — revisit the Short-Circuit section once more." :
-              "Go back through the Nested If and Short-Circuit sections, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 5.3 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You can now combine conditions with and/or, nest ifs inside each other, and understand
-            short-circuit evaluation.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 5.4 — Capstone: Decision Maker.</strong> We'll bring
-            all of Module 5 together into one real project.
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>{tog(p, setP, "p")}{tog(q, setQ, "q")}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8 }}>
+        {rows.map(([e, v, n]) => (
+          <div key={e} style={{ background: T.card, border: `1.5px solid ${tint(v ? T.green : T.red, "66")}`, borderRadius: 10, padding: 12 }}>
+            <code style={{ fontSize: 15 }}>{e}</code> → <strong style={{ color: v ? T.green : T.red, fontFamily: CODE_FONT }}>{v ? "True" : "False"}</strong>
+            <div style={{ fontSize: 13.5, color: T.slate, marginTop: 4 }}>{n}</div>
           </div>
-        </div>
+        ))}
       </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16 }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
     </div>
   );
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function Unit5_3({ student, onUnitComplete }) {
-  const sections = [
-    { id: "combine", label: "Combining Conditions" },
-    { id: "nested", label: "Nested if" },
-    { id: "shortcircuit", label: "Short-Circuit" },
-    { id: "compare", label: "Nested vs Combined" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
-  ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Combining Conditions with and / or</h3>
-      <LoanEligibility />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Nested if Statements</h3>
-      <NestedEligibility />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Short-Circuit Evaluation</h3>
-      <ShortCircuitDemo />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Nested vs Combined — Which to Use?</h3>
-      <NestedVsCombined />
-    </div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-        4 questions to check your understanding of Unit 5.3.
-      </p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
+// ── Widget: the "or" trap ──
+function OrTrap() {
+  const [day, setDay] = useState("Monday");
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 5 › UNIT 5.3</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Nested Conditions & Boolean Logic</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
+    <div className="fh-two">
+      <div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+          {["Monday", "Saturday", "Sunday"].map((d) => (
+            <button key={d} onClick={() => setDay(d)} style={{ padding: "7px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontWeight: 700, border: `1.5px solid ${day === d ? T.navy : T.border}`, background: day === d ? T.navy : T.card, color: day === d ? "#fff" : T.text }}>{d}</button>
           ))}
         </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
+        <pre style={codeBox}>{'if day == "Saturday" or "Sunday":\n    print("Weekend!")'}</pre>
+      </div>
+      <div style={{ background: tint(T.red, "0E"), border: `1px solid ${tint(T.red, "44")}`, borderRadius: 10, padding: 12, fontSize: 14.5, color: T.slate, lineHeight: 1.65 }}>
+        Prints <strong style={{ color: T.red }}>Weekend!</strong> — even for {day}. Python reads it as
+        <code>(day == "Saturday") or ("Sunday")</code>. The right side is just the text <code>"Sunday"</code>, which is non-empty, so truthy (Unit 5.1). <strong>Each side of or must be a full comparison</strong>: <code>day == "Saturday" or day == "Sunday"</code>.
       </div>
     </div>
+  );
+}
+
+// ── Widget: nested if — the hall-ticket rule ──
+function HallTicket() {
+  const [att, setAtt] = useState(82);
+  const [inn, setInn] = useState(18);
+  const outer = att >= 75, inner = inn >= 20;
+  const msg = outer ? (inner ? "Hall ticket issued" : "Eligible - meet your mentor about internals") : (inner ? "Attendance shortage - apply for condonation" : "Not eligible - repeat the course");
+  const line = (cond, txt, on) => <div style={{ background: on ? tint(T.green, "22") : "transparent", color: on ? T.green : cond ? T.text : T.muted, fontWeight: on ? 700 : 400, borderRadius: 4 }}>{txt}</div>;
+  return (
+    <div className="fh-two">
+      <div>
+        <label style={{ fontFamily: CODE_FONT }}>attendance = <strong>{att}</strong>%  (need 75)</label>
+        <input type="range" min={40} max={100} value={att} onChange={(e) => setAtt(Number(e.target.value))} style={slider} />
+        <label style={{ fontFamily: CODE_FONT }}>internal = <strong>{inn}</strong> / 40  (need 20)</label>
+        <input type="range" min={0} max={40} value={inn} onChange={(e) => setInn(Number(e.target.value))} style={slider} />
+        <div style={{ marginTop: 10, fontFamily: CODE_FONT, fontWeight: 700, color: T.green }}>&gt; {msg}</div>
+      </div>
+      <div style={{ ...codeBox, whiteSpace: "pre" }}>
+        {line(true, "if attendance >= 75:", false)}
+        {line(outer, "    if internal >= 20:", false)}
+        {line(outer, '        print("Hall ticket issued")', outer && inner)}
+        {line(outer, "    else:", false)}
+        {line(outer, '        print("Eligible - meet your mentor ...")', outer && !inner)}
+        {line(true, "else:", false)}
+        {line(!outer, "    if internal >= 20:", false)}
+        {line(!outer, '        print("Attendance shortage - ...")', !outer && inner)}
+        {line(!outer, "    else:", false)}
+        {line(!outer, '        print("Not eligible - ...")', !outer && !inner)}
+      </div>
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const EX = {
+  loan: {
+    id: "loan", kind: "write", title: "Loan check with and",
+    task: <>Ask <code>Age: </code> and <code>Income: </code> (whole numbers). Print <code>Approved</code> if the age is at least 21 <strong>and</strong> the income is at least 25000; otherwise <code>Rejected</code>.</>,
+    tests: [
+      { inputs: ["30", "40000"], expect: "Age: 30\nIncome: 40000\nApproved" },
+      { inputs: ["20", "90000"], expect: "Age: 20\nIncome: 90000\nRejected", hidden: true },
+      { inputs: ["45", "24999"], expect: "Age: 45\nIncome: 24999\nRejected", hidden: true },
+      { inputs: ["21", "25000"], expect: "Age: 21\nIncome: 25000\nApproved", hidden: true },
+    ],
+    requires: [{ node: "BoolOp", msg: "Combine both conditions in one if with and." }],
+    hints: ["if age >= 21 and income >= 25000:"],
+    solution: 'age = int(input("Age: "))\nincome = int(input("Income: "))\nif age >= 21 and income >= 25000:\n    print("Approved")\nelse:\n    print("Rejected")',
+  },
+  weekend: {
+    id: "weekend", kind: "write", title: "Weekend or weekday (or)",
+    task: <>Ask <code>Day: </code>. Print <code>Weekend</code> if it is <code>Saturday</code> or <code>Sunday</code>, otherwise <code>Weekday</code>.</>,
+    tests: [
+      { inputs: ["Sunday"], expect: "Day: Sunday\nWeekend" },
+      { inputs: ["Saturday"], expect: "Day: Saturday\nWeekend", hidden: true },
+      { inputs: ["Monday"], expect: "Day: Monday\nWeekday", hidden: true },
+    ],
+    requires: [{ text: " or ", msg: "Use or." }],
+    hints: ['Each side of or must be a complete comparison: day == "Saturday" or day == "Sunday"'],
+    solution: 'day = input("Day: ")\nif day == "Saturday" or day == "Sunday":\n    print("Weekend")\nelse:\n    print("Weekday")',
+  },
+  orbug: {
+    id: "orbug", kind: "fix", title: "Every day is a holiday?",
+    task: <>Exams are on weekdays, holidays are Saturday and Sunday. Run it with the test input — a Monday — and fix the condition.</>,
+    starter: 'day = input("Day: ")\nif day == "Saturday" or "Sunday":\n    print("Holiday!")\nelse:\n    print("Exam day")',
+    tests: [{ inputs: ["Monday"], expect: "Day: Monday\nExam day" }, { inputs: ["Sunday"], expect: "Day: Sunday\nHoliday!", hidden: true }, { inputs: ["Saturday"], expect: "Day: Saturday\nHoliday!", hidden: true }],
+    hints: ['"Sunday" on its own is non-empty text — always truthy.', 'day == "Saturday" or day == "Sunday"'],
+    solution: 'day = input("Day: ")\nif day == "Saturday" or day == "Sunday":\n    print("Holiday!")\nelse:\n    print("Exam day")',
+  },
+  fees: {
+    id: "fees", kind: "write", title: "not",
+    task: <>Ask <code>Fees paid (yes/no): </code> and store <code>paid = answer == "yes"</code> — a bool. Then use <code>if not paid:</code> to print <code>Pay your fees first</code>; otherwise print <code>Hall ticket ready</code>.</>,
+    tests: [
+      { inputs: ["no"], expect: "Fees paid (yes/no): no\nPay your fees first" },
+      { inputs: ["yes"], expect: "Fees paid (yes/no): yes\nHall ticket ready", hidden: true },
+    ],
+    requires: [{ text: "not ", msg: "Use if not paid:" }],
+    hints: ['answer = input("Fees paid (yes/no): ")', 'paid = answer == "yes"   # True or False'],
+    solution: 'answer = input("Fees paid (yes/no): ")\npaid = answer == "yes"\nif not paid:\n    print("Pay your fees first")\nelse:\n    print("Hall ticket ready")',
+  },
+  range: {
+    id: "range", kind: "write", title: "Is it a valid mark?",
+    task: <>A mark must be between 0 and 100, both included. Ask <code>Mark: </code> and print <code>Valid</code> or <code>Invalid mark</code>. Python lets you write a range the maths way: <code>0 &lt;= mark &lt;= 100</code>.</>,
+    tests: [
+      { inputs: ["67"], expect: "Mark: 67\nValid" },
+      { inputs: ["101"], expect: "Mark: 101\nInvalid mark", hidden: true }, { inputs: ["-1"], expect: "Mark: -1\nInvalid mark", hidden: true },
+      { inputs: ["0"], expect: "Mark: 0\nValid", hidden: true }, { inputs: ["100"], expect: "Mark: 100\nValid", hidden: true },
+    ],
+    requires: [{ node: "If" }],
+    hints: ["if 0 <= mark <= 100: — or the long way: mark >= 0 and mark <= 100"],
+    solution: 'mark = int(input("Mark: "))\nif 0 <= mark <= 100:\n    print("Valid")\nelse:\n    print("Invalid mark")',
+  },
+  oneline: {
+    id: "oneline", kind: "complete", title: "Choose a value in one line",
+    task: <>When an if / else only picks between two values, Python has a one-line form: <code>value_if_true if condition else value_if_false</code>. Fill the blanks.</>,
+    starter: 'marks = int(input("Marks: "))\nresult = ___ if marks >= 40 else ___\nprint(f"Result: {result}")',
+    tests: [{ inputs: ["55"], expect: "Marks: 55\nResult: Pass" }, { inputs: ["12"], expect: "Marks: 12\nResult: Fail", hidden: true }],
+    requires: [{ node: "IfExp", msg: "Use the one-line form: \"Pass\" if marks >= 40 else \"Fail\"" }],
+    hints: ['result = "Pass" if marks >= 40 else "Fail"'],
+    solution: 'marks = int(input("Marks: "))\nresult = "Pass" if marks >= 40 else "Fail"\nprint(f"Result: {result}")',
+  },
+  hall: {
+    id: "hall", kind: "write", title: "Hall-ticket rule (nested if)",
+    task: <>Ask <code>Attendance: </code> and <code>Internal: </code>. Write the nested rule from the widget, printing exactly one of: <code>Hall ticket issued</code> · <code>Eligible - meet your mentor about internals</code> · <code>Attendance shortage - apply for condonation</code> · <code>Not eligible - repeat the course</code>.</>,
+    minLines: 12,
+    tests: [
+      { inputs: ["82", "25"], expect: "Attendance: 82\nInternal: 25\nHall ticket issued" },
+      { inputs: ["90", "12"], expect: "Attendance: 90\nInternal: 12\nEligible - meet your mentor about internals", hidden: true },
+      { inputs: ["70", "30"], expect: "Attendance: 70\nInternal: 30\nAttendance shortage - apply for condonation", hidden: true },
+      { inputs: ["60", "10"], expect: "Attendance: 60\nInternal: 10\nNot eligible - repeat the course", hidden: true },
+      { inputs: ["75", "20"], expect: "Attendance: 75\nInternal: 20\nHall ticket issued", hidden: true },
+    ],
+    requires: [{ node: "If", min: 3, msg: "One outer if, and an inner if inside each branch." }],
+    hints: ["The inner if/else is indented 4 more spaces than the outer one.", "Outer: attendance >= 75. Inner (on both sides): internal >= 20."],
+    solution: 'attendance = int(input("Attendance: "))\ninternal = int(input("Internal: "))\nif attendance >= 75:\n    if internal >= 20:\n        print("Hall ticket issued")\n    else:\n        print("Eligible - meet your mentor about internals")\nelse:\n    if internal >= 20:\n        print("Attendance shortage - apply for condonation")\n    else:\n        print("Not eligible - repeat the course")',
+  },
+  safe: {
+    id: "safe", kind: "fix", title: "Order saves you from a crash",
+    task: <>The average is only meaningful when at least one test was taken. With 0 tests this crashes. Run it, then fix it by <strong>swapping the two sides of and</strong> — so the safe check runs first.</>,
+    starter: 'total = int(input("Total marks: "))\ncount = int(input("Tests taken: "))\nif total / count >= 50 and count > 0:\n    print("Good average")\nelse:\n    print("Not enough data or low average")',
+    tests: [
+      { inputs: ["0", "0"], expect: "Total marks: 0\nTests taken: 0\nNot enough data or low average" },
+      { inputs: ["240", "4"], expect: "Total marks: 240\nTests taken: 4\nGood average", hidden: true },
+      { inputs: ["90", "3"], expect: "Total marks: 90\nTests taken: 3\nNot enough data or low average", hidden: true },
+    ],
+    hints: ["and stops as soon as the left side is False — the right side never runs.", "if count > 0 and total / count >= 50:"],
+    solution: 'total = int(input("Total marks: "))\ncount = int(input("Tests taken: "))\nif count > 0 and total / count >= 50:\n    print("Good average")\nelse:\n    print("Not enough data or low average")',
+  },
+  scholarship: {
+    id: "scholarship", kind: "make", title: "Scholarship decider",
+    task: <>Ask <code>Marks: </code> (decimal), <code>Family income: </code> (whole number) and <code>Sports quota (yes/no): </code>. A student gets the scholarship if <strong>(marks ≥ 85 and income &lt; 300000)</strong> <strong>or</strong> <strong>(sports quota and marks ≥ 60)</strong>. Print <code>Scholarship: Yes</code> or <code>Scholarship: No</code>.</>,
+    minLines: 10,
+    tests: [
+      { inputs: ["90", "250000", "no"], expect: "Marks: 90\nFamily income: 250000\nSports quota (yes/no): no\nScholarship: Yes" },
+      { inputs: ["90", "500000", "no"], expect: "Marks: 90\nFamily income: 500000\nSports quota (yes/no): no\nScholarship: No", hidden: true },
+      { inputs: ["65", "900000", "yes"], expect: "Marks: 65\nFamily income: 900000\nSports quota (yes/no): yes\nScholarship: Yes", hidden: true },
+      { inputs: ["55", "100000", "yes"], expect: "Marks: 55\nFamily income: 100000\nSports quota (yes/no): yes\nScholarship: No", hidden: true },
+      { inputs: ["85", "299999", "no"], expect: "Marks: 85\nFamily income: 299999\nSports quota (yes/no): no\nScholarship: Yes", hidden: true },
+    ],
+    requires: [{ node: "BoolOp", min: 2, msg: "Combine conditions with and / or." }],
+    hints: ['sports = input("Sports quota (yes/no): ") == "yes"', "Use brackets to group each and-pair, then join the two groups with or."],
+    solution: 'marks = float(input("Marks: "))\nincome = int(input("Family income: "))\nsports = input("Sports quota (yes/no): ") == "yes"\nif (marks >= 85 and income < 300000) or (sports and marks >= 60):\n    print("Scholarship: Yes")\nelse:\n    print("Scholarship: No")',
+  },
+};
+
+export const EXERCISES = EX; // for src/kit/selfTest.js
+
+const QUIZ = [
+  { q: "True and False gives…", options: ["True", "False"], answer: 1, explain: "and needs both sides True." },
+  { q: "True or False gives…", options: ["True", "False"], answer: 0, explain: "or needs at least one side True." },
+  { q: "For day = \"Monday\", what does day == \"Saturday\" or \"Sunday\" give?", options: ["False", "True — the bare text \"Sunday\" is truthy", "An error", "\"Monday\""], answer: 1, explain: "Python reads it as (day == \"Saturday\") or \"Sunday\". Write both comparisons in full." },
+  { q: "Which checks that m is between 1 and 10, inclusive?", options: ["1 < m < 10", "1 <= m <= 10", "m >= 1 or m <= 10", "1 <= m or m <= 10"], answer: 1, explain: "<= includes the ends. or would accept every number." },
+  { q: "What is result?", code: 'temp = 38\nresult = "Hot" if temp > 35 else "Fine"', options: ["\"Fine\"", "\"Hot\"", "True", "Error"], answer: 1, explain: "The condition is True, so the value before if is chosen." },
+  { q: "Why does count > 0 and total / count > 5 never crash when count is 0?", options: ["Python fixes division by zero", "and stops at the first False, so the division never runs", "Because > is checked first", "It does crash"], answer: 1, explain: "Short-circuit: once the left side is False the answer is already False. Put the safety check first." },
+  { q: "What does not (5 > 3) give?", options: ["True", "False"], answer: 1, explain: "5 > 3 is True; not flips it." },
+];
+
+export default function Unit5_3(props) {
+  const sections = [
+    {
+      label: "and", kicker: "BOTH MUST HOLD", title: "and: two conditions at once",
+      blocks: [
+        <P>Real rules have more than one condition. A bank lends only if the applicant is <strong>old enough and</strong> earns enough. <code>and</code> is True only when both sides are True.</P>,
+        <LoanCheck />,
+        EX.loan,
+      ],
+    },
+    {
+      label: "or & not", kicker: "EITHER / FLIP", title: "or, not, and the truth table",
+      blocks: [
+        <P><code>or</code> is True when <em>at least one</em> side is True. <code>not</code> flips True and False. Toggle p and q:</P>,
+        <TruthTable />,
+        EX.weekend,
+        <P>The most famous <code>or</code> bug in every first-year lab:</P>,
+        <OrTrap />,
+        EX.orbug,
+        EX.fees,
+        <KeyIdea>Each side of <code>and</code>/<code>or</code> must be a complete condition. When you mix them, use brackets: <code>and</code> binds tighter than <code>or</code>, which binds tighter than … nothing you want to guess.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Ranges & One-liners", kicker: "PYTHON SHORTCUTS", title: "0 <= m <= 100, and choosing in one line",
+      blocks: [
+        <P>Python lets you chain comparisons like in maths: <code>0 &lt;= mark &lt;= 100</code> means <code>mark &gt;= 0 and mark &lt;= 100</code>. (Most languages, including C, don't allow this.)</P>,
+        EX.range,
+        EX.oneline,
+      ],
+    },
+    {
+      label: "Nested if", kicker: "DECISIONS INSIDE DECISIONS", title: "An if inside an if",
+      blocks: [
+        <P>Sometimes the second question only matters in one situation. The college checks attendance first; what low internals <em>mean</em> depends on which side of the attendance rule you are. Move the sliders:</P>,
+        <HallTicket />,
+        EX.hall,
+        <Note color={T.blue} icon="🤔">Could this be one chain with <code>and</code>? Yes — but nesting mirrors how the rule is actually decided: attendance first, then internals.</Note>,
+      ],
+    },
+    {
+      label: "Short-circuit", kicker: "ORDER MATTERS", title: "Python stops as soon as it knows",
+      blocks: [
+        <P><code>and</code> stops at the first False; <code>or</code> stops at the first True. The rest is never even evaluated. That turns the order of conditions into a safety tool.</P>,
+        EX.safe,
+      ],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: scholarship decider",
+      blocks: [
+        <P>Two groups joined with <code>or</code>, each group an <code>and</code>, brackets to make the meaning obvious.</P>,
+        EX.scholarship,
+      ],
+    },
+  ];
+  return (
+    <LessonShell
+      {...props}
+      unitId="Unit5_3"
+      crumb="MODULE 5 › UNIT 5.3"
+      title="Combining Conditions"
+      sections={sections}
+      quiz={QUIZ}
+      next={{ title: "Unit 5.4 — Capstone: Decision Maker", text: "Everything from Module 5 in one program that decides for real." }}
+    />
   );
 }

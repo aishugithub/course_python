@@ -1,416 +1,94 @@
-import { useState } from "react";
+// Unit CT3.2 — Recursion in Action (rebuilt, typing-first)
+// Fibonacci → the exploding call tree (count the calls) → memoisation with a
+// dict fixes a timeout → digit sum and string reverse → recursive binary
+// search → Euclid's GCD make-task.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T } from "../kit/theme.js";
+
+const comments = (min) => ({ text: "#", min, msg: `Name the base case and the recursive case in at least ${min} # comment lines.` });
+const fibs = (n) => { const a = [0, 1]; for (let i = 2; i <= n; i++) a.push(a[i - 1] + a[i - 2]); return a.slice(0, n + 1); };
+const calls = (n) => { let c = 0; const f = (k) => { c++; return k < 2 ? k : f(k - 1) + f(k - 2); }; f(n); return c; };
+const DATA = [3, 8, 12, 19, 23, 31, 45, 52, 67, 74, 88];
+
+const EX = {
+  fib: {
+    id: "fib", kind: "write", title: "Fibonacci",
+    task: <>The Fibonacci numbers start 0, 1 and each next one is the sum of the previous two. Write <code>fib(n)</code> recursively (two base cases: fib(0) = 0, fib(1) = 1). Ask <code>n: </code> and print fib(0) to fib(n) on one line.</>,
+    tests: [{ inputs: ["10"], expect: "n: 10\n" + fibs(10).join(" ") }, { inputs: ["1"], expect: "n: 1\n0 1", hidden: true }],
+    post: "assert fib(15) == 610",
+    requires: [comments(2), { node: "FunctionDef" }],
+    hints: ["if n < 2: return n", "return fib(n - 1) + fib(n - 2)", 'for i in range(n + 1): print(fib(i), end=" ")'],
+    solution: '# base cases: fib(0) = 0, fib(1) = 1\n# recursive case: fib(n) = fib(n-1) + fib(n-2)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nn = int(input("n: "))\nfor i in range(n + 1):\n    print(fib(i), end=" ")',
+  },
+  count: {
+    id: "count", kind: "type", title: "How many calls?",
+    task: <>fib calls itself twice, and each of those calls itself twice… Count every call with a dictionary entry the function updates (a dict passed around, so no global). Predict how fast the count grows before you run it.</>,
+    show: 'def fib(n, counter):\n    counter["calls"] += 1\n    if n < 2:\n        return n\n    return fib(n - 1, counter) + fib(n - 2, counter)\n\nfor n in [10, 20, 25]:\n    counter = {"calls": 0}\n    fib(n, counter)\n    print(n, counter["calls"])',
+    tests: [{ expect: [10, 20, 25].map((n) => `${n} ${calls(n)}`).join("\n") }],
+    hints: ["Each step of n roughly multiplies the calls by 1.6 — exponential growth."],
+    solution: 'def fib(n, counter):\n    counter["calls"] += 1\n    if n < 2:\n        return n\n    return fib(n - 1, counter) + fib(n - 2, counter)\n\nfor n in [10, 20, 25]:\n    counter = {"calls": 0}\n    fib(n, counter)\n    print(n, counter["calls"])',
+  },
+  memo: {
+    id: "memo", kind: "fix", title: "Memoisation",
+    task: <>fib(80) would take years this way — the runner stops it after 5 seconds. Run it. Then fix it by <strong>remembering</strong> answers: before computing, look in a dictionary <code>memo</code>; after computing, store the result there. Same recursion, each fib(k) worked out only once.</>,
+    starter: 'def fib(n):\n    if n < 2:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nprint(fib(80))',
+    tests: [{ expect: "23416728348467685" }],
+    requires: [{ node: "Dict", msg: "Use a dictionary to remember answers you've already worked out." }],
+    hints: ["memo = {} outside the function.", "if n in memo: return memo[n] — then compute, store memo[n] = result, return it."],
+    solution: 'memo = {}\n\ndef fib(n):\n    if n < 2:\n        return n\n    if n in memo:\n        return memo[n]\n    result = fib(n - 1) + fib(n - 2)\n    memo[n] = result\n    return result\n\nprint(fib(80))',
+  },
+  digits: {
+    id: "digits", kind: "write", title: "Digits and strings, recursively",
+    task: <>Write two recursive functions: <code>digit_sum(n)</code> (0 for 0; otherwise last digit + digit_sum of the rest) and <code>reverse(s)</code> (empty string for empty; otherwise reverse of the rest + first character). Ask <code>Number: </code> and <code>Word: </code>; print <code>Digit sum: 10</code> and <code>Reversed: nohtyp</code>.</>,
+    tests: [{ inputs: ["253", "python"], expect: "Number: 253\nWord: python\nDigit sum: 10\nReversed: nohtyp" }, { inputs: ["0", "a"], expect: "Number: 0\nWord: a\nDigit sum: 0\nReversed: a", hidden: true }],
+    post: "assert digit_sum(9999) == 36 and reverse('abc') == 'cba' and reverse('') == ''",
+    requires: [comments(2), { node: "FunctionDef", min: 2 }],
+    forbids: [{ text: "::-1", msg: "Reverse it recursively, not with slicing [::-1]." }, { node: "For" }, { node: "While" }],
+    hints: ["digit_sum: return n % 10 + digit_sum(n // 10)", "reverse: return reverse(s[1:]) + s[0]"],
+    solution: '# digit_sum: base 0 -> 0; else last digit + digit_sum(rest)\n# reverse: base "" -> ""; else reverse(rest) + first\ndef digit_sum(n):\n    if n == 0:\n        return 0\n    return n % 10 + digit_sum(n // 10)\n\ndef reverse(s):\n    if s == "":\n        return ""\n    return reverse(s[1:]) + s[0]\n\nn = int(input("Number: "))\nw = input("Word: ")\nprint(f"Digit sum: {digit_sum(n)}")\nprint(f"Reversed: {reverse(w)}")',
+  },
+  bsearch: {
+    id: "bsearch", kind: "write", title: "Recursive binary search",
+    task: <>Write <code>search(data, target, low, high)</code> returning the index or -1, recursively: if low &gt; high, it's not there (base case); otherwise check the middle and search <em>one</em> half. Search <code>data = [3, 8, 12, 19, 23, 31, 45, 52, 67, 74, 88]</code> for the number typed after <code>Find: </code>; print <code>Index: 8</code>.</>,
+    tests: [{ inputs: ["67"], expect: `Find: 67\nIndex: ${DATA.indexOf(67)}` }, { inputs: ["50"], expect: "Find: 50\nIndex: -1", hidden: true }, { inputs: ["3"], expect: "Find: 3\nIndex: 0", hidden: true }],
+    post: "_d = [1, 3, 5, 7, 9, 11]\nassert [search(_d, x, 0, len(_d) - 1) for x in [1, 9, 11, 4]] == [0, 4, 5, -1]",
+    requires: [comments(2), { node: "FunctionDef" }],
+    forbids: [{ node: "While", msg: "Recursion replaces the while loop here." }, { call: "index" }],
+    hints: ["mid = (low + high) // 2", "Too small → return search(data, target, mid + 1, high); too big → search(data, target, low, mid - 1)."],
+    solution: '# base cases: low > high -> -1; middle matches -> mid\n# recursive case: search only the half that can contain target\ndef search(data, target, low, high):\n    if low > high:\n        return -1\n    mid = (low + high) // 2\n    if data[mid] == target:\n        return mid\n    if data[mid] < target:\n        return search(data, target, mid + 1, high)\n    return search(data, target, low, mid - 1)\n\ndata = [3, 8, 12, 19, 23, 31, 45, 52, 67, 74, 88]\nt = int(input("Find: "))\nprint(f"Index: {search(data, t, 0, len(data) - 1)}")',
+  },
+  gcd: {
+    id: "gcd", kind: "make", title: "Euclid's GCD",
+    task: <>Euclid's 2,300-year-old algorithm: gcd(a, 0) = a; otherwise gcd(a, b) = gcd(b, a % b). Write it recursively and use it for <code>lcm(a, b) = a * b // gcd(a, b)</code>. Ask <code>a: </code> and <code>b: </code>; print <code>GCD: 6</code> and <code>LCM: 72</code>. Compare: CT1.3 searched every candidate; this takes a handful of steps even for huge numbers.</>,
+    minLines: 12,
+    tests: [{ inputs: ["18", "24"], expect: "a: 18\nb: 24\nGCD: 6\nLCM: 72" }, { inputs: ["1071", "462"], expect: "a: 1071\nb: 462\nGCD: 21\nLCM: 23562", hidden: true }],
+    post: "assert gcd(7, 13) == 1 and gcd(100, 75) == 25 and lcm(4, 6) == 12",
+    requires: [comments(2), { node: "FunctionDef", min: 2 }],
+    forbids: [{ text: "math.gcd" }, { node: "For" }, { node: "While" }],
+    hints: ["if b == 0: return a", "return gcd(b, a % b)"],
+    solution: '# base case: gcd(a, 0) = a\n# recursive case: gcd(a, b) = gcd(b, a % b)\ndef gcd(a, b):\n    if b == 0:\n        return a\n    return gcd(b, a % b)\n\ndef lcm(a, b):\n    return a * b // gcd(a, b)\n\na = int(input("a: "))\nb = int(input("b: "))\nprint(f"GCD: {gcd(a, b)}")\nprint(f"LCM: {lcm(a, b)}")',
+  },
 };
 
-// ── Section 1: The Need ──────────────────────────────────────────────────────
-function TheNeed() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Unit 1 gave you the recursive skeleton on factorial. The same skeleton — a{" "}
-        <span style={{ color: C.green }}>base case</span> plus a{" "}
-        <span style={{ color: C.teal }}>smaller call</span> — solves a whole family of the number problems you met
-        in CT Set 1: sum of digits, power, countdowns.
-      </p>
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
-        <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>The shape you keep reusing:</div>
-        <pre style={{ fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.9, whiteSpace: "pre" }}>
-{`def solve(problem):
-    if `}<span style={{ color: C.green }}>problem is smallest</span>{`:
-        return `}<span style={{ color: C.green }}>direct answer</span>{`
-    return `}<span style={{ color: C.teal }}>combine(a bit, solve(smaller))</span></pre>
-      </div>
+const QUIZ = [
+  { q: "Why is plain recursive fib so slow?", options: ["Python is slow", "It recomputes the same values again and again — the calls grow exponentially", "Too many base cases", "Recursion is always slow"], answer: 1, explain: "fib(25) makes over 240,000 calls." },
+  { q: "What does memoisation do?", options: ["Deletes calls", "Stores each answer the first time, and looks it up afterwards", "Uses a loop", "Prints faster"], answer: 1, explain: "Each fib(k) is computed once: from exponential to linear." },
+  { q: "In recursive binary search, what is the base case for “not found”?", options: ["mid == 0", "low > high", "target == 0", "len(data) == 1"], answer: 1, explain: "Nothing left to search." },
+  { q: "gcd(18, 24) → gcd(24, 18) → gcd(18, 6) → gcd(6, 0) → ?", options: ["0", "6", "18", "24"], answer: 1, explain: "Base case: gcd(a, 0) = a." },
+];
 
-      <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Ask two questions for any recursion:</strong> "what's the smallest
-        case I can answer outright?" and "how do I shrink the input by one step?" Answer both and the function
-        writes itself.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 2: Same skeleton, three problems ─────────────────────────────────
-function SameSkeleton() {
-  const [mode, setMode] = useState("digits");
-  const modes = {
-    digits: {
-      label: "Sum of digits", color: C.teal,
-      code: "def digit_sum(n):\n    if n == 0:\n        return 0\n    return n % 10 + digit_sum(n // 10)",
-      base: "n == 0 → 0 (no digits left)",
-      step: "peel the last digit (n % 10) and add the sum of the rest (n // 10)",
-      demo: "digit_sum(253) → 3 + digit_sum(25) → 3+5+digit_sum(2) → 3+5+2 = 10",
-    },
-    power: {
-      label: "Power", color: C.orange,
-      code: "def power(base, exp):\n    if exp == 0:\n        return 1\n    return base * power(base, exp - 1)",
-      base: "exp == 0 → 1 (anything to the 0 is 1)",
-      step: "one factor of base × the power with exp reduced by 1",
-      demo: "power(2, 3) → 2 × power(2, 2) → 2×2×power(2,1) → 2×2×2×1 = 8",
-    },
-    count: {
-      label: "Countdown", color: C.green,
-      code: 'def countdown(n):\n    if n == 0:\n        print("liftoff")\n        return\n    print(n)\n    countdown(n - 1)',
-      base: 'n == 0 → print "liftoff" and stop',
-      step: "print n, then count down from n − 1",
-      demo: "countdown(3) → 3, 2, 1, liftoff",
-    },
-  };
-  const m = modes[mode];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Three problems, one skeleton. Notice how each just fills in "smallest case" and "shrink step" differently.
-      </p>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-        {Object.entries(modes).map(([k, mv]) => (
-          <button key={k} onClick={() => setMode(k)} style={{
-            flex: 1, minWidth: 100, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600,
-            background: mode === k ? mv.color + "22" : C.card,
-            border: `1.5px solid ${mode === k ? mv.color : C.border}`, color: mode === k ? mv.color : C.muted,
-          }}>{mv.label}</button>
-        ))}
-      </div>
-
-      <pre style={{ background: "#0A0E14", border: `1px solid ${m.color}44`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: "0 0 14px", whiteSpace: "pre" }}>{m.code}</pre>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-        <div style={{ background: C.card, border: `1px solid ${C.green}44`, borderRadius: 8, padding: 12 }}>
-          <div style={{ color: C.green, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>BASE CASE</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>{m.base}</div>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${m.color}44`, borderRadius: 8, padding: 12 }}>
-          <div style={{ color: m.color, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>SHRINK STEP</div>
-          <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.5 }}>{m.step}</div>
-        </div>
-      </div>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontFamily: "monospace", fontSize: 11.5, color: m.color, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-        {m.demo}
-      </div>
-    </div>
-  );
-}
-
-// ── Section 3: Fibonacci call tree ───────────────────────────────────────────
-function fibCalls(n) { return n <= 1 ? 1 : 1 + fibCalls(n - 1) + fibCalls(n - 2); }
-function fibVal(n) { return n <= 1 ? n : fibVal(n - 1) + fibVal(n - 2); }
-
-function FibNode({ n, depth }) {
-  const leaf = n <= 1;
-  const color = leaf ? C.green : C.accent;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-      <div style={{
-        fontFamily: "monospace", fontSize: 11.5, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-        background: color + "18", border: `1.5px solid ${color}`, color, whiteSpace: "nowrap",
-      }}>fib({n}){leaf ? `=${n}` : ""}</div>
-      {!leaf && (
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-          <FibNode n={n - 1} depth={depth + 1} />
-          <FibNode n={n - 2} depth={depth + 1} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Fibonacci() {
-  const [n, setN] = useState(6);
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        <strong style={{ color: C.text }}>Fibonacci</strong> makes <em>two</em> recursive calls, so it branches into
-        a tree. Each number is the sum of the previous two — base case: fib(0)=0, fib(1)=1.
-      </p>
-
-      <pre style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: "0 0 14px", whiteSpace: "pre" }}>{`def fib(n):\n    if n <= 1:\n        return n\n    return fib(n - 1) + fib(n - 2)`}</pre>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, overflowX: "auto" }}>
-        <div style={{ color: C.muted, fontSize: 11, marginBottom: 10 }}>Call tree for fib(4):</div>
-        <div style={{ display: "flex", justifyContent: "center", minWidth: 320 }}>
-          <FibNode n={4} depth={0} />
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 14 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>n = <strong style={{ color: C.accent }}>{n}</strong></label>
-        <input type="range" min={2} max={15} value={n} onChange={(e) => setN(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div style={{ background: C.card, border: `2px solid ${C.green}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
-          <div style={{ color: C.green, fontSize: 10, letterSpacing: 1 }}>fib({n}) =</div>
-          <div style={{ color: C.text, fontSize: 24, fontWeight: 700, fontFamily: "monospace" }}>{fibVal(n)}</div>
-        </div>
-        <div style={{ background: C.card, border: `2px solid ${C.red}`, borderRadius: 10, padding: 12, textAlign: "center" }}>
-          <div style={{ color: C.red, fontSize: 10, letterSpacing: 1 }}>calls made</div>
-          <div style={{ color: C.text, fontSize: 24, fontWeight: 700, fontFamily: "monospace" }}>{fibCalls(n)}</div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 14, background: C.red + "12", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        ⚠️ <strong style={{ color: C.red }}>The call count explodes.</strong> fib(6) already needs 25 calls; the same
-        sub-problems (like fib(2)) are recomputed again and again. Beautiful code, but wasteful.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 4: Recursion vs iteration ────────────────────────────────────────
-function VsIteration() {
-  const [mode, setMode] = useState("rec");
-  const modes = {
-    rec: {
-      label: "Recursive", color: C.teal,
-      code: "def fib(n):\n    if n <= 1:\n        return n\n    return fib(n - 1) + fib(n - 2)",
-      note: "Mirrors the definition perfectly — but recomputes the same values exponentially. fib(40) would take ages.",
-    },
-    loop: {
-      label: "Iterative (loop)", color: C.orange,
-      code: "def fib(n):\n    a = 0\n    b = 1\n    for i in range(n):\n        temp = a + b\n        a = b\n        b = temp\n    return a",
-      note: "Two running values sweep forward once — linear time, no repeated work. fib(40) is instant.",
-    },
-  };
-  const m = modes[mode];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Recursion isn't always the right tool. For Fibonacci, a loop is dramatically faster — same answer, no
-        exploding tree. It just keeps the last two values as it marches forward.
-      </p>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-        {Object.entries(modes).map(([k, mv]) => (
-          <button key={k} onClick={() => setMode(k)} style={{
-            flex: 1, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600,
-            background: mode === k ? mv.color + "22" : C.card,
-            border: `1.5px solid ${mode === k ? mv.color : C.border}`, color: mode === k ? mv.color : C.muted,
-          }}>{mv.label}</button>
-        ))}
-      </div>
-
-      <pre style={{ background: "#0A0E14", border: `1px solid ${m.color}44`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 12, color: C.text, lineHeight: 1.8, margin: 0, whiteSpace: "pre" }}>{m.code}</pre>
-
-      <div style={{ marginTop: 14, background: m.color + "14", border: `1px solid ${m.color}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-        {m.note}
-      </div>
-
-      <div style={{ marginTop: 16, background: C.purple + "15", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Recursion buys clarity, sometimes at a cost.</strong> Use it when the
-        problem is genuinely branching (trees, Hanoi — next unit). For a straight march like Fibonacci or factorial,
-        a loop is often the smarter engineering choice.
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "In  digit_sum(n),  what is the base case?",
-      options: ["n == 1 → 1", "n == 0 → 0 (no digits left)", "n > 10", "There is none"],
-      answer: 1,
-      explain: "Peeling n // 10 eventually reaches 0, which has no digits to add — so digit_sum(0) returns 0 directly and stops the recursion.",
-    },
-    {
-      q: "Why does Fibonacci form a TREE of calls, not a single chain like factorial?",
-      options: [
-        "It uses a loop",
-        "Each fib(n) makes TWO recursive calls — fib(n-1) and fib(n-2) — so the calls branch",
-        "It has no base case",
-        "It only calls itself once",
-      ],
-      answer: 1,
-      explain: "Two recursive calls per step means the call graph splits in two at every node, forming a branching tree that grows fast.",
-    },
-    {
-      q: "Naïve recursive Fibonacci is slow mainly because…",
-      options: [
-        "Python is slow",
-        "It recomputes the same sub-problems (like fib(2)) many times over",
-        "It uses too much disk",
-        "The base case is wrong",
-      ],
-      answer: 1,
-      explain: "The same fib(k) values are calculated repeatedly across the branches, so the work grows exponentially even though there are only n distinct answers.",
-    },
-    {
-      q: "For computing Fibonacci fast, which is the better choice?",
-      options: [
-        "Recursion — it's always best",
-        "An iterative loop with two running values — linear time, no repeated work",
-        "Neither works",
-        "Recursion, because loops can't add",
-      ],
-      answer: 1,
-      explain: "A loop sweeps forward once keeping the last two values, so it's linear and instant even for large n. Recursion here is elegant but exponential.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You can turn number problems recursive — and know when not to." :
-            score >= 2 ? "Good — replay the Fibonacci tree to see the repeated work." :
-              "Revisit Same Skeleton and Fibonacci, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 CT III · Unit 2 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Sum-of-digits, power, and the branching cost of Fibonacci.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 3 — Tower of Hanoi.</strong> The showcase where
-            recursion shines and a loop would be a nightmare: move a tower three disks at a time.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function UnitCT3_2({ student, onUnitComplete }) {
+export default function UnitCT3_2(props) {
   const sections = [
-    { id: "need", label: "The Need" },
-    { id: "skeleton", label: "Same Skeleton" },
-    { id: "fib", label: "Fibonacci Tree" },
-    { id: "vs", label: "Recursion vs Loop" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    { label: "Fibonacci", kicker: "TWO CALLS EACH", title: "Fibonacci and the exploding call tree", blocks: [EX.fib, EX.count, <Note color={T.blue} icon="🌳">Each fib(n) calls two more; the tree of calls roughly doubles at every level. That's exponential growth — and why fib(80) never finishes.</Note>] },
+    { label: "Memoisation", kicker: "REMEMBER ANSWERS", title: "From hopeless to instant", blocks: [EX.memo, <KeyIdea>If a recursive function solves the same sub-problem many times, store each answer in a dictionary the first time. This idea (dynamic programming) powers many famous algorithms.</KeyIdea>] },
+    { label: "More Shapes", kicker: "NUMBERS · STRINGS · SEARCH", title: "The same pattern everywhere", blocks: [EX.digits, EX.bsearch] },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: Euclid's GCD", blocks: [EX.gcd] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>One Skeleton, Many Programs</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Same Skeleton, Three Problems</h3><SameSkeleton /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Fibonacci: When Recursion Branches</h3><Fibonacci /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Recursion vs a Loop</h3><VsIteration /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on recursion in action.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🧠</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>COMPUTATIONAL THINKING III › UNIT 2</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Recursion in Action</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="UnitCT3_2" crumb="COMPUTATIONAL THINKING III › 2" title="Recursion in Action" sections={sections} quiz={QUIZ}
+      next={{ title: "CT III · 3 — Tower of Hanoi", text: "The puzzle that's nearly impossible by hand — and three lines of recursion." }} />
   );
 }

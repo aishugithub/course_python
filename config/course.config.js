@@ -29,6 +29,7 @@ const COURSE_CONFIG = {
   // a Certificate of Participation — but ONLY once `participationOpen` is true.
   // Keep it false until the cut-off date; while false, students never see it.
   labCertificate: {
+    show:                false,   // 2026-11-12: MED23CL202 lab finished — hides the e-Lab card. true brings it back.
     participationOpen:   false,
     participationMinPct: 60,
   },
@@ -38,7 +39,7 @@ const COURSE_CONFIG = {
   // "Mini-Project Report" card on the Dashboard: keep it false until the
   // report builder is finished and the new Code.gs is deployed.
   miniProjectReport: {
-    open:         true,
+    open:         false,   // 2026-11-12: MED23CL202 report card hidden (lab finished). true brings it back.
     academicYear: "2026–2027",
     faculty:      "Ms. Aishwarya S",
     hod:          "Dr. Nandakumar Venkatesan",   // Head of the Department, on the bonafide certificate
@@ -110,6 +111,8 @@ const COURSE_CONFIG = {
           blurb: "Your program finally talks back. But beware: everything users type is a string…" },
         { unitId: "Unit4_4", title: "Operators & Expressions",
           blurb: "+ - * / is the easy part. Wait till // and % start earning their keep." },
+        { unitId: "Unit4_5", title: "Formatted Output",
+          blurb: "Rs 450.0? Hi Meena ! Stop fighting commas — f-strings print exactly what you mean." },
         { unitId: "Unit4_C", title: "The Crucible", optional: true,
           blurb: "Four stages. Rising heat. Prove Module 4 didn't just pass through you." },
       ],
@@ -120,11 +123,11 @@ const COURSE_CONFIG = {
       icon:        "",
       blurb: "Teach your program to choose. This is where code gets a mind of its own.",
       units: [
-        { unitId: "Unit5_1", title: "Booleans & Truthy/Falsy Values",
-          blurb: "True, False… and Python's strange habit of calling 0 \"false-ish\". Truthy business." },
+        { unitId: "Unit5_1", title: "Comparisons & Booleans",
+          blurb: "== or =? \"10\" < \"9\"? 0.1 + 0.2 == 0.3? Every question has a True/False answer — some will surprise you." },
         { unitId: "Unit5_2", title: "if / elif / else",
           blurb: "One question, many paths. The single most-used pattern in all of programming." },
-        { unitId: "Unit5_3", title: "Nested Conditions & Boolean Logic",
+        { unitId: "Unit5_3", title: "Combining Conditions",
           blurb: "and, or, not — chain decisions inside decisions without tying a knot." },
         { unitId: "Unit5_4", title: "Capstone: Decision Maker",
           blurb: "Everything from Module 5, folded into one program that decides for you." },
@@ -182,8 +185,10 @@ const COURSE_CONFIG = {
           blurb: "Your first container: one name, a thousand values, endless possibilities." },
         { unitId: "Unit7_3", title: "List Methods & Loop Patterns",
           blurb: "append, sort, sum, max — the daily toolkit of every working programmer." },
-        { unitId: "Unit7_4", title: "Tuples & Dictionaries",
-          blurb: "Lock data down with tuples; look it up instantly with dicts." },
+        { unitId: "Unit7_4", title: "Tuples",
+          blurb: "Lock a record, unpack it in one line, swap without a temp — and meet enumerate and zip." },
+        { unitId: "Unit7_4D", title: "Dictionaries",
+          blurb: "Look it up by name, not position. Then count anything — grades, votes, words — in one line." },
         { unitId: "Unit7_5", title: "Sets: Unique Collections",
           blurb: "Duplicates vanish, membership checks turn instant. The most underrated container." },
         { unitId: "Unit7_6", title: "Capstone: Student Marks Manager",
@@ -296,6 +301,8 @@ const COURSE_CONFIG = {
       units: [
         { unitId: "Unit11_1", title: "Modules & the Ecosystem",
           blurb: "pip, venv, and the gigantic toolbox Python hands you for free." },
+        { unitId: "Unit11_2", title: "Pythonic Python",
+          blurb: "Comprehensions, lambda, sorted(key=…), any/all — say more with less code." },
       ],
     },
     {
@@ -306,6 +313,8 @@ const COURSE_CONFIG = {
       units: [
         { unitId: "Unit12_1", title: "Meet Pandas: DataFrames",
           blurb: "A spreadsheet inside Python, on steroids. Meet the DataFrame." },
+        { unitId: "Unit12_2", title: "Analysing Real Data",
+          blurb: "groupby, missing values and saved reports — answer real questions with a shop's sales." },
       ],
     },
     {
@@ -347,39 +356,27 @@ const COURSE_CONFIG = {
       ],
     },
     {
-      // ── APPLIED MINI-PROJECTS — "Build for Your Branch" ──
-      // Optional post-trunk track units (excluded from the completion % like the
-      // Crucible/FT/FB units). Same scaffolded capstone spine, re-skinned per
-      // engineering branch; a learner builds the ONE for their domain. Added one
-      // unit at a time. Filenames: UnitMP_<TRACK>.jsx.
-      // Hidden for the MED23CL202 batch: their mini-project is the track inside
-      // the e-Lab Record. Remove `hidden` to bring this back for other branches.
+      // ── MINI-PROJECTS — four generic tracks (rebuilt 2026-11-13, typing-first) ──
+      // Optional (excluded from the completion % and the certificate, like the
+      // Crucibles). A learner picks ONE track and grows one program through five
+      // checkpoints tied to modules: 1 core (M4–6) · 2 organise (M7–8) ·
+      // 3 survive (M9) · 4 model (M10) · 5 analyse & chart (M12–13).
+      // Filenames: UnitMP_<TRACK>.jsx. The old medical tracks live inside the
+      // hidden LAB module and are untouched.
       moduleId:    "MP",
-      hidden:      true,
       label:       "MINI PROJECT",
-      moduleTitle: "Applied Mini-Projects — Build for Your Branch",
+      moduleTitle: "Mini-Projects — Pick a Track",
       icon:        "",
-      blurb: "Everything you learned, aimed at your world. Pick your branch and build one real program end to end.",
+      blurb: "Pick one track and grow one real program through five checkpoints — from a menu in Module 6 to a chart in Module 13.",
       units: [
-        { unitId: "UnitMP_GEN", title: "General — Personal Expense Tracker", optional: true,
-          blurb: "The app everyone needs: log spending, group by category, bust your budget alarm, and remember it all. The whole trunk, snapped together." },
-      ],
-    },
-    {
-      // ── FINISH LINE — end-of-course feedback + certificate gate ──
-      // One optional unit (excluded from the completion % like the Crucible/FT
-      // units). Submitting it records "UnitFB" in the Progress sheet, which —
-      // together with all ten Crucibles — is what unlocks the course certificate
-      // (see src/shell/completion.js + Certificate.jsx). The feedback answers
-      // themselves go to a separate "Feedback" sheet via api.js submitFeedback.
-      moduleId:    "FB",
-      label:       "FINISH LINE",
-      moduleTitle: "Finish Line — Feedback & Certificate",
-      icon:        "",
-      blurb: "You've climbed the whole thing. Tell us how it went — required for your e-Lab certificate.",
-      units: [
-        { unitId: "UnitFB", title: "Your Verdict — Feedback, Review & Testimonial", optional: true, tag: "REQUIRED · E-LAB CERTIFICATE",
-          blurb: "Two minutes of honesty: how Foothold compared, what helped, what didn't — then claim your certificate." },
+        { unitId: "UnitMP_GEN", title: "Track A — Personal Expense Tracker", optional: true,
+          blurb: "Log spending, warn when the budget breaks, remember it in a file, and chart where the money went." },
+        { unitId: "UnitMP_SHOP", title: "Track B — Shop Inventory Manager", optional: true,
+          blurb: "Sell, restock and bill at a canteen or stationery shop — with low-stock alarms and a stock-value chart." },
+        { unitId: "UnitMP_SEAT", title: "Track C — Event Seat Booking", optional: true,
+          blurb: "Book and cancel seats for a fest, cinema or bus: a seat map, no double booking, a waitlist and occupancy charts." },
+        { unitId: "UnitMP_LEAGUE", title: "Track D — Sports League Tracker", optional: true,
+          blurb: "Results in, points table out: tie-breakers, a saved table, Team and League classes and a goals chart." },
       ],
     },
     {
@@ -390,7 +387,10 @@ const COURSE_CONFIG = {
       // three-stage-per-program work is logged (algorithm/flowchart/program)
       // against a signed-in student's roll number via the existing
       // onStageComplete plumbing, exactly like the Crucible.
+      // 2026-11-12: hidden — the MED23CL202 batch has finished its lab. Files and
+      // students' saved lab progress are untouched; delete `hidden` to bring it back.
       moduleId:    "LAB",
+      hidden:      true,
       label:       "E-LAB RECORD",
       labRecord:   true,
       moduleTitle: "e-Lab Record — Python Lab (MED23CL202)",
@@ -427,6 +427,23 @@ const COURSE_CONFIG = {
           blurb: "Two programs (a labelled line chart · a Seaborn histogram), each as algorithm → flowchart → self-check. One chart turns your numbers into a dashboard." },
         { unitId: "UnitLAB10_5", title: "Mini Project — Crucible 5 (Exp 9 & 10)", optional: true,
           blurb: "Analysis & charts, forged through your track: filter and summarise your records into numbers worth plotting. The last brick of your capstone." },
+      ],
+    },
+    {
+      // ── FINISH LINE — end-of-course feedback + certificate gate ──
+      // One optional unit (excluded from the completion % like the Crucible/FT
+      // units). Submitting it records "UnitFB" in the Progress sheet, which —
+      // together with all ten Crucibles — is what unlocks the course certificate
+      // (see src/shell/completion.js + Certificate.jsx). The feedback answers
+      // themselves go to a separate "Feedback" sheet via api.js submitFeedback.
+      moduleId:    "FB",
+      label:       "FINISH LINE",
+      moduleTitle: "Finish Line — Feedback & Certificate",
+      icon:        "",
+      blurb: "You've climbed the whole thing. Tell us how it went — with all ten Crucibles cleared, this unlocks your course certificate.",
+      units: [
+        { unitId: "UnitFB", title: "Your Verdict — Feedback, Review & Testimonial", optional: true, tag: "REQUIRED · COURSE CERTIFICATE",
+          blurb: "Two minutes of honesty: how Foothold compared, what helped, what didn't — then claim your certificate." },
       ],
     },
   ],

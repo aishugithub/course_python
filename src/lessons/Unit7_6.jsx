@@ -1,530 +1,181 @@
-// Unit 7.5 — Capstone: Student Marks Manager (Module 7 finale)
-import { useState } from "react";
+// Unit 7.6 — Capstone: Student Marks Manager (rebuilt on the typing-first lesson
+// kit; shown as 7.7). v1 report from two input lines → v2 menu loop (Add /
+// Report / Exit) → v3 Search + merit list via sorted (mark, name) tuples →
+// Make It: top-3 words. Pass mark is 40, consistent with the rest of the course.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT } from "../kit/theme.js";
+
+// ── Reference simulators (they produce the expected outputs for the tests) ──
+function report(pairs, merit) {
+  if (!pairs.length) return ["No students yet"];
+  let total = 0, passed = 0, top = pairs[0][0], best = pairs[0][1];
+  for (const [n, m] of pairs) { total += m; if (m >= 40) passed++; if (m > best) { best = m; top = n; } }
+  const out = [`Students: ${pairs.length}`, `Average: ${(total / pairs.length).toFixed(2)}`, `Topper: ${top} (${best})`, `Passed: ${passed}/${pairs.length}`];
+  if (merit) {
+    const ranked = pairs.map(([n, m]) => [m, n]).sort((a, b) => b[0] - a[0] || (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0));
+    out.push("Merit list:");
+    ranked.slice(0, 3).forEach(([m, n], i) => out.push(`${i + 1}. ${n} - ${m}`));
+  }
+  return out;
+}
+function v1(names, marks) {
+  const n = names.split(" "), m = marks.split(" ").map(Number);
+  return [`Names: ${names}`, `Marks: ${marks}`, ...report(n.map((x, i) => [x, m[i]]), false)].join("\n");
+}
+function menu(version, inputs) {
+  const q = [...inputs], out = [], data = [];
+  const ask = (p) => { const v = q.shift(); out.push(p + v); return v; };
+  const MENU = version === 3 ? "1. Add  2. Report  3. Search  4. Exit" : "1. Add  2. Report  3. Exit";
+  for (;;) {
+    out.push(MENU);
+    const c = ask("Choose: ");
+    if (c === "1") {
+      const name = ask("Name: ").trim().toUpperCase();
+      const mark = Number(ask("Mark: "));
+      const at = data.findIndex(([k]) => k === name);
+      if (at >= 0) { data[at][1] = mark; out.push(`Updated ${name}`); } else { data.push([name, mark]); out.push(`Added ${name}`); }
+    } else if (c === "2") out.push(...report(data, version === 3));
+    else if (version === 3 && c === "3") {
+      const name = ask("Search: ").trim().toUpperCase();
+      const hit = data.find(([k]) => k === name);
+      out.push(hit ? `${name}: ${hit[1]}` : "Not found");
+    } else if (c === (version === 3 ? "4" : "3")) { out.push("Bye!"); break; }
+    else out.push("Invalid choice");
+  }
+  return out.join("\n");
+}
+function topWords(sentence) {
+  const c = new Map();
+  sentence.toLowerCase().split(/\s+/).filter(Boolean).forEach((w) => c.set(w, (c.get(w) || 0) + 1));
+  const ranked = [...c.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  return [`Text: ${sentence}`, ...ranked.slice(0, 3).map(([w, n], i) => `${i + 1}. ${w} (${n})`)].join("\n");
+}
+
+// ── Mission table ──
+function Mission() {
+  const rows = [
+    ["Store each student's mark by name", "dictionary", "7.5"],
+    ["Read names and marks from one line each", "split, zip", "7.3, 7.4"],
+    ["Average, topper, pass count", "sum/len, best-so-far, count", "6.2, 7.3"],
+    ["Keep the program running with a menu", "while True + break", "6.3"],
+    ["Search without crashing", "in / .get", "7.5"],
+    ["Merit list, highest first", "sorted list of (mark, name) tuples", "7.3, 7.4"],
+  ];
+  return (
+    <div style={{ border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden", maxWidth: 940 }}>
+      {rows.map(([need, tool, unit], i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "1.7fr 1.7fr 0.8fr", gap: 10, padding: "10px 14px", background: i % 2 ? T.surface : T.card, fontSize: 14.5 }}>
+          <span>{need}</span><code style={{ justifySelf: "start" }}>{tool}</code><span style={{ color: T.bronze, fontWeight: 700 }}>{unit}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Exercise specs ──
+const REPORT_V1 = 'if marks:\n    total = 0\n    passed = 0\n    top = ""\n    best = -1\n    for name, mark in marks.items():\n        total += mark\n        if mark >= 40:\n            passed += 1\n        if mark > best:\n            best = mark\n            top = name\n    print(f"Students: {len(marks)}")\n    print(f"Average: {total / len(marks):.2f}")\n    print(f"Topper: {top} ({best})")\n    print(f"Passed: {passed}/{len(marks)}")\nelse:\n    print("No students yet")';
+const indent = (code, n) => code.split("\n").map((l) => " ".repeat(n) + l).join("\n");
+const V1 = 'names = input("Names: ").split()\nmarks_line = input("Marks: ").split()\nmarks = {}\nfor name, m in zip(names, marks_line):\n    marks[name] = int(m)\n' + REPORT_V1;
+const ADD = '        name = input("Name: ").strip().upper()\n        mark = int(input("Mark: "))\n        if name in marks:\n            print(f"Updated {name}")\n        else:\n            print(f"Added {name}")\n        marks[name] = mark';
+const V2 = 'marks = {}\nwhile True:\n    print("1. Add  2. Report  3. Exit")\n    choice = input("Choose: ")\n    if choice == "1":\n' + ADD + '\n    elif choice == "2":\n' + indent(REPORT_V1, 8) + '\n    elif choice == "3":\n        print("Bye!")\n        break\n    else:\n        print("Invalid choice")';
+const MERIT = '    ranked = []\n    for name, mark in marks.items():\n        ranked.append((mark, name))\n    ranked = sorted(ranked, reverse=True)\n    print("Merit list:")\n    for i, (mark, name) in enumerate(ranked[:3], start=1):\n        print(f"{i}. {name} - {mark}")';
+const REPORT_V3 = REPORT_V1.replace('    print(f"Passed: {passed}/{len(marks)}")', '    print(f"Passed: {passed}/{len(marks)}")\n' + MERIT);
+const V3 = 'marks = {}\nwhile True:\n    print("1. Add  2. Report  3. Search  4. Exit")\n    choice = input("Choose: ")\n    if choice == "1":\n' + ADD + '\n    elif choice == "2":\n' + indent(REPORT_V3, 8) + '\n    elif choice == "3":\n        name = input("Search: ").strip().upper()\n        if name in marks:\n            print(f"{name}: {marks[name]}")\n        else:\n            print("Not found")\n    elif choice == "4":\n        print("Bye!")\n        break\n    else:\n        print("Invalid choice")';
+
+const S2a = ["2", "1", "priya", "87", "1", "Arun", "35", "1", "PRIYA", "90", "2", "9", "3"];
+const S2b = ["1", "meena", "91", "1", "ravi", "64", "2", "3"];
+const S3a = ["1", "priya", "87", "1", "arun", "35", "1", "meena", "91", "1", "ravi", "87", "2", "3", "Arun", "3", "kavya", "4"];
+const S3b = ["2", "3", "x", "1", "divya", "77", "2", "4"];
+
+const EX = {
+  v1: {
+    id: "v1", kind: "write", title: "Version 1 — the report",
+    task: <>Ask <code>Names: </code> and <code>Marks: </code> (one line each). Build a dictionary <code>marks</code> (name → int mark) with zip. Print <code>Students: 4</code>, <code>Average: 69.50</code>, <code>Topper: MEENA (91)</code> (the first highest wins ties) and <code>Passed: 3/4</code> (pass mark 40). If there are no students print <code>No students yet</code> — you'll need it in Version 2.</>,
+    minLines: 20,
+    tests: [
+      { inputs: ["PRIYA ARUN MEENA RAVI", "87 62 91 38"], expect: v1("PRIYA ARUN MEENA RAVI", "87 62 91 38") },
+      { inputs: ["A B", "40 39"], expect: v1("A B", "40 39"), hidden: true },
+      { inputs: ["X Y Z", "70 99 99"], expect: v1("X Y Z", "70 99 99"), hidden: true },
+    ],
+    requires: [{ call: "zip" }, { call: "items" }],
+    hints: ["for name, m in zip(names, marks_line): marks[name] = int(m)", "One loop over marks.items() can do the total, the pass count and the best-so-far.", "Put the whole report under if marks: … else: print(\"No students yet\")"],
+    solution: V1,
+  },
+  v2: {
+    id: "v2", kind: "modify", title: "Version 2 — a menu that keeps running",
+    task: <>Replace the two input lines with a menu: start with <code>marks = {"{}"}</code>; loop forever printing <code>1. Add  2. Report  3. Exit</code> (two spaces between options) and asking <code>Choose: </code>. <strong>1</strong>: ask <code>Name: </code> (strip + upper) and <code>Mark: </code>; print <code>Added PRIYA</code>, or <code>Updated PRIYA</code> if the name already exists. <strong>2</strong>: the report. <strong>3</strong>: print <code>Bye!</code> and stop. Anything else: <code>Invalid choice</code>.</>,
+    starter: V1,
+    minLines: 34,
+    tests: [
+      { inputs: S2a, expect: menu(2, S2a) },
+      { inputs: S2b, expect: menu(2, S2b), hidden: true },
+    ],
+    requires: [{ node: "While" }, { node: "Break" }],
+    hints: ["Select the report lines and press Tab twice — they go under elif choice == \"2\":", "if name in marks: print(f\"Updated {name}\") else: print(f\"Added {name}\") — then marks[name] = mark either way."],
+    solution: V2,
+  },
+  v3: {
+    id: "v3", kind: "modify", title: "Version 3 — search and a merit list",
+    task: <>Two upgrades. A new option <strong>3</strong> asks <code>Search: </code> (strip + upper) and prints <code>ARUN: 35</code> or <code>Not found</code>; Exit becomes <strong>4</strong> (the menu line is now <code>1. Add  2. Report  3. Search  4. Exit</code>). And the report ends with <code>Merit list:</code> and the top 3 as <code>1. MEENA - 91</code>. Trick: put <code>(mark, name)</code> tuples in a list — <code>sorted(…, reverse=True)</code> sorts by mark first.</>,
+    starter: V2,
+    minLines: 44,
+    tests: [
+      { inputs: S3a, expect: menu(3, S3a) },
+      { inputs: S3b, expect: menu(3, S3b), hidden: true },
+    ],
+    requires: [{ call: "sorted" }, { call: "enumerate" }],
+    hints: ["Tuples compare item by item: (91, 'MEENA') > (87, 'RAVI'). Equal marks are then ordered by name.", "for i, (mark, name) in enumerate(ranked[:3], start=1):", "ranked[:3] is safe even with fewer than 3 students."],
+    solution: V3,
+  },
+  words: {
+    id: "words", kind: "make", title: "Top 3 words",
+    task: <>Ask <code>Text: </code>. Count each word (lowercase) with a dictionary, then print the three most frequent as <code>1. the (3)</code> — most frequent first, ties in alphabetical order. Trick: sort <code>(-count, word)</code> tuples in normal order.</>,
+    minLines: 9,
+    tests: [
+      { inputs: ["the cat and the dog and the bird"], expect: topWords("the cat and the dog and the bird") },
+      { inputs: ["b a b a c"], expect: topWords("b a b a c"), hidden: true },
+      { inputs: ["One"], expect: topWords("One"), hidden: true },
+    ],
+    requires: [{ call: "get" }, { call: "sorted" }],
+    hints: ["counts[w] = counts.get(w, 0) + 1", "ranked = sorted of (-n, w) tuples — negative counts make the biggest count come first.", "for i, (neg, w) in enumerate(ranked[:3], start=1): print(f\"{i}. {w} ({-neg})\")"],
+    solution: 'counts = {}\nfor w in input("Text: ").lower().split():\n    counts[w] = counts.get(w, 0) + 1\nranked = []\nfor w, n in counts.items():\n    ranked.append((-n, w))\nranked = sorted(ranked)\nfor i, (neg, w) in enumerate(ranked[:3], start=1):\n    print(f"{i}. {w} ({-neg})")',
+  },
 };
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-const insight = (color, children) => (
-  <div style={{ marginTop: 16, background: color + "18", border: `1px solid ${color}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-    🔑 {children}
-  </div>
-);
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-// ── Section 1: The Mission — spec + tool checklist ──
-function MissionWidget() {
-  const tools = [
-    { tool: "dict — names → marks", from: "Unit 7.4", why: "one locker per student, looked up by name" },
-    { tool: "while True + break menu", from: "Units 6.1 & 6.3", why: "the program runs until the user chooses Exit" },
-    { tool: "input() + int()", from: "Unit 4.3", why: "read names and marks from the keyboard" },
-    { tool: "accumulate pattern", from: "Unit 7.3", why: "total → class average" },
-    { tool: "best-so-far pattern", from: "Unit 7.3", why: "crown the topper" },
-    { tool: "count pattern + if", from: "Units 7.3 & 5.2", why: "how many passed?" },
-    { tool: "sort() + slicing", from: "Units 7.3 & 7.1", why: "top-3 merit list" },
-  ];
-  const [checked, setChecked] = useState([]);
-  const toggle = (i) => setChecked((p) => p.includes(i) ? p.filter((x) => x !== i) : [...p, i]);
+const QUIZ = [
+  { q: "Why does the Marks Manager use a dictionary instead of two lists?", options: ["It's faster to type", "Each mark stays attached to its name; lookup by name needs no searching", "Lists can't hold names", "Dictionaries are sorted"], answer: 1, explain: "Parallel lists can drift out of line; a dict keeps the pair together." },
+  { q: "Adding PRIYA a second time…", options: ["Creates a second PRIYA", "Overwrites her mark (keys are unique)", "Crashes", "Is ignored"], answer: 1, explain: "That's why the program prints Updated." },
+  { q: "sorted([(87, 'RAVI'), (91, 'MEENA'), (87, 'PRIYA')], reverse=True) starts with…", options: ["(87, 'RAVI')", "(91, 'MEENA')", "(87, 'PRIYA')", "Error"], answer: 1, explain: "Tuples compare the first item first: 91 is biggest." },
+  { q: "What stops the menu loop?", options: ["The condition becoming False", "break after printing Bye!", "Ctrl+C only", "Report"], answer: 1, explain: "while True only ends with break." },
+  { q: "Why ranked[:3] rather than ranked[0], ranked[1], ranked[2]?", options: ["Style only", "A slice never crashes, even with fewer than 3 students", "It's faster", "It sorts"], answer: 1, explain: "Indexing past the end is an IndexError; slicing just returns what's there." },
+];
 
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Your class teacher needs a program. It must let her <strong style={{ color: C.text }}>add students and
-        marks</strong>, then print a <strong style={{ color: C.text }}>class report</strong>: average, topper,
-        pass count, and a top-3 merit list — running until she chooses Exit. Sounds big? Tick off each tool
-        below — you already own every single one.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 12 }}>📋 THE SPEC</div>
-        <pre style={mono}>
-          {`1. Add student   → name + mark, stored together\n2. Class report  → average · topper · passed · merit top-3\n3. Exit          → menu repeats until this is chosen`}
-        </pre>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {tools.map((t, i) => (
-          <div key={i} onClick={() => toggle(i)} style={{
-            display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8,
-            background: checked.includes(i) ? C.green + "14" : C.card,
-            border: `1.5px solid ${checked.includes(i) ? C.green : C.border}`,
-            cursor: "pointer", transition: "all 0.2s",
-          }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-              border: `2px solid ${checked.includes(i) ? C.green : C.muted}`,
-              background: checked.includes(i) ? C.green : "transparent", color: "#fff", fontSize: 13, fontWeight: 700,
-            }}>{checked.includes(i) ? "✓" : ""}</div>
-            <div>
-              <span style={{ fontFamily: "monospace", fontSize: 12.5, color: checked.includes(i) ? C.green : C.text, fontWeight: 600 }}>{t.tool}</span>
-              <span style={{ fontSize: 11.5, color: C.accent, marginLeft: 8 }}>({t.from})</span>
-              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{t.why}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {checked.length === tools.length && (
-        <div style={{ marginTop: 14, padding: "12px 16px", borderRadius: 8, background: C.green + "18", border: `1px solid ${C.green}55`, color: C.green, fontSize: 13, fontWeight: 600, textAlign: "center" }}>
-          🎯 All 7 tools ready — nothing new to learn. Just assembly!
-        </div>
-      )}
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>Big programs are small patterns assembled.</strong> Not one line
-        of this capstone is new — the skill you're practising is <em>composition</em>: choosing the right
-        tool from the right unit and snapping them together.
-      </>)}
-    </div>
-  );
-}
-
-// ── Section 2: Build in Steps — v1 / v2 / v3 ──
-function StepsWidget() {
-  const [v, setV] = useState(0);
-  const versions = [
-    {
-      label: "v1 — the report core",
-      note: "Start with the heart: a fixed dict and the average. No menu, no input — prove the calculation works first.",
-      warn: "But the teacher can't add HER students — the data is frozen in the code. That's the wall input and a menu will break.",
-      color: C.yellow,
-      code: `marks = {"PRIYA": 87, "ARUN": 62, "MEENA": 91}\n\ntotal = 0\nfor name in marks:\n    total = total + marks[name]\n\nprint("Average:", total / len(marks))`,
-    },
-    {
-      label: "v2 — menu + add",
-      note: "Wrap it in the while True menu from Unit 6.3 and let her add students with input(). The dict grows at runtime!",
-      warn: "Works — but the report only knows the average. No topper, no pass count, no merit list. Thin.",
-      color: C.orange,
-      code: `marks = {}\n\nwhile True:\n    print("1. Add  2. Report  3. Exit")\n    choice = input("Choose: ")\n\n    if choice == "1":\n        name = input("Name: ")\n        mark = int(input("Mark: "))\n        marks[name] = mark\n\n    elif choice == "2":\n        total = 0\n        for name in marks:\n            total = total + marks[name]\n        print("Average:", total / len(marks))\n\n    elif choice == "3":\n        break`,
-    },
-    {
-      label: "v3 — the full report",
-      note: "Now pour in Unit 7.3's patterns: best-so-far for the topper, count for passes, sort + slice for the merit list. One loop can carry all three!",
-      warn: null,
-      color: C.green,
-      code: `elif choice == "2":\n    total = 0\n    passed = 0\n    topper = ""\n    best = -1\n    for name in marks:\n        m = marks[name]\n        total = total + m          # accumulate\n        if m >= 50:\n            passed = passed + 1    # count\n        if m > best:\n            best = m               # best-so-far\n            topper = name\n\n    all_marks = []\n    for name in marks:\n        all_marks.append(marks[name])\n    all_marks.sort(reverse=True)   # sort + slice\n\n    print("Average:", total / len(marks))\n    print("Topper:", topper, "with", best)\n    print("Passed:", passed, "of", len(marks))\n    print("Merit top-3:", all_marks[:3])`,
-    },
-  ];
-  const cur = versions[v];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Real programmers never write the whole program in one go — they grow it in working versions, each
-        adding ONE idea. Walk through the three stages.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        {versions.map((ver, i) => (
-          <button key={i} onClick={() => setV(i)} style={{
-            padding: "8px 14px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-            background: v === i ? ver.color + "22" : C.card, color: v === i ? ver.color : C.muted,
-            border: `1.5px solid ${v === i ? ver.color : C.border}`,
-          }}>{ver.label}</button>
-        ))}
-      </div>
-
-      <div style={{ background: C.card, border: `1.5px solid ${cur.color}55`, borderRadius: 10, padding: 16, marginBottom: 12 }}>
-        <div style={{ fontSize: 12.5, color: cur.color, fontWeight: 600, marginBottom: 10, lineHeight: 1.6 }}>{cur.note}</div>
-        <pre style={mono}>{cur.code}</pre>
-      </div>
-
-      {cur.warn && (
-        <div style={{ background: C.red + "12", border: `1px solid ${C.red}44`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-          ⛔ <strong style={{ color: C.red }}>Why we can't stop here:</strong> {cur.warn}
-        </div>
-      )}
-
-      {insight(C.accent, <>
-        <strong style={{ color: C.accent }}>v1 → v2 → v3: each version RUNS.</strong> Grow a program in
-        working steps and bugs stay small and findable. Write it all at once and you debug everything
-        everywhere, all at the same time.
-      </>)}
-    </div>
-  );
-}
-
-// ── Section 3: Play It — the working Marks Manager ──
-function PlayWidget() {
-  const [students, setStudents] = useState({});
-  const [name, setName] = useState("");
-  const [mark, setMark] = useState(75);
-  const [log, setLog] = useState([{ t: "sys", s: "Student Marks Manager — add a few students, then print the report!" }]);
-
-  const push = (lines) => setLog((l) => [...l.slice(-14), ...lines]);
-
-  const add = () => {
-    const n = name.trim().toUpperCase();
-    if (!n) { push([{ t: "err", s: "Name cannot be empty!" }]); return; }
-    const existed = n in students;
-    setStudents((p) => ({ ...p, [n]: mark }));
-    push([{ t: "in", s: `> add ${n}, ${mark}` }, { t: "ok", s: existed ? `${n} updated to ${mark}.` : `${n} recorded with ${mark}.` }]);
-    setName("");
-  };
-
-  const report = () => {
-    const entries = Object.entries(students);
-    if (entries.length === 0) { push([{ t: "in", s: "> report" }, { t: "err", s: "No students yet!" }]); return; }
-    let total = 0, passed = 0, best = -1, topper = "";
-    entries.forEach(([n, m]) => {
-      total += m;
-      if (m >= 50) passed += 1;
-      if (m > best) { best = m; topper = n; }
-    });
-    const sorted = entries.map(([, m]) => m).sort((a, b) => b - a);
-    const avg = (total / entries.length).toFixed(1);
-    push([
-      { t: "in", s: "> report" },
-      { t: "out", s: `Class average : ${avg}` },
-      { t: "out", s: `Topper        : ${topper} with ${best}` },
-      { t: "out", s: `Passed        : ${passed} of ${entries.length}` },
-      { t: "out", s: `Merit top-3   : [${sorted.slice(0, 3).join(", ")}]` },
-    ]);
-  };
-
-  const reset = () => { setStudents({}); setName(""); setMark(75); setLog([{ t: "sys", s: "Fresh start — the dict is empty again." }]); };
-
-  const colors = { sys: C.muted, in: C.accent, ok: C.green, out: C.text, err: C.red };
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Here's v3, alive. You're the teacher: enter a few students (try some marks below 50 too), then hit
-        Class Report and check the patterns did their job.
-      </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <div>
-          <label style={{ color: C.muted, fontSize: 11, display: "block", marginBottom: 4 }}>Student name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()}
-            placeholder="e.g. PRIYA" style={{
-              padding: "9px 12px", borderRadius: 8, background: C.card, color: C.text, fontSize: 13,
-              border: `1.5px solid ${C.border}`, outline: "none", width: 140, fontFamily: "monospace",
-            }} />
-        </div>
-        <div style={{ minWidth: 150 }}>
-          <label style={{ color: C.muted, fontSize: 11, display: "block", marginBottom: 4 }}>Mark: <strong style={{ color: C.accent }}>{mark}</strong></label>
-          <input type="range" min={0} max={100} value={mark} onChange={(e) => setMark(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-        </div>
-        <button onClick={add} style={{
-          padding: "9px 16px", borderRadius: 8, background: C.green + "22", color: C.green,
-          border: `1.5px solid ${C.green}`, fontWeight: 600, fontSize: 12.5, cursor: "pointer",
-        }}>+ Add student</button>
-        <button onClick={report} style={{
-          padding: "9px 16px", borderRadius: 8, background: C.accentGlow, color: "#fff",
-          border: "none", fontWeight: 600, fontSize: 12.5, cursor: "pointer",
-        }}>📋 Class Report</button>
-        <button onClick={reset} style={{
-          padding: "9px 14px", borderRadius: 8, background: C.card, color: C.muted,
-          border: `1.5px solid ${C.border}`, fontWeight: 600, fontSize: 12.5, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      {Object.keys(students).length > 0 && (
-        <div style={{ background: C.card, border: `1px solid ${C.teal}44`, borderRadius: 10, padding: "12px", marginBottom: 12 }}>
-          <div style={{ color: C.teal, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>marks (the dict, live)</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {Object.entries(students).map(([n, m]) => (
-              <div key={n} style={{
-                padding: "5px 10px", borderRadius: 7, fontFamily: "monospace", fontSize: 12,
-                background: C.surface, border: `1.5px solid ${m >= 50 ? C.teal + "66" : C.red + "66"}`,
-                color: m >= 50 ? C.text : C.red,
-              }}>"{n}": {m}</div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ background: "#010409", border: `1px solid ${C.border}`, borderRadius: 10, padding: 14, minHeight: 150 }}>
-        <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>CONSOLE</div>
-        {log.map((e, i) => (
-          <div key={i} style={{ fontFamily: "monospace", fontSize: 12.5, lineHeight: 1.8, color: colors[e.t], whiteSpace: "pre-wrap" }}>{e.s}</div>
-        ))}
-      </div>
-
-      {insight(C.green, <>
-        <strong style={{ color: C.green }}>You just used a program you know every line of.</strong> The dict
-        grows as you add, and one loop computes average, topper, and pass count in a single pass — three
-        patterns sharing one walk through the data.
-      </>)}
-    </div>
-  );
-}
-
-// ── Section 4: Full Code — run it for real + challenges ──
-function FullCodeWidget() {
-  const code = `# Student Marks Manager — Foothold Module 7 Capstone
-marks = {}
-
-while True:
-    print()
-    print("1. Add student  2. Class report  3. Exit")
-    choice = input("Choose: ")
-
-    if choice == "1":
-        name = input("Student name: ")
-        mark = int(input("Mark (0-100): "))
-        marks[name] = mark
-        print(name, "recorded.")
-
-    elif choice == "2":
-        if len(marks) == 0:
-            print("No students yet!")
-            continue
-
-        total = 0
-        passed = 0
-        topper = ""
-        best = -1
-        for name in marks:
-            m = marks[name]
-            total = total + m
-            if m >= 50:
-                passed = passed + 1
-            if m > best:
-                best = m
-                topper = name
-
-        all_marks = []
-        for name in marks:
-            all_marks.append(marks[name])
-        all_marks.sort(reverse=True)
-
-        print("Class average:", total / len(marks))
-        print("Topper:", topper, "with", best)
-        print("Passed:", passed, "of", len(marks))
-        print("Merit top-3:", all_marks[:3])
-
-    elif choice == "3":
-        print("Goodbye!")
-        break
-
-    else:
-        print("Please choose 1, 2 or 3.")`;
-
-  const challenges = [
-    { icon: "🥉", text: "Add option 4: remove a student — you'll want del marks[name], and an in check first (Unit 7.4!)." },
-    { icon: "🥈", text: "Print a grade next to each student in the report: A for 90+, B for 75+, C for 50+, F below — an if/elif chain per student (Unit 5.2)." },
-    { icon: "🥇", text: "Show the merit list with NAMES, not just marks — hint: loop over the dict once per merit mark and find who scored it." },
-  ];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        The complete program — type it into your own Python (IDLE, VS Code, or replit.com) and run it for
-        real. Every line traces back to a unit you've completed.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 16, maxHeight: 420, overflowY: "auto" }}>
-        <pre style={mono}>{code}</pre>
-      </div>
-
-      <div style={{ color: C.orange, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>⚡ CHALLENGE UPGRADES</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {challenges.map((ch, i) => (
-          <div key={i} style={{ display: "flex", gap: 10, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-            <span style={{ fontSize: 16 }}>{ch.icon}</span><span>{ch.text}</span>
-          </div>
-        ))}
-      </div>
-
-      {insight(C.purple, <>
-        <strong style={{ color: C.purple }}>Notice the program getting crowded?</strong> The report block is
-        20+ lines inside one elif. Wouldn't it be cleaner to say <code style={{ color: C.accent }}>print_report(marks)</code> and
-        define that step ONCE, elsewhere? That itch is exactly what Module 8 scratches: <em>functions</em>.
-      </>)}
-    </div>
-  );
-}
-
-// ── Quiz ──
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "In the Marks Manager, why is a dict better than two parallel lists (names and marks)?",
-      options: ["Dicts use less memory", "Each name stays glued to its mark — look up by name in one step", "Lists can't hold numbers and strings", "Dicts are automatically sorted"],
-      answer: 1,
-      explain: "The key→value pair keeps each student's name and mark together, and marks[name] finds it without hunting through slots.",
-    },
-    {
-      q: 'best = -1\nfor name in marks:\n    if marks[name] > best:\n        best = marks[name]\n        topper = name\n\nWhich pattern is this?',
-      options: ["Accumulate", "Count", "Best-so-far (find max)", "Sort"],
-      answer: 2,
-      explain: "The current champion (best) faces every mark; only a higher one replaces it — Unit 7.3's best-so-far pattern.",
-    },
-    {
-      q: "Why does the whole menu live inside while True?",
-      options: ["To make the program faster", "Python requires menus to use while", "So the menu repeats forever — until break fires on Exit", "To avoid using if/elif"],
-      answer: 2,
-      explain: "while True repeats the menu endlessly; choosing Exit hits break, the one door out — Unit 6.3's pattern.",
-    },
-    {
-      q: 'all_marks = [62, 91, 87, 45]\nall_marks.sort(reverse=True)\nprint(all_marks[:3])\n\nWhat does this print?',
-      options: ["[45, 62, 87]", "[91, 87, 62]", "[91, 87, 62, 45]", "[62, 91, 87]"],
-      answer: 1,
-      explain: "sort(reverse=True) gives [91, 87, 62, 45]; the slice [:3] keeps the first three — the merit list.",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🏆" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "Perfect! You didn't just learn Module 7 — you built with it." :
-            score >= 2 ? "Good work! Revisit 'Build in Steps' to see how the patterns slot into the program." :
-              "Worth a replay: 'The Mission' maps every tool to its unit — retrace the checklist, then re-run the program."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.green}22, ${C.accentGlow}22)`,
-          border: `1px solid ${C.green}55`,
-        }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🏆 Module 7 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            Decide (M5), repeat (M6), and now <strong style={{ color: C.text }}>organize data</strong> (M7) —
-            strings, lists, tuples and dictionaries, plus the loop patterns that bring them to life. Three of
-            the four superpowers down.<br /><br />
-            <strong style={{ color: C.accent }}>Next: Module 8 — Functions & Modular Thinking.</strong> Your
-            capstone's report block was 20 lines inside one elif. Functions let you name that block, reuse
-            it anywhere, and finally answer: where do variables LIVE when code calls code?
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 14, marginBottom: 16, whiteSpace: "pre-wrap", fontFamily: q.q.includes("\n") ? "monospace" : "inherit" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function Unit7_6({ student, onUnitComplete }) {
+export default function Unit7_6(props) {
   const sections = [
-    { id: "mission", label: "The Mission" },
-    { id: "steps", label: "Build in Steps" },
-    { id: "play", label: "Play It" },
-    { id: "code", label: "Full Code" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "The Mission", kicker: "CAPSTONE", title: "Student Marks Manager",
+      blocks: [
+        <P>A teacher wants a small program to enter marks and get a class report. You'll build it in three versions — each one working before the next begins. Everything you need:</P>,
+        <Mission />,
+        <Note color={T.blue} icon="🧱">The pass mark is 40 throughout the course. Names are stored in capitals so “priya” and “PRIYA” are the same student.</Note>,
+      ],
+    },
+    { label: "Version 1", kicker: "BUILD IN STEPS", title: "Version 1: the report", blocks: [EX.v1] },
+    { label: "Version 2", kicker: "ADD ONE IDEA", title: "Version 2: a menu loop", blocks: [EX.v2] },
+    {
+      label: "Version 3", kicker: "ADD ONE MORE", title: "Version 3: search and merit list",
+      blocks: [EX.v3, <KeyIdea>This program already has the shape of real software: data in a dictionary, a loop that waits for commands, and separate jobs for each choice. Module 8 will split those jobs into functions; Module 9 will save the data to a file.</KeyIdea>],
+    },
+    {
+      label: "Make It", kicker: "ON YOUR OWN", title: "Your program: top 3 words",
+      blocks: [<P>Counting with a dict, then ranking with sorted tuples — the same two ideas, a new problem.</P>, EX.words],
+    },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>The Mission: Student Marks Manager</h3><MissionWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Build It in Three Versions</h3><StepsWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Play It: Be the Teacher</h3><PlayWidget /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>The Full Code — Run It For Real</h3><FullCodeWidget /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on how the capstone fits together.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 7 › UNIT 7.6</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Capstone: Student Marks Manager</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit7_6" crumb="MODULE 7 › UNIT 7.7" title="Capstone: Student Marks Manager" sections={sections} quiz={QUIZ}
+      next={{ title: "Computational Thinking II", text: "Module 7 complete! Next: the classic algorithms on data — searching, sorting, matrices. (Optional first: Module 7's Crucible.)" }} />
   );
 }

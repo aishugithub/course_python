@@ -1,398 +1,104 @@
-import { useState } from "react";
+// Unit 10.5 — Polymorphism & Abstraction (rebuilt, typing-first)
+// Same method name, many behaviours → you've used polymorphism already
+// (len, +) → payment methods → an abstract parent that raises
+// NotImplementedError → a payroll of salaried and hourly staff.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import LessonShell, { P, KeyIdea, CodeBlock } from "../kit/Lesson.jsx";
+import { T } from "../kit/theme.js";
+
+const payroll = (lines) => {
+  const out = [], res = []; let total = 0;
+  for (const l of lines) {
+    out.push(`Staff: ${l}`); if (l === "done") break;
+    const p = l.split(" "); let pay;
+    if (p[0] === "salaried") pay = Number(p[2]);
+    else { const rate = Number(p[2]), hrs = Number(p[3]); pay = hrs <= 160 ? rate * hrs : rate * 160 + rate * 1.5 * (hrs - 160); }
+    total += pay; res.push(`${p[1]}: Rs ${pay.toFixed(2)}`);
+  }
+  out.push(...res);
+  out.push(`Total payroll: Rs ${total.toFixed(2)}`);
+  return out.join("\n");
 };
 
-// ── Section 1: The Need — treat different objects the same way ───────────────
-function TheNeed() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        In Unit 10.4 you built a <code style={{ color: C.accent }}>Student</code> and a{" "}
-        <code style={{ color: C.accent }}>Teacher</code>. Now imagine a mixed list of shapes — circles, squares —
-        and you want the area of each. You'd like to just say <code style={{ color: C.teal }}>shape.area()</code> and
-        let each object do the right thing.
-      </p>
+const EX = {
+  shapes: {
+    id: "shapes", kind: "type", title: "One loop, many shapes",
+    task: <>Each class has its own <code>area()</code>. The loop doesn't know or care which kind of shape it has — it just calls <code>s.area()</code>, and each object answers its own way. That's <strong>polymorphism</strong> (“many forms”).</>,
+    show: 'class Circle:\n    def __init__(self, r):\n        self.r = r\n    def area(self):\n        return round(3.14159 * self.r ** 2, 2)\n\nclass Square:\n    def __init__(self, side):\n        self.side = side\n    def area(self):\n        return self.side ** 2\n\nshapes = [Circle(1), Square(3), Circle(2)]\nfor s in shapes:\n    print(type(s).__name__, s.area())',
+    minLines: 16,
+    tests: [{ expect: "Circle 3.14\nSquare 9\nCircle 12.57" }],
+    requires: [{ node: "ClassDef", min: 2 }],
+    hints: ["No if/elif on the shape's kind anywhere — that's the point."],
+    solution: 'class Circle:\n    def __init__(self, r):\n        self.r = r\n    def area(self):\n        return round(3.14159 * self.r ** 2, 2)\n\nclass Square:\n    def __init__(self, side):\n        self.side = side\n    def area(self):\n        return self.side ** 2\n\nshapes = [Circle(1), Square(3), Circle(2)]\nfor s in shapes:\n    print(type(s).__name__, s.area())',
+  },
+  builtin: {
+    id: "builtin", kind: "type", title: "You've used polymorphism all along",
+    task: <><code>len</code> and <code>+</code> already behave differently depending on the type of value — the same idea, built in.</>,
+    show: 'print(len("Priya"), len([1, 2, 3]), len({"a": 1}))\nprint(2 + 3, "ab" + "cd", [1] + [2])\nprint(3 * 2, "ha" * 3)',
+    tests: [{ expect: "5 3 1\n5 abcd [1, 2]\n6 hahaha" }],
+    hints: ["Each type decides what len, + and * mean for it."],
+    solution: 'print(len("Priya"), len([1, 2, 3]), len({"a": 1}))\nprint(2 + 3, "ab" + "cd", [1] + [2])\nprint(3 * 2, "ha" * 3)',
+  },
+  payments: {
+    id: "payments", kind: "write", title: "Three ways to pay",
+    task: <>Write <code>UPI(upi_id)</code>, <code>Card(last4)</code> and <code>Cash()</code>, each with a <code>pay(amount)</code> method that <strong>returns</strong> a string: <code>Paid Rs 250 via UPI priya@okaxis</code>, <code>Paid Rs 900 by card ending 4421</code>, <code>Paid Rs 60 in cash</code>. Then loop over <code>[(UPI("priya@okaxis"), 250), (Card("4421"), 900), (Cash(), 60)]</code> and print each result.</>,
+    minLines: 18,
+    tests: [{ expect: "Paid Rs 250 via UPI priya@okaxis\nPaid Rs 900 by card ending 4421\nPaid Rs 60 in cash" }],
+    post: "assert Cash().pay(5) == 'Paid Rs 5 in cash'\nassert Card('1111').pay(1) == 'Paid Rs 1 by card ending 1111'",
+    requires: [{ node: "ClassDef", min: 3 }],
+    hints: ["for method, amount in payments: print(method.pay(amount)) — unpacking the tuples (7.4)."],
+    solution: 'class UPI:\n    def __init__(self, upi_id):\n        self.upi_id = upi_id\n    def pay(self, amount):\n        return f"Paid Rs {amount} via UPI {self.upi_id}"\n\nclass Card:\n    def __init__(self, last4):\n        self.last4 = last4\n    def pay(self, amount):\n        return f"Paid Rs {amount} by card ending {self.last4}"\n\nclass Cash:\n    def pay(self, amount):\n        return f"Paid Rs {amount} in cash"\n\npayments = [(UPI("priya@okaxis"), 250), (Card("4421"), 900), (Cash(), 60)]\nfor method, amount in payments:\n    print(method.pay(amount))',
+  },
+  abstract: {
+    id: "abstract", kind: "fix", title: "The promise that wasn't kept",
+    task: <><code>Shape</code> is <strong>abstract</strong>: it promises every shape has an <code>area()</code>, but refuses to guess one (it raises <code>NotImplementedError</code>). Run it and read the coach. Give <code>Triangle</code> its own <code>area()</code> (½ × base × height).</>,
+    starter: 'class Shape:\n    def area(self):\n        raise NotImplementedError("every shape must define area()")\n\nclass Square(Shape):\n    def __init__(self, side):\n        self.side = side\n    def area(self):\n        return self.side ** 2\n\nclass Triangle(Shape):\n    def __init__(self, base, height):\n        self.base = base\n        self.height = height\n\nfor s in [Square(4), Triangle(6, 5)]:\n    print(s.area())',
+    tests: [{ expect: "16\n15.0" }],
+    hints: ["def area(self): return 0.5 * self.base * self.height — inside Triangle."],
+    solution: 'class Shape:\n    def area(self):\n        raise NotImplementedError("every shape must define area()")\n\nclass Square(Shape):\n    def __init__(self, side):\n        self.side = side\n    def area(self):\n        return self.side ** 2\n\nclass Triangle(Shape):\n    def __init__(self, base, height):\n        self.base = base\n        self.height = height\n    def area(self):\n        return 0.5 * self.base * self.height\n\nfor s in [Square(4), Triangle(6, 5)]:\n    print(s.area())',
+  },
+  payroll: {
+    id: "payroll", kind: "make", title: "Payroll",
+    task: <>Write an abstract <code>Employee(name)</code> whose <code>pay()</code> raises <code>NotImplementedError</code>, and two children: <code>Salaried(name, monthly)</code> and <code>Hourly(name, rate, hours)</code> — hourly staff get 1.5× the rate for every hour above 160. Read <code>Staff: </code> lines like <code>salaried Priya 50000</code> or <code>hourly Arun 300 170</code> until <code>done</code>. Print each as <code>Arun: Rs 52500.00</code> and finally <code>Total payroll: Rs 102500.00</code>. The printing loop must not check which kind of employee it has.</>,
+    minLines: 28,
+    tests: [
+      { inputs: ["salaried Priya 50000", "hourly Arun 300 170", "done"], expect: payroll(["salaried Priya 50000", "hourly Arun 300 170", "done"]) },
+      { inputs: ["hourly Kavya 250 100", "done"], expect: payroll(["hourly Kavya 250 100", "done"]), hidden: true },
+    ],
+    post: "assert Hourly('h', 100, 170).pay() == 17500\ntry:\n    Employee('x').pay()\n    raise AssertionError('Employee.pay() should raise NotImplementedError')\nexcept NotImplementedError:\n    pass",
+    requires: [{ node: "ClassDef", min: 3 }, { node: "Raise" }],
+    hints: ["Build the right object when reading the line (an if is fine there), store all of them in one list.", "The print loop: for e in staff: print(f\"{e.name}: Rs {e.pay():.2f}\")", "Overtime: if hours <= 160: rate * hours, else rate * 160 + rate * 1.5 * (hours - 160)"],
+    solution: 'class Employee:\n    def __init__(self, name):\n        self.name = name\n    def pay(self):\n        raise NotImplementedError("pay() must be defined")\n\nclass Salaried(Employee):\n    def __init__(self, name, monthly):\n        super().__init__(name)\n        self.monthly = monthly\n    def pay(self):\n        return self.monthly\n\nclass Hourly(Employee):\n    def __init__(self, name, rate, hours):\n        super().__init__(name)\n        self.rate = rate\n        self.hours = hours\n    def pay(self):\n        if self.hours <= 160:\n            return self.rate * self.hours\n        return self.rate * 160 + self.rate * 1.5 * (self.hours - 160)\n\nstaff = []\nline = input("Staff: ")\nwhile line != "done":\n    parts = line.split()\n    if parts[0] == "salaried":\n        staff.append(Salaried(parts[1], float(parts[2])))\n    else:\n        staff.append(Hourly(parts[1], float(parts[2]), float(parts[3])))\n    line = input("Staff: ")\ntotal = 0\nfor e in staff:\n    print(f"{e.name}: Rs {e.pay():.2f}")\n    total += e.pay()\nprint(f"Total payroll: Rs {total:.2f}")',
+  },
+};
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        <div style={{ background: C.card, border: `1.5px solid ${C.red}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.red, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>❌ Without polymorphism</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`# shapes = a list of shape records (sketch)\nfor s in shapes:\n    if s.kind == "circle":\n        a = 3.14*s.r*s.r\n    elif s.kind == "square":\n        a = s.side*s.side\n    print(a)`}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>A new shape means editing this if-ladder. Fragile.</div>
-        </div>
-        <div style={{ background: C.card, border: `1.5px solid ${C.green}44`, borderRadius: 10, padding: 14 }}>
-          <div style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>✅ With polymorphism</div>
-          <pre style={{ fontFamily: "monospace", fontSize: 11, color: C.text, margin: 0, lineHeight: 1.7, whiteSpace: "pre" }}>{`# shapes = [Circle(2), Square(3)] — classes built in the next tab\nfor s in shapes:\n    print(s.area())`}</pre>
-          <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>Each object knows its own area(). New shapes just work.</div>
-        </div>
-      </div>
+export const EXERCISES = EX; // for src/kit/selfTest.js
 
-      <div style={{ background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>Polymorphism = "many forms".</strong> The same call,{" "}
-        <code style={{ color: C.purple }}>s.area()</code>, runs different code depending on which object s actually is.
-        The caller doesn't need to know or care.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 2: Polymorphism via overriding + duck typing ─────────────────────
-function Polymorphism() {
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        Each class defines its <em>own</em> <code style={{ color: C.teal }}>area()</code>. When you call{" "}
-        <code style={{ color: C.teal }}>s.area()</code>, Python looks up the method on the actual object — so a
-        Circle runs Circle.area, a Square runs Square.area.
-      </p>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 11.5, lineHeight: 1.8, whiteSpace: "pre" }}>
-        <span style={{ color: C.teal }}>class Circle:</span>{"\n"}
-        {"    "}def __init__(self, r):{"\n"}
-        {"        "}self.r = r{"\n"}
-        {"    "}def area(self):{"\n"}
-        {"        "}return 3.14 * self.r * self.r{"\n\n"}
-        <span style={{ color: C.orange }}>class Square:</span>{"\n"}
-        {"    "}def __init__(self, side):{"\n"}
-        {"        "}self.side = side{"\n"}
-        {"    "}def area(self):{"\n"}
-        {"        "}return self.side * self.side{"\n\n"}
-        shapes = [Circle(2), Square(3)]{"\n"}
-        for s in shapes:{"\n"}
-        {"    "}print(s.area()){"   "}<span style={{ color: C.muted }}># 12.56, then 9</span>
-      </div>
-
-      <div style={{ background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🦆 <strong style={{ color: C.teal }}>Duck typing:</strong> "If it walks like a duck and quacks like a duck…"
-        Python doesn't check the type — it just calls <code style={{ color: C.teal }}>area()</code>. Any object with
-        an <code>area()</code> method fits the loop, related by inheritance or not.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 3: Dispatch stepper ──────────────────────────────────────────────
-const SHAPES = [
-  { name: "Circle", detail: "r=2", cls: "Circle", area: 12.56, expr: "3.14 * 2 * 2" },
-  { name: "Square", detail: "side=3", cls: "Square", area: 9, expr: "3 * 3" },
-  { name: "Circle", detail: "r=1", cls: "Circle", area: 3.14, expr: "3.14 * 1 * 1" },
+const QUIZ = [
+  { q: "What is polymorphism?", options: ["A class with many attributes", "The same method call doing different things depending on the object's type", "Copying objects", "A kind of loop"], answer: 1, explain: "s.area() runs Circle.area or Square.area depending on s." },
+  { q: "Why is a loop calling e.pay() better than if/elif on the employee type?", options: ["Shorter only", "Adding a new kind of employee needs no change to the loop", "Faster", "Required"], answer: 1, explain: "New classes plug in without touching existing code." },
+  { q: "What is an abstract class here?", options: ["A class with no methods", "A parent that defines what children must provide, raising NotImplementedError instead of guessing", "A hidden class", "A finished class"], answer: 1, explain: "Python's abc module can enforce this more strictly; NotImplementedError is the plain-Python version." },
+  { q: "\"ha\" * 3 and 3 * 2 both use *. That's…", options: ["A bug", "Built-in polymorphism: each type defines what * means", "Inheritance", "Encapsulation"], answer: 1, explain: "Operators are polymorphic too." },
 ];
-const DISPATCH_STEPS = (() => {
-  const steps = [];
-  let total = 0;
-  for (let i = 0; i < SHAPES.length; i++) {
-    total = Math.round((total + SHAPES[i].area) * 100) / 100;
-    steps.push({ i, total, desc: `s is a ${SHAPES[i].name} → Python runs ${SHAPES[i].cls}.area() = ${SHAPES[i].expr} = ${SHAPES[i].area}.` });
-  }
-  steps.push({ i: SHAPES.length, total, done: true, desc: `Loop done. One line, print(s.area()), dispatched to two different methods. Total area = ${total}.` });
-  return steps;
-})();
 
-function DispatchStepper() {
-  const [step, setStep] = useState(0);
-  const s = DISPATCH_STEPS[step];
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 12, lineHeight: 1.7 }}>
-        Step through <code style={{ color: C.accent }}>for s in shapes: print(s.area())</code>. Watch the SAME call
-        land on a different class's method each time — that's dynamic dispatch.
-      </p>
-
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        <button onClick={() => setStep((x) => Math.min(DISPATCH_STEPS.length - 1, x + 1))} disabled={step === DISPATCH_STEPS.length - 1} style={{
-          flex: 1, padding: "10px", borderRadius: 8, background: step === DISPATCH_STEPS.length - 1 ? C.card : C.accentGlow,
-          border: "none", color: step === DISPATCH_STEPS.length - 1 ? C.muted : "#fff", fontWeight: 600, fontSize: 13,
-          cursor: step === DISPATCH_STEPS.length - 1 ? "default" : "pointer",
-        }}>Step ▶ ({step + 1} / {DISPATCH_STEPS.length})</button>
-        <button onClick={() => setStep(0)} style={{
-          padding: "10px 18px", borderRadius: 8, background: C.card, border: `1.5px solid ${C.border}`,
-          color: C.muted, fontWeight: 600, fontSize: 13, cursor: "pointer",
-        }}>↺ Reset</button>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        {SHAPES.map((sh, i) => {
-          const active = !s.done && i === s.i;
-          const color = sh.cls === "Circle" ? C.teal : C.orange;
-          return (
-            <div key={i} style={{
-              flex: 1, minWidth: 90, borderRadius: 8, padding: "10px 8px", textAlign: "center",
-              background: active ? color + "22" : C.card, border: `1.5px solid ${active ? color : C.border}`,
-            }}>
-              <div style={{ color: active ? color : C.text, fontWeight: 700, fontSize: 13 }}>{sh.name}</div>
-              <div style={{ color: C.muted, fontSize: 10, fontFamily: "monospace" }}>{sh.detail}</div>
-            </div>
-          );
-        })}
-        <div style={{ marginLeft: "auto", background: C.card, border: `2px solid ${C.green}`, borderRadius: 10, padding: "8px 16px", textAlign: "center" }}>
-          <div style={{ color: C.green, fontSize: 10, letterSpacing: 1 }}>total area</div>
-          <div style={{ color: C.text, fontSize: 20, fontWeight: 700, fontFamily: "monospace" }}>{s.total}</div>
-        </div>
-      </div>
-
-      <div style={{ background: C.accent + "12", border: `1px solid ${C.accent}33`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.text, minHeight: 44 }}>
-        {s.done ? "✅ " : ""}{s.desc}
-      </div>
-
-      <div style={{ marginTop: 14, background: C.purple + "15", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.purple }}>One interface, many implementations.</strong> The loop is written
-        once and never changes — even if you add Triangle, Hexagon, or Star later. That's the power of polymorphism.
-      </div>
-    </div>
-  );
-}
-
-// ── Section 4: Abstraction — the base-class contract ─────────────────────────
-function Abstraction() {
-  const [impl, setImpl] = useState(false);
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        <strong style={{ color: C.text }}>Abstraction</strong> is defining <em>what</em> without <em>how</em>. A base
-        class <code style={{ color: C.accent }}>Shape</code> promises every shape has an{" "}
-        <code style={{ color: C.teal }}>area()</code> — but leaves the formula to each subclass, forcing them to
-        provide it with <code style={{ color: C.red }}>NotImplementedError</code>.
-      </p>
-
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 11.5, lineHeight: 1.8, whiteSpace: "pre" }}>
-        <span style={{ color: C.accent }}>class Shape:</span>{"                       "}<span style={{ color: C.muted }}># the abstract contract</span>{"\n"}
-        {"    "}def area(self):{"\n"}
-        {"        "}<span style={{ color: C.red }}>raise NotImplementedError</span>({'"subclass must define area()"'}){"\n\n"}
-        <span style={{ color: C.teal }}>class Circle(Shape):</span>{"              "}<span style={{ color: C.muted }}># fulfils the contract</span>{"\n"}
-        {"    "}def __init__(self, r):{"\n"}
-        {"        "}self.r = r{"\n"}
-        {"    "}def area(self):{"\n"}
-        {"        "}return 3.14 * self.r * self.r
-      </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <button onClick={() => setImpl(false)} style={{ flex: 1, padding: "9px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, background: !impl ? C.red + "22" : C.card, border: `1.5px solid ${!impl ? C.red : C.border}`, color: !impl ? C.red : C.muted }}>Shape().area()</button>
-        <button onClick={() => setImpl(true)} style={{ flex: 1, padding: "9px", borderRadius: 8, cursor: "pointer", fontSize: 12.5, fontWeight: 600, background: impl ? C.green + "22" : C.card, border: `1.5px solid ${impl ? C.green : C.border}`, color: impl ? C.green : C.muted }}>Circle(2).area()</button>
-      </div>
-
-      <div style={{ background: (impl ? C.green : C.red) + "12", border: `1px solid ${(impl ? C.green : C.red)}44`, borderRadius: 8, padding: "12px 16px", fontFamily: "monospace", fontSize: 12.5, color: impl ? C.green : C.red, lineHeight: 1.6 }}>
-        {impl
-          ? "→ 12.56   ✓ Circle implemented area(), so it works."
-          : "→ NotImplementedError: subclass must define area()   ✗ Shape is abstract — it refuses to guess."}
-      </div>
-
-      <div style={{ marginTop: 14, background: C.teal + "15", border: `1px solid ${C.teal}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-        🔑 <strong style={{ color: C.teal }}>Abstraction sets the rules; polymorphism plays by them.</strong> The
-        base class guarantees every shape HAS an area(); each subclass decides HOW. Together they let one loop
-        handle any shape safely. (Python also has a stricter tool, the <code style={{ color: C.text }}>abc</code>{" "}
-        module, for enforcing this — the NotImplementedError pattern is the plain-Python version.)
-      </div>
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "What does polymorphism let you do?",
-      options: [
-        "Store many values in one variable",
-        "Call the same method name on different objects and have each respond in its own way",
-        "Make classes run faster",
-        "Avoid writing __init__",
-      ],
-      answer: 1,
-      explain: "Polymorphism ('many forms') means s.area() runs Circle.area or Square.area depending on what s actually is — one call, many behaviours.",
-    },
-    {
-      q: "In  for s in shapes: print(s.area()),  how does Python know which area() to run?",
-      options: [
-        "It always runs the first class's method",
-        "It looks up area() on the actual object s refers to at that moment (dynamic dispatch)",
-        "You must write if-checks for each type",
-        "It picks randomly",
-      ],
-      answer: 1,
-      explain: "Method lookup happens on the real object. A Circle object finds Circle.area; a Square finds Square.area. No type-checking if-ladder needed.",
-    },
-    {
-      q: "Why does the abstract  Shape.area()  raise NotImplementedError?",
-      options: [
-        "It's a bug",
-        "To force every subclass to provide its own area() — the base class defines the contract, not the formula",
-        "Because circles have no area",
-        "To make the program crash",
-      ],
-      answer: 1,
-      explain: "Abstraction defines WHAT (there must be an area()) without HOW. Raising NotImplementedError makes it a loud error if a subclass forgets to implement it.",
-    },
-    {
-      q: "What is 'duck typing'?",
-      options: [
-        "A type of inheritance",
-        "Python cares that an object HAS the needed method, not what class it belongs to",
-        "A way to sort ducks",
-        "Requiring all objects share a base class",
-      ],
-      answer: 1,
-      explain: "If an object has an area() method, it works in the loop — regardless of its class. Behaviour matters, not the label. 'If it quacks like a duck…'",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{score >= 3 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {score} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {score === 4 ? "You can design with interfaces, not just classes." :
-            score >= 2 ? "Good — replay the Dispatch Stepper to see one call hit two methods." :
-              "Revisit Polymorphism and Abstraction, then try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accentGlow}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 10.5 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            The four OOP pillars are complete: encapsulation, inheritance, <strong style={{ color: C.accent }}>polymorphism and abstraction</strong>.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 10.6 — User-Defined Exceptions.</strong> Errors are objects
-            too — and now that you know inheritance, you can make your own error classes as children of Exception.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16, whiteSpace: "pre-wrap" }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ─────────────────────────────────────────────────────────────────────
-export default function Unit10_5({ student, onUnitComplete }) {
+export default function Unit10_5(props) {
   const sections = [
-    { id: "need", label: "The Need" },
-    { id: "poly", label: "Polymorphism" },
-    { id: "dispatch", label: "Dispatch Stepper" },
-    { id: "abstract", label: "Abstraction" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "Many Forms", kicker: "ONE CALL, MANY BEHAVIOURS", title: "Polymorphism",
+      blocks: [
+        <div className="fh-two" style={{ maxWidth: 900 }}>
+          <CodeBlock title="without polymorphism" code={'for s in shapes:\n    if s.kind == "circle":\n        a = 3.14 * s.r ** 2\n    elif s.kind == "square":\n        a = s.side ** 2\n    # a new shape? edit this loop again…'} />
+          <CodeBlock title="with polymorphism" code={"for s in shapes:\n    a = s.area()   # each shape knows its own formula"} />
+        </div>,
+        EX.shapes, EX.builtin,
+      ],
+    },
+    { label: "Interchangeable", kicker: "SAME INTERFACE", title: "Objects you can swap", blocks: [EX.payments, <KeyIdea>If several classes offer the same method name with the same meaning, code that uses them never needs to know which one it has.</KeyIdea>] },
+    { label: "Abstraction", kicker: "PROMISE, DON'T GUESS", title: "Abstract parents", blocks: [EX.abstract] },
+    { label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: payroll", blocks: [EX.payroll] },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Many Shapes, One Call</h3><TheNeed /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Polymorphism &amp; Duck Typing</h3><Polymorphism /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>See It: Dynamic Dispatch</h3><DispatchStepper /></div>,
-    <div><h3 style={{ color: C.text, marginBottom: 6 }}>Abstraction: The Contract</h3><Abstraction /></div>,
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>4 questions on polymorphism and abstraction.</p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🧬</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 10 › UNIT 10.5</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Polymorphism &amp; Abstraction</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell {...props} unitId="Unit10_5" crumb="MODULE 10 › UNIT 10.5" title="Polymorphism & Abstraction" sections={sections} quiz={QUIZ}
+      next={{ title: "Unit 10.6 — User-Defined Exceptions", text: "Raise InvalidMarkError, not a mystery — exceptions as classes." }} />
   );
 }

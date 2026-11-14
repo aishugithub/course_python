@@ -1,596 +1,281 @@
-// ============================================================================
-//  UNIT 4.3 — "Input & Type Conversion"
-// ----------------------------------------------------------------------------
-//  WHERE THIS FILE FITS IN THE APP
-//  --------------------------------
-//  Lives at src/lessons/Unit4_3.jsx. App.jsx dynamically imports this file
-//  (via import.meta.glob) when the "Input & Type Conversion" card is clicked
-//  on the Dashboard — that card exists because config/course.config.js lists
-//  { unitId: "Unit4_3", ... } under Module 4. Same contract as every other
-//  lesson: props are `student` (whoever is logged in) and `onUnitComplete`
-//  (called once, from inside the closing Quiz, to persist progress via
-//  src/shell/api.js and send the learner back to a Dashboard where this
-//  unit's card is now ticked ✅).
-//
-//  TEACHING APPROACH FOR THIS UNIT:
-//    Unit 4.2 taught that every variable has a TYPE, decided by Python from
-//    the value assigned to it. This unit uses that foundation to explain a
-//    fact that trips up almost every beginner: input() ALWAYS hands back a
-//    string, even if the user typed a number. We first let the student HIT
-//    the resulting bug themselves (str + int -> TypeError), THEN introduce
-//    int()/float()/str() as the fix, THEN let them build a tiny real program
-//    that ties input -> casting -> arithmetic -> print together end to end.
-// ============================================================================
+// Unit 4.3 — Input & Type Conversion (rebuilt on the typing-first lesson kit)
+// input() always returns text → the crash (TypeError) and the silent bug
+// ("40" + "35" = "4035") → int(), float(), str() → when conversion fails.
 
 import { useState } from "react";
+import LessonShell, { P, KeyIdea, Note } from "../kit/Lesson.jsx";
+import { T, CODE_FONT, tint } from "../kit/theme.js";
 
-// ----------------------------------------------------------------------------
-// COLOUR PALETTE — same convention as every other lesson: local and
-// self-contained, no cross-file imports.
-// ----------------------------------------------------------------------------
-const C = {
-  bg: "#0D1117",
-  surface: "#161B22",
-  card: "#1C2333",
-  accent: "#58A6FF",
-  accentGlow: "#1F6FEB",
-  green: "#3FB950",
-  yellow: "#D29922",
-  purple: "#BC8CFF",
-  red: "#F85149",
-  orange: "#F0883E",
-  teal: "#39D0D8",
-  text: "#E6EDF3",
-  muted: "#8B949E",
-  border: "#30363D",
-};
+const btn = (bg = T.navy, fg = "#fff") => ({ padding: "9px 16px", borderRadius: 8, border: "none", background: bg, color: fg, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 });
+const codeBox = { margin: 0, fontFamily: CODE_FONT, fontSize: 14.5, lineHeight: 1.7, background: T.codeBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "12px 14px", whiteSpace: "pre-wrap" };
+const term = { margin: 0, fontFamily: CODE_FONT, fontSize: 14.5, lineHeight: 1.7, background: T.termBg, color: T.termText, borderRadius: 10, padding: "12px 14px", whiteSpace: "pre-wrap" };
 
-// ============================================================================
-// WIDGET 1 — InputBasics
-// A live, typeable simulation of Python's input() function. The student
-// types their own name into a "terminal" text box; clicking Submit shows
-// exactly what input() handed back to the program — always text (str),
-// confirmed with a type() check, even though nothing about a name LOOKS
-// unusual as a string. This sets up the trap explored in the next widget.
-// ============================================================================
+// ── Widget: type into input(), see what Python receives ──
 function InputBasics() {
-  // What the student has typed into the simulated terminal prompt.
   const [typed, setTyped] = useState("");
-  // Whether they've clicked Submit yet — controls when we reveal the result.
-  const [submitted, setSubmitted] = useState(false);
-
-  const submit = () => {
-    if (typed.trim().length === 0) return; // ignore empty submissions
-    setSubmitted(true);
-  };
-
-  const reset = () => { setSubmitted(false); setTyped(""); };
-
+  const [done, setDone] = useState(false);
   return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        <code style={{ color: C.accent }}>input()</code> pauses your program, waits for the user to type
-        something and press Enter, and hands that text back to you. Try it — type your name below, exactly
-        like you would in a real terminal.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 14, fontFamily: "monospace", fontSize: 13, color: C.text }}>
-        name = input("What's your name? ")
-      </div>
-
-      {/* Simulated terminal prompt + text field + submit button */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <div style={{ flex: 1, background: "#010409", border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: C.teal, fontFamily: "monospace", fontSize: 13 }}>What's your name? </span>
-          <input
-            value={typed}
-            disabled={submitted}
-            onChange={(e) => setTyped(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            placeholder="type here…"
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: C.text, fontFamily: "monospace", fontSize: 13 }}
-          />
-        </div>
-        {!submitted ? (
-          <button onClick={submit} style={{ padding: "0 18px", borderRadius: 8, background: C.accentGlow, border: "none", color: "#fff", fontWeight: 600, cursor: "pointer" }}>Enter ↵</button>
-        ) : (
-          <button onClick={reset} style={{ padding: "0 18px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: "pointer" }}>↺ Reset</button>
-        )}
-      </div>
-
-      {/* Result revealed only after submission */}
-      {submitted && (
-        <div style={{ background: C.card, border: `1.5px solid ${C.accent}44`, borderRadius: 10, padding: 16 }}>
-          <div style={{ fontFamily: "monospace", fontSize: 13, color: C.muted, marginBottom: 8 }}>
-            &gt;&gt;&gt; print(name)
+    <div className="fh-two">
+      <div>
+        <pre style={codeBox}>{'name = input("What\'s your name? ")\nprint(name)\nprint(type(name))'}</pre>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: T.card, border: `1.5px solid ${T.borderStrong}`, borderRadius: 8, padding: "8px 12px" }}>
+            <span style={{ fontFamily: CODE_FONT, color: T.teal, fontSize: 14 }}>What's your name?</span>
+            <input value={typed} disabled={done} onChange={(e) => setTyped(e.target.value)} onKeyDown={(e) => e.key === "Enter" && typed.trim() && setDone(true)}
+              placeholder="type, then Enter" style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontFamily: CODE_FONT, fontSize: 14, color: T.text }} />
           </div>
-          <div style={{ fontFamily: "monospace", fontSize: 15, color: C.text, marginBottom: 12 }}>{typed}</div>
-          <div style={{ fontFamily: "monospace", fontSize: 13, color: C.muted, marginBottom: 8 }}>
-            &gt;&gt;&gt; type(name)
-          </div>
-          <div style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 700, color: C.accent }}>&lt;class 'str'&gt;</div>
+          {done ? <button onClick={() => { setDone(false); setTyped(""); }} style={btn(T.card, T.text)}>↺</button>
+            : <button onClick={() => typed.trim() && setDone(true)} style={btn()}>Enter ↵</button>}
         </div>
-      )}
-
-      <div style={{ marginTop: 16, background: C.accent + "18", border: `1px solid ${C.accent}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.accent }}>Key idea:</strong> no matter WHAT the user types — a name, a
-        number, even nothing — <code style={{ color: C.accent }}>input()</code> always hands it back as a{" "}
-        <strong style={{ color: C.accent }}>string</strong>. That's about to matter a lot.
+        <div style={{ fontSize: 13, color: T.muted, marginTop: 6 }}>Try a name — then reset and type a number, like 18.</div>
+      </div>
+      <div>
+        <pre style={term}>{done ? `What's your name? ${typed}\n${typed}\n<class 'str'>` : "What's your name? _"}</pre>
+        {done && <div style={{ fontSize: 14, color: T.slate, marginTop: 8, lineHeight: 1.6 }}>
+          {/^\s*-?\d+(\.\d+)?\s*$/.test(typed)
+            ? <>Even <strong>{typed.trim()}</strong> — digits only — arrives as <code>"{typed.trim()}"</code>, a <strong>str</strong>. input() never gives you a number.</>
+            : <>input() handed your program the text <code>"{typed}"</code>. Now try typing a number.</>}
+        </div>}
       </div>
     </div>
   );
 }
 
-// ============================================================================
-// WIDGET 2 — StrIntTrap
-// Lets the student type a NUMBER (like an age) into the same kind of
-// simulated input() prompt, then try to use it in arithmetic directly. This
-// deliberately reproduces Python's real TypeError, because seeing the bug
-// happen is far more memorable than being told about it in advance.
-// ============================================================================
-function StrIntTrap() {
-  const [typed, setTyped] = useState("");
-  const [stage, setStage] = useState(0); // 0 = typing, 1 = shown the crash, 2 = shown the fix
-
-  const submit = () => {
-    if (typed.trim().length === 0) return;
-    setStage(1);
-  };
-
-  const reset = () => { setStage(0); setTyped(""); };
-
-  // Whether whatever the student typed can even be parsed as a whole number
-  // — used only to keep the "fixed" output realistic if they type something
-  // like "twenty" instead of "20".
-  const parsedAge = parseInt(typed, 10);
-  const isNumeric = !Number.isNaN(parsedAge) && String(parsedAge) === typed.trim();
-
+// ── Widget: + on text vs + on numbers ──
+function PlusTwoWays() {
+  const [conv, setConv] = useState(false);
   return (
     <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Now type your AGE (just the number) into the prompt below, and we'll try to use it in a calculation —
-        exactly the way a beginner naturally would.
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 14, fontFamily: "monospace", fontSize: 13, color: C.text }}>
-        age = input("How old are you? ")<br />
-        print(age + 5)
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <button onClick={() => setConv(false)} style={btn(!conv ? T.red : T.card, !conv ? "#fff" : T.text)}>without int()</button>
+        <button onClick={() => setConv(true)} style={btn(conv ? T.green : T.card, conv ? "#fff" : T.text)}>with int()</button>
       </div>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <div style={{ flex: 1, background: "#010409", border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: C.teal, fontFamily: "monospace", fontSize: 13 }}>How old are you? </span>
-          <input
-            value={typed}
-            disabled={stage > 0}
-            onChange={(e) => setTyped(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            placeholder="e.g. 20"
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: C.text, fontFamily: "monospace", fontSize: 13 }}
-          />
-        </div>
-        {stage === 0 ? (
-          <button onClick={submit} style={{ padding: "0 18px", borderRadius: 8, background: C.accentGlow, border: "none", color: "#fff", fontWeight: 600, cursor: "pointer" }}>Enter ↵</button>
-        ) : (
-          <button onClick={reset} style={{ padding: "0 18px", borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: "pointer" }}>↺ Reset</button>
-        )}
-      </div>
-
-      {/* Stage 1: the crash */}
-      {stage >= 1 && (
-        <div style={{ background: C.red + "18", border: `1.5px solid ${C.red}55`, borderRadius: 10, padding: 16, marginBottom: 14, fontFamily: "monospace", fontSize: 12, color: C.red, lineHeight: 1.7 }}>
-          Traceback (most recent call last):<br />
-          &nbsp;&nbsp;print(age + 5)<br />
-          TypeError: can only concatenate str (not "int") to str
-        </div>
-      )}
-
-      {stage >= 1 && (
-        <div style={{ background: C.yellow + "18", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted, marginBottom: 14 }}>
-          ⚠️ Even though <code style={{ color: C.yellow }}>{typed || "20"}</code> LOOKS like a number, input() stored
-          it as the string <code style={{ color: C.yellow }}>"{typed || "20"}"</code>. Python refuses to add a
-          number (5) to text — it has no idea whether you meant "join them" or "add them," so it stops and
-          raises an error instead of guessing.
-        </div>
-      )}
-
-      {/* Offer the fix once the crash has been shown */}
-      {stage === 1 && (
-        <button onClick={() => setStage(2)} style={{
-          width: "100%", padding: "10px", borderRadius: 8, background: C.accentGlow,
-          border: "none", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer",
-        }}>Show me the fix →</button>
-      )}
-
-      {/* Stage 2: the fix, using int() */}
-      {stage >= 2 && (
+      <div className="fh-two">
+        <pre style={codeBox}>{conv
+          ? 'a = int(input("First mark: "))\nb = int(input("Second mark: "))\nprint("Total:", a + b)'
+          : 'a = input("First mark: ")\nb = input("Second mark: ")\nprint("Total:", a + b)'}</pre>
         <div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 10, fontFamily: "monospace", fontSize: 13, color: C.text }}>
-            age = input("How old are you? ")<br />
-            <span style={{ color: C.green }}>age = int(age)</span> &nbsp;<span style={{ color: C.muted }}># convert text → whole number</span><br />
-            print(age + 5)
-          </div>
-          <div style={{ background: C.green + "18", border: `1.5px solid ${C.green}55`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 14, color: C.green }}>
-            &gt; {isNumeric ? parsedAge + 5 : "25"}
-          </div>
-          <div style={{ marginTop: 10, color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
-            <code style={{ color: C.green }}>int(age)</code> reads the text in the age slot, and — if it looks like
-            a whole number — creates a brand-new int value from it. Now <code style={{ color: C.green }}>age + 5</code>{" "}
-            is a number plus a number, which Python happily adds.
+          <pre style={term}>{`First mark: 40\nSecond mark: 35\nTotal: ${conv ? "75" : "4035"}`}</pre>
+          <div style={{ fontSize: 14, color: conv ? T.green : T.red, marginTop: 8, lineHeight: 1.6 }}>
+            {conv ? "Numbers + numbers: Python adds. 40 + 35 = 75. ✓"
+              : <>No crash — and completely wrong. <code>"40" + "35"</code> is text + text, so + <strong>joins</strong> them: <code>"4035"</code>.</>}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-// ============================================================================
-// WIDGET 3 — CastPipeline
-// A reference-style widget: the three most common casting functions
-// (int, float, str) shown as small "conversion machines" with example
-// inputs/outputs, plus a demonstration that casting can itself fail
-// (int("hello") raises ValueError) — casting is not magic, it still has
-// rules.
-// ============================================================================
-function CastPipeline() {
-  const machines = [
-    {
-      name: "int()", color: C.accent,
-      examples: [
-        { input: '"25"', output: "25", ok: true },
-        { input: '"3.9"', output: "ValueError", ok: false },
-        { input: '"hello"', output: "ValueError", ok: false },
-      ],
-      desc: "Converts text (or a float) into a whole number. Fails if the text isn't a clean whole number.",
-    },
-    {
-      name: "float()", color: C.teal,
-      examples: [
-        { input: '"3.14"', output: "3.14", ok: true },
-        { input: '"25"', output: "25.0", ok: true },
-        { input: '"abc"', output: "ValueError", ok: false },
-      ],
-      desc: "Converts text (or an int) into a decimal number. More forgiving than int() — whole numbers are fine too.",
-    },
-    {
-      name: "str()", color: C.purple,
-      examples: [
-        { input: "25", output: '"25"', ok: true },
-        { input: "3.14", output: '"3.14"', ok: true },
-        { input: "True", output: '"True"', ok: true },
-      ],
-      desc: "Converts almost anything into text. This basically never fails — everything can be described as text.",
-    },
-  ];
-
-  // Which conversion machine's card is expanded, or null if none.
-  const [active, setActive] = useState(null);
-
+// ── Widget: conversion machines ──
+const MACHINES = [
+  { f: "int", c: T.blue, d: "text or decimal → whole number", ex: [['"25"', "25", true], ["3.9", "3   (cuts off the decimal — it does NOT round)", true], ['"3.9"', "ValueError", false], ['"hello"', "ValueError", false]] },
+  { f: "float", c: T.teal, d: "text or int → decimal number", ex: [['"8.5"', "8.5", true], ['"25"', "25.0", true], ["7", "7.0", true], ['"abc"', "ValueError", false]] },
+  { f: "str", c: T.purple, d: "anything → text", ex: [["25", '"25"', true], ["8.5", '"8.5"', true], ["True", '"True"', true]] },
+];
+function Converters() {
+  const [sel, setSel] = useState(0);
+  const m = MACHINES[sel];
   return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Python gives you three small "conversion machines" for switching a value between types. Tap each one to
-        see example conversions — including cases where the conversion is impossible.
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {machines.map((m, i) => (
-          <div key={i} onClick={() => setActive(active === i ? null : i)} style={{
-            background: active === i ? m.color + "18" : C.card,
-            border: `1.5px solid ${active === i ? m.color : C.border}`,
-            borderRadius: 10, padding: "12px 14px", cursor: "pointer", transition: "all 0.25s",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 15, color: m.color }}>{m.name}</span>
-              <span style={{ color: C.muted, fontSize: 12 }}>{m.desc}</span>
-            </div>
-            {active === i && (
-              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                {m.examples.map((ex, j) => (
-                  <div key={j} style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "monospace", fontSize: 12, background: C.bg, borderRadius: 6, padding: "6px 10px" }}>
-                    <span style={{ color: C.text }}>{m.name.replace("()", "")}({ex.input})</span>
-                    <span style={{ color: C.muted }}>→</span>
-                    <span style={{ color: ex.ok ? C.green : C.red, fontWeight: 700 }}>{ex.output}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+    <div className="fh-two">
+      <div style={{ display: "grid", gap: 8, alignContent: "start" }}>
+        {MACHINES.map((x, i) => (
+          <button key={x.f} onClick={() => setSel(i)} style={{ textAlign: "left", padding: "12px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+            border: `1.5px solid ${i === sel ? x.c : T.border}`, background: i === sel ? tint(x.c, "14") : T.card }}>
+            <code style={{ fontSize: 16, fontWeight: 700, color: x.c, background: "transparent" }}>{x.f}( )</code>
+            <span style={{ color: T.slate, fontSize: 14, marginLeft: 10 }}>{x.d}</span>
+          </button>
         ))}
       </div>
-
-      <div style={{ marginTop: 16, background: C.purple + "18", border: `1px solid ${C.purple}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.purple }}>Key idea:</strong> casting doesn't change the ORIGINAL variable —
-        it creates a new value of the requested type, which you then usually store back into the same
-        variable (like <code style={{ color: C.purple }}>age = int(age)</code>).
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// WIDGET 4 — BuildAProgram
-// A small capstone for this unit: the learner enters their OWN current age
-// through a real, live control (a number input), and we walk through the
-// exact program — input (conceptually), cast, add 1, print — using their
-// real number, tying input + casting + arithmetic + print together end to
-// end. This previews the operators covered fully in Unit 4.4.
-// ============================================================================
-function BuildAProgram() {
-  // The learner's own age, entered as a real number input (defaults to 18,
-  // a plausible age for a first-year B.Tech student).
-  const [age, setAge] = useState(18);
-  const nextYearAge = age + 1;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Let's put everything in this unit together in one tiny real program: ask for your age, convert it to a
-        number, add 1, and print how old you'll be next year. Drag the slider to change your age and watch
-        every step update live.
-      </p>
-
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ color: C.muted, fontSize: 12 }}>Your age: <strong style={{ color: C.accent }}>{age}</strong></label>
-        <input type="range" min={10} max={80} value={age} onChange={(e) => setAge(Number(e.target.value))} style={{ width: "100%", accentColor: C.accent }} />
-      </div>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 13, lineHeight: 2 }}>
-        <div><span style={{ color: C.muted }}>1</span> &nbsp; age_text = input("How old are you? ") &nbsp;<span style={{ color: C.muted }}># age_text = "{age}"</span></div>
-        <div><span style={{ color: C.muted }}>2</span> &nbsp; age = <span style={{ color: C.green }}>int(age_text)</span> &nbsp;<span style={{ color: C.muted }}># age = {age} (a real number now)</span></div>
-        <div><span style={{ color: C.muted }}>3</span> &nbsp; next_year = age + 1 &nbsp;<span style={{ color: C.muted }}># next_year = {nextYearAge}</span></div>
-        <div><span style={{ color: C.muted }}>4</span> &nbsp; print(next_year)</div>
-      </div>
-
-      <div style={{ marginTop: 14, background: C.green + "18", border: `1.5px solid ${C.green}55`, borderRadius: 10, padding: 16, fontFamily: "monospace", fontSize: 15, color: C.green, textAlign: "center" }}>
-        &gt; {nextYearAge}
-      </div>
-
-      <div style={{ marginTop: 16, background: C.accent + "18", border: `1px solid ${C.accent}44`, borderRadius: 8, padding: "12px 16px", fontSize: 13, color: C.muted }}>
-        🔑 <strong style={{ color: C.accent }}>Key idea:</strong> almost every useful Python program follows this
-        same shape — get input, convert it to the right type, compute something, show the result.
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// WIDGET 5 — Quiz
-// Standard closing quiz; only its onComplete triggers onUnitComplete.
-// ============================================================================
-function Quiz({ onComplete }) {
-  const questions = [
-    {
-      q: "What type of value does input() ALWAYS return?",
-      options: ["Whatever type looks correct for what was typed", "Always a string (str), no matter what was typed", "Always an integer", "Always a boolean"],
-      answer: 1,
-      explain: "input() always returns text (str). Even if the user types digits, Python stores them as characters, not as a number, until you explicitly convert it.",
-    },
-    {
-      q: 'Why does age + 5 crash with a TypeError if age = input("Age: ")?',
-      options: [
-        "Because 5 is too large a number",
-        "Because age is a string and Python won't automatically add a string and a number together",
-        "Because input() cannot be used with numbers",
-        "Because + is not a valid Python operator",
-      ],
-      answer: 1,
-      explain: "age holds a string (even if it looks like a number). Python refuses to silently guess whether + means \"join text\" or \"add numbers,\" so it raises a TypeError instead.",
-    },
-    {
-      q: "Which function converts text into a whole number?",
-      options: ["str()", "float()", "int()", "input()"],
-      answer: 2,
-      explain: "int() converts a value (commonly a string) into a whole number, as long as the text represents a valid whole number.",
-    },
-    {
-      q: 'What happens when you run int("hello")?',
-      options: [
-        "It returns 0",
-        "It raises a ValueError, because \"hello\" isn't a valid whole number",
-        "It silently converts to the number 8 (the word's length)",
-        "It works fine and returns \"hello\" unchanged",
-      ],
-      answer: 1,
-      explain: '"hello" cannot be interpreted as a number in any base, so int() raises a ValueError. Casting still has rules — it isn\'t magic.',
-    },
-    {
-      q: "What is the correct order of steps in a typical input-driven program?",
-      options: [
-        "Print result → get input → convert type → compute",
-        "Get input → convert type → compute → print result",
-        "Convert type → get input → print result → compute",
-        "Compute → get input → print result → convert type",
-      ],
-      answer: 1,
-      explain: "The natural flow is: gather input from the user, convert it to the correct type, perform the computation, then show the result with print().",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(0);
-  const [done, setDone] = useState(false);
-
-  const choose = (i) => {
-    if (selected !== null) return;
-    setSelected(i);
-    if (i === questions[current].answer) setScore((s) => s + 1);
-  };
-
-  const next = () => {
-    if (current < questions.length - 1) { setCurrent((c) => c + 1); setSelected(null); }
-    else { setDone(true); onComplete && onComplete(); }
-  };
-
-  if (done) {
-    const final = score + (selected === questions[current].answer ? 1 : 0);
-    return (
-      <div style={{ textAlign: "center", padding: 20 }}>
-        <div style={{ fontSize: 52 }}>{final >= 4 ? "🎉" : "👍"}</div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: C.text, marginTop: 10 }}>You scored {final} / {questions.length}</div>
-        <div style={{ color: C.muted, marginTop: 8, marginBottom: 20 }}>
-          {final === 5 ? "Perfect! You'll never be surprised by a str + int TypeError again." :
-            final >= 3 ? "Good work — revisit the str/int trap section once more." :
-              "Go back through the casting pipeline and try again."}
-        </div>
-        <div style={{
-          padding: "20px", borderRadius: 12,
-          background: `linear-gradient(135deg, ${C.accent}22, ${C.purple}22)`,
-          border: `1px solid ${C.accent}55`,
-        }}>
-          <div style={{ color: C.accent, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🎓 Unit 4.3 Complete!</div>
-          <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.7 }}>
-            You can now take input from a user, convert it to the correct type, and use it safely in
-            calculations.<br /><br />
-            <strong style={{ color: C.accent }}>Next up: Unit 4.4 — Operators & Expressions.</strong> We'll cover
-            every operator Python offers, then build a small calculator project using everything from Module 4.
+      <div style={{ background: T.card, border: `1.5px solid ${tint(m.c, "66")}`, borderRadius: 12, padding: 14 }}>
+        {m.ex.map(([inp, out, ok], i) => (
+          <div key={i} style={{ fontFamily: CODE_FONT, fontSize: 14.5, padding: "6px 0", borderBottom: i < m.ex.length - 1 ? `1px dashed ${T.border}` : "none" }}>
+            <span style={{ color: T.text }}>{m.f}({inp})</span> <span style={{ color: T.muted }}>→</span>{" "}
+            <span style={{ color: ok ? T.green : T.red, fontWeight: 700 }}>{out}</span>
           </div>
+        ))}
+        <div style={{ fontSize: 13.5, color: T.slate, marginTop: 10, lineHeight: 1.6 }}>
+          A conversion never changes the original value. It makes a <strong>new</strong> value, and you tie a name to it — the name-tag picture from Unit 4.2: <code>age = int(age)</code>.
         </div>
       </div>
-    );
-  }
-
-  const q = questions[current];
-  return (
-    <div>
-      <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>Question {current + 1} of {questions.length}</div>
-      <div style={{ color: C.text, fontWeight: 600, fontSize: 15, marginBottom: 16 }}>{q.q}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {q.options.map((opt, i) => {
-          let bg = C.card, border = C.border, col = C.text;
-          if (selected !== null) {
-            if (i === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-            else if (i === selected) { bg = C.red + "22"; border = C.red; col = C.red; }
-          }
-          return (
-            <button key={i} onClick={() => choose(i)} style={{
-              textAlign: "left", padding: "10px 14px", borderRadius: 8,
-              background: bg, border: `1.5px solid ${border}`, color: col,
-              cursor: selected !== null ? "default" : "pointer", fontSize: 13, transition: "all 0.25s",
-            }}>
-              {i === q.answer && selected !== null ? "✓ " : i === selected && selected !== q.answer ? "✗ " : ""}{opt}
-            </button>
-          );
-        })}
-      </div>
-      {selected !== null && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: C.purple + "18", border: `1px solid ${C.purple}44`, color: C.muted, fontSize: 13 }}>
-          💡 {q.explain}
-        </div>
-      )}
-      {selected !== null && (
-        <button onClick={next} style={{
-          marginTop: 14, padding: "10px 24px", borderRadius: 8,
-          background: C.accentGlow, border: "none", color: "#fff",
-          fontWeight: 600, cursor: "pointer", fontSize: 14,
-        }}>{current < questions.length - 1 ? "Next Question →" : "See Results"}</button>
-      )}
     </div>
   );
 }
 
-// ============================================================================
-// MAIN EXPORT — Unit4_3
-// Shared shell: header, progress bar, section tabs, content card, "Mark
-// Complete & Continue" navigation — identical structure to every other unit.
-// ============================================================================
-export default function Unit4_3({ student, onUnitComplete }) {
-  // Tab order here MUST match the order of the `content` array below.
+// ── Exercise specs ──
+const EX = {
+  hello: {
+    id: "hello", kind: "type", title: "Ask, then answer",
+    task: <>Type it and run. The test types <strong>Priya</strong> for you; the expected output shows the question, the typed answer, and your program's reply — exactly what a real terminal shows.</>,
+    show: 'name = input("What\'s your name? ")\nprint("Hello,", name)',
+    tests: [{ inputs: ["Priya"], expect: "What's your name? Priya\nHello, Priya" }, { inputs: ["Arun"], expect: "What's your name? Arun\nHello, Arun", hidden: true }],
+    hints: ["The prompt text goes inside input( ), in quotes. Note the space after the ? so the answer doesn't stick to it."],
+    solution: 'name = input("What\'s your name? ")\nprint("Hello,", name)',
+  },
+  meet: {
+    id: "meet", kind: "write", title: "Where are you from?",
+    task: <>Ask two questions with the exact prompts <code>Your name: </code> and <code>Your city: </code> (note the space after each colon). Then print <code>Hi Meena from Chennai</code> — built from the two answers.</>,
+    tests: [
+      { inputs: ["Meena", "Chennai"], expect: "Your name: Meena\nYour city: Chennai\nHi Meena from Chennai" },
+      { inputs: ["Ravi", "Pune"], expect: "Your name: Ravi\nYour city: Pune\nHi Ravi from Pune", hidden: true },
+    ],
+    requires: [{ call: "input", min: 2, msg: "Ask two questions — two input( ) calls." }],
+    forbids: [{ text: '"Meena', msg: "Don't type Meena — use whatever the user answered." }, { text: "Chennai\"", msg: "Don't type Chennai — use the variable." }],
+    hints: ["Store each answer: name = input(\"Your name: \")", 'print("Hi", name, "from", city)'],
+    solution: 'name = input("Your name: ")\ncity = input("Your city: ")\nprint("Hi", name, "from", city)',
+  },
+  crash: {
+    id: "crash", kind: "fix", title: "The crash",
+    task: <>Run it. Read the coach. Fix it so it prints the age next year.</>,
+    starter: 'age = input("Age: ")\nprint("Next year you will be", age + 1)',
+    tests: [{ inputs: ["18"], expect: "Age: 18\nNext year you will be 19" }, { inputs: ["40"], expect: "Age: 40\nNext year you will be 41", hidden: true }],
+    requires: [{ call: "int", msg: "Convert the answer to a whole number with int( )." }],
+    hints: ["age holds the text \"18\". Text + 1 makes no sense to Python.", "age = int(input(\"Age: \"))"],
+    solution: 'age = int(input("Age: "))\nprint("Next year you will be", age + 1)',
+  },
+  silent: {
+    id: "silent", kind: "fix", title: "The bug that doesn't crash",
+    task: <>This program runs without any error. Run it and look at the total. Then fix it.</>,
+    starter: 'a = input("First mark: ")\nb = input("Second mark: ")\nprint("Total:", a + b)',
+    tests: [{ inputs: ["40", "35"], expect: "First mark: 40\nSecond mark: 35\nTotal: 75" }, { inputs: ["12", "8"], expect: "First mark: 12\nSecond mark: 8\nTotal: 20", hidden: true }],
+    requires: [{ call: "int", min: 2, msg: "Convert both marks with int( )." }],
+    hints: ["4035 is \"40\" and \"35\" glued together. When does + glue instead of add?", "Wrap each input( ) in int( )."],
+    solution: 'a = int(input("First mark: "))\nb = int(input("Second mark: "))\nprint("Total:", a + b)',
+  },
+  convert: {
+    id: "convert", kind: "type", title: "Four conversions",
+    task: <>Predict all four lines, then type and run. Line 3 surprises most people.</>,
+    show: 'print(int("25") + 5)\nprint(float("2.5") * 2)\nprint(int(3.9))\nprint(str(25) + "5")',
+    tests: [{ expect: "30\n5.0\n3\n255" }],
+    hints: ["int( ) cuts off the decimal part; str(25) + \"5\" is text + text."],
+    solution: 'print(int("25") + 5)\nprint(float("2.5") * 2)\nprint(int(3.9))\nprint(str(25) + "5")',
+  },
+  seats: {
+    id: "seats", kind: "complete", title: "Convert in one line",
+    task: <>You can convert the answer the moment it arrives: <code>int(input(...))</code>. Fill in the blank so the bill is right.</>,
+    starter: 'seats = ___(input("Seats: "))\nprint("Total:", seats * 150)',
+    tests: [{ inputs: ["3"], expect: "Seats: 3\nTotal: 450" }, { inputs: ["5"], expect: "Seats: 5\nTotal: 750", hidden: true }],
+    hints: ["Seats are whole numbers. Which converter makes whole numbers?"],
+    solution: 'seats = int(input("Seats: "))\nprint("Total:", seats * 150)',
+  },
+  petrol: {
+    id: "petrol", kind: "write", title: "Petrol bill",
+    task: <>Petrol costs ₹100 a litre — store that in a variable <code>price</code>. Ask <code>Litres: </code> (people buy 4.5 litres, so allow decimals), then print <code>Total: Rs</code> and the amount.</>,
+    tests: [{ inputs: ["4.5"], expect: "Litres: 4.5\nTotal: Rs 450.0" }, { inputs: ["2"], expect: "Litres: 2\nTotal: Rs 200.0", hidden: true }],
+    requires: [{ call: "float", msg: "Litres can have a decimal point — convert with float( )." }],
+    forbids: [{ text: "450", msg: "Let Python calculate the total." }],
+    hints: ["int( ) can't read \"4.5\". Which converter can?", 'litres = float(input("Litres: "))', 'print("Total: Rs", litres * price)'],
+    solution: 'price = 100\nlitres = float(input("Litres: "))\nprint("Total: Rs", litres * price)',
+  },
+  cgpa: {
+    id: "cgpa", kind: "fix", title: "When conversion fails",
+    task: <>A student types her CGPA, 8.5, and the program crashes. Run it, read the coach, fix it.</>,
+    starter: 'cgpa = int(input("CGPA: "))\nprint("Your CGPA is", cgpa)',
+    tests: [{ inputs: ["8.5"], expect: "CGPA: 8.5\nYour CGPA is 8.5" }, { inputs: ["9.1"], expect: "CGPA: 9.1\nYour CGPA is 9.1", hidden: true }],
+    hints: ["int( ) only reads whole numbers. A CGPA has a decimal point."],
+    solution: 'cgpa = float(input("CGPA: "))\nprint("Your CGPA is", cgpa)',
+  },
+  glue: {
+    id: "glue", kind: "fix", title: "Gluing text and a number",
+    task: <>This time the conversion is right, but the print line crashes. Fix the print line — either convert the number to text with <code>str( )</code>, or switch to commas.</>,
+    starter: 'age = int(input("Age: "))\nprint("Age next year: " + (age + 1))',
+    tests: [{ inputs: ["18"], expect: "Age: 18\nAge next year: 19" }, { inputs: ["25"], expect: "Age: 25\nAge next year: 26", hidden: true }],
+    hints: ["+ can join text to text, or add numbers — not text + number.", 'print("Age next year: " + str(age + 1))'],
+    solution: 'age = int(input("Age: "))\nprint("Age next year: " + str(age + 1))',
+  },
+  split: {
+    id: "split", kind: "make", title: "Split the bill",
+    task: <>Friends share a restaurant bill. Ask <code>Total bill: </code> (it can have paise, so allow decimals) and <code>Friends: </code> (a whole number). Print exactly the two lines shown. Blank editor.</>,
+    minLines: 8,
+    tests: [
+      { inputs: ["900", "3"], expect: "Total bill: 900\nFriends: 3\nBill of Rs 900.0 split 3 ways\nEach pays: Rs 300.0" },
+      { inputs: ["1000", "4"], expect: "Total bill: 1000\nFriends: 4\nBill of Rs 1000.0 split 4 ways\nEach pays: Rs 250.0", hidden: true },
+    ],
+    requires: [{ call: "float", msg: "The bill can have decimals — use float( )." }, { call: "int", msg: "Friends is a whole number — use int( )." }],
+    forbids: [{ text: "300", msg: "Let Python divide." }],
+    hints: ["Two inputs, each converted. Then one division.", "Notice 900.0 in the output — that's what float( ) gives you.", 'share = bill / friends'],
+    solution: 'bill = float(input("Total bill: "))\nfriends = int(input("Friends: "))\nshare = bill / friends\nprint("Bill of Rs", bill, "split", friends, "ways")\nprint("Each pays: Rs", share)',
+  },
+};
+
+export const EXERCISES = EX; // for src/kit/selfTest.js
+
+const QUIZ = [
+  { q: "The user types 18 at an input() prompt. What does input() give your program?", options: ["The number 18", "The text \"18\"", "It depends on what was typed", "18.0"], answer: 1,
+    explain: "input() always returns a str — even when every character is a digit." },
+  { q: "What does this print if the user types 5 and then 5?", code: 'a = input()\nb = input()\nprint(a + b)', options: ["10", "55", "TypeError", "5 5"], answer: 1,
+    explain: "Text + text joins: \"5\" + \"5\" is \"55\". No error — which is what makes it dangerous." },
+  { q: "What does int(3.9) give?", options: ["4", "3", "3.9", "ValueError"], answer: 1,
+    explain: "int() cuts off the decimal part. It does not round. (Rounding is round(), in Unit 4.4.)" },
+  { q: "What does int(\"3.9\") give?", options: ["3", "4", "ValueError", "3.9"], answer: 2,
+    explain: "From text, int() only accepts a whole number like \"25\". For \"3.9\" use float()." },
+  { q: "Why does this crash?", code: 'age = 18\nprint("Age: " + age)', options: ["age must be in quotes", "+ can't join text and a number", "print can't show numbers", "age is a keyword"], answer: 1,
+    explain: "Use str(age) to turn it into text, or use a comma: print(\"Age:\", age)." },
+  { q: "What does float(\"25\") give?", options: ["25", "25.0", "\"25.0\"", "ValueError"], answer: 1,
+    explain: "float() accepts whole numbers too and returns a decimal: 25.0." },
+  { q: "Which is the usual order in an input program?", options: ["print → input → convert → compute", "input → convert → compute → print", "convert → input → print → compute", "compute → input → convert → print"], answer: 1,
+    explain: "Get the text, convert it to the right type, compute, then show the result." },
+];
+
+export default function Unit4_3(props) {
   const sections = [
-    { id: "basics", label: "Getting Input" },
-    { id: "trap", label: "The str + int Trap" },
-    { id: "cast", label: "Type Casting" },
-    { id: "build", label: "Build It" },
-    { id: "quiz", label: "Quiz & Wrap-up" },
+    {
+      label: "input()", kicker: "YOUR PROGRAM ASKS", title: "input() — let the user type",
+      blocks: [
+        <P><code>input("question ")</code> shows the question, waits for the user to type and press Enter, then hands the typed text to your program. Type into the prompt below:</P>,
+        <InputBasics />,
+        <Note color={T.blue} icon="💡">In these exercises the tests do the typing for you. The expected output shows the whole conversation: the question, the typed answer, then what your program prints.</Note>,
+        EX.hello,
+        EX.meet,
+      ],
+    },
+    {
+      label: "Everything Is Text", kicker: "THE TRAP", title: "input() always gives you text",
+      blocks: [
+        <P>Whatever the user types — even <code>18</code> — arrives as a <code>str</code>. Use it in maths and one of two things happens. Sometimes Python crashes. Worse, sometimes it doesn't:</P>,
+        <PlusTwoWays />,
+        <P>Now fix both kinds for real — the crash first, then the silent one.</P>,
+        EX.crash,
+        EX.silent,
+        <KeyIdea>Numbers from input() must be converted before maths. The crash is the lucky case; the silent <code>"40" + "35" = "4035"</code> is the bug that reaches your exam.</KeyIdea>,
+      ],
+    },
+    {
+      label: "int · float · str", kicker: "CONVERSION", title: "Three converters",
+      blocks: [
+        <P>Python has a converter for each basic type. Click each one:</P>,
+        <Converters />,
+        EX.convert,
+        EX.seats,
+        EX.petrol,
+        <KeyIdea>Whole things you count (seats, age, marks) → <code>int()</code>. Things that can have a decimal (money, CGPA, litres) → <code>float()</code>. Turning a number into text → <code>str()</code>.</KeyIdea>,
+      ],
+    },
+    {
+      label: "When It Fails", kicker: "ValueError & TypeError", title: "When conversion goes wrong",
+      blocks: [
+        <P>Converters have rules. <code>int("8.5")</code> fails with <code>ValueError</code>, because the text isn't a whole number. And <code>"text" + number</code> fails with <code>TypeError</code>. Read each error, then fix it.</P>,
+        EX.cgpa,
+        EX.glue,
+        <KeyIdea><code>ValueError</code>: the type is right but the content can't be converted. <code>TypeError</code>: two types that can't be combined. The coach tells you which one you hit.</KeyIdea>,
+      ],
+    },
+    {
+      label: "Make It", kicker: "PUT IT TOGETHER", title: "Your program: split the bill",
+      blocks: [
+        <P>Two inputs, two different converters, one calculation. The shape of almost every useful program: <strong>input → convert → compute → print</strong>.</P>,
+        EX.split,
+      ],
+    },
   ];
-
-  const [activeSection, setActiveSection] = useState(0);
-  const [completed, setCompleted] = useState([]);
-
-  const markComplete = (idx) => { if (!completed.includes(idx)) setCompleted((p) => [...p, idx]); };
-  const goNext = () => { markComplete(activeSection); setActiveSection((s) => Math.min(sections.length - 1, s + 1)); };
-
-  const content = [
-    // 0 — input() basics, always returns str
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Getting Input From the User</h3>
-      <InputBasics />
-    </div>,
-
-    // 1 — the str + int trap, reproducing the real TypeError
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>The str + int Trap</h3>
-      <StrIntTrap />
-    </div>,
-
-    // 2 — casting functions reference
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Type Casting: int(), float(), str()</h3>
-      <CastPipeline />
-    </div>,
-
-    // 3 — capstone mini-program tying it all together
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Build It: Age Next Year</h3>
-      <BuildAProgram />
-    </div>,
-
-    // 4 — Quiz. onComplete marks this section done AND calls onUnitComplete,
-    // which is the single line that actually persists Unit 4.3's completion.
-    <div>
-      <h3 style={{ color: C.text, marginBottom: 6 }}>Quick Quiz</h3>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>
-        5 questions to check your understanding of Unit 4.3.
-      </p>
-      <Quiz onComplete={() => { markComplete(4); onUnitComplete && onUnitComplete(); }} />
-    </div>,
-  ];
-
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.accentGlow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🐍</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.muted, letterSpacing: 1 }}>MODULE 4 › UNIT 4.3</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Input & Type Conversion</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{completed.length} / {sections.length} done</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(completed.length / sections.length) * 100}%`, background: C.green, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => setActiveSection(i)} style={{
-              flex: 1, minWidth: 80, padding: "8px 6px", borderRadius: 7,
-              background: activeSection === i ? C.accentGlow : "transparent",
-              border: "none", color: activeSection === i ? "#fff" : C.muted,
-              cursor: "pointer", fontSize: 11, fontWeight: activeSection === i ? 600 : 400,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              transition: "all 0.2s",
-            }}>
-              {completed.includes(i) && <span style={{ color: C.green }}>✓</span>}
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {content[activeSection]}
-        </div>
-
-        {activeSection < sections.length - 1 && (
-          <button onClick={goNext} style={{
-            marginTop: 16, width: "100%", padding: "12px", borderRadius: 8,
-            background: C.accentGlow, border: "none", color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: "pointer",
-          }}>Mark Complete & Continue →</button>
-        )}
-      </div>
-    </div>
+    <LessonShell
+      {...props}
+      unitId="Unit4_3"
+      crumb="MODULE 4 › UNIT 4.3"
+      title="Input & Type Conversion"
+      sections={sections}
+      quiz={QUIZ}
+      next={{ title: "Unit 4.4 — Operators & Expressions", text: "// and % start earning their keep, plus rounding, shortcuts like +=, and your first import." }}
+    />
   );
 }

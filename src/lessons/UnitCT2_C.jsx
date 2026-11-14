@@ -1,673 +1,80 @@
-// UnitCT2_C — 🔥 The Crucible: Computational Thinking II (algorithms on data)
-// Drills scanning, searching, sorting and string algorithms. Temper asks the
-// student to WRITE a straight-line conditional accumulator; hidden tests set the
-// list before their code and check the printed count.
-import { useState, useRef } from "react";
+// UnitCT2_C — The Crucible: Computational Thinking II (rebuilt, typing-first)
+// Lists, no functions (CT II comes before Module 8). Spark: trace bubble sort
+// pass by pass; trace binary search. Flame: selection sort comparing with the
+// wrong item; duplicates reported more than once. Forge: merge two sorted
+// lists. Temper: run-length encoding, algorithm first as # comments.
 
-const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+import CrucibleShell from "../kit/Crucible.jsx";
+
+const comments = (min) => ({ text: "#", min, msg: `Write your algorithm first, as at least ${min} # comment lines.` });
+function rle(text) {
+  let enc = "", best = "", bestN = 0, i = 0;
+  while (i < text.length) { let j = i; while (j < text.length && text[j] === text[i]) j++; enc += text[i] + (j - i); if (j - i > bestN) { bestN = j - i; best = text[i]; } i = j; }
+  return `Text: ${text}\nEncoded: ${enc}\nLongest run: ${best} (${bestN})`;
+}
+const rleTest = (t, extra = {}) => ({ inputs: [t], expect: rle(t), ...extra });
+const readNums = 'nums = []\nfor x in input("Numbers: ").split():\n    nums.append(int(x))\n';
+
+const EX = {
+  spark1: {
+    id: "spark1", kind: "predict", title: "Bubble sort, pass by pass",
+    code: 'data = [5, 1, 4, 2]\nfor p in range(len(data) - 1):\n    swapped = False\n    for i in range(len(data) - 1 - p):\n        if data[i] > data[i + 1]:\n            data[i], data[i + 1] = data[i + 1], data[i]\n            swapped = True\n    print(p + 1, data)\n    if not swapped:\n        break',
+    task: <>Each pass walks along the list swapping neighbours that are out of order. Print the list after every pass.</>,
+    hints: ["Pass 1 carries the 5 all the way to the end.", "Each pass looks at one fewer pair (len - 1 - p).", "Pass 3 makes no swap — it still prints, then breaks."],
+    solution: "1 [1, 4, 2, 5]\n2 [1, 2, 4, 5]\n3 [1, 2, 4, 5]",
+  },
+  spark2: {
+    id: "spark2", kind: "predict", title: "Binary search, step by step",
+    code: 'data = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]\ntarget = 23\nlow = 0\nhigh = len(data) - 1\nwhile low <= high:\n    mid = (low + high) // 2\n    print(low, high, mid, data[mid])\n    if data[mid] == target:\n        print("found at", mid)\n        break\n    elif data[mid] < target:\n        low = mid + 1\n    else:\n        high = mid - 1',
+    task: <>Track <code>low</code>, <code>high</code> and <code>mid</code>. Positions count from 0.</>,
+    hints: ["mid = (0 + 9) // 2 = 4, and data[4] is 16.", "16 < 23, so the answer is to the right: low = mid + 1."],
+    solution: "0 9 4 16\n5 9 7 56\n5 6 5 23\nfound at 5",
+  },
+  selection: {
+    id: "selection", kind: "fix", title: "Selection sort that doesn't select",
+    task: <>Selection sort: for each position, find the smallest of the remaining items and swap it in. This version compares with the wrong item. Fix it (no <code>sort</code> / <code>sorted</code>).</>,
+    starter: readNums + 'for i in range(len(nums)):\n    smallest = i\n    for j in range(i + 1, len(nums)):\n        if nums[j] < nums[i]:\n            smallest = j\n    nums[i], nums[smallest] = nums[smallest], nums[i]\nprint(nums)',
+    tests: [{ inputs: ["4 3 1 2"], expect: "Numbers: 4 3 1 2\n[1, 2, 3, 4]" }, { inputs: ["9 7 8 1 5"], expect: "Numbers: 9 7 8 1 5\n[1, 5, 7, 8, 9]", hidden: true }, { inputs: ["3"], expect: "Numbers: 3\n[3]", hidden: true }],
+    forbids: [{ call: "sort" }, { call: "sorted" }, { call: "min" }],
+    hints: ["smallest is the position of the best so far. Compare each new item with THAT item.", "if nums[j] < nums[smallest]:"],
+    solution: readNums + 'for i in range(len(nums)):\n    smallest = i\n    for j in range(i + 1, len(nums)):\n        if nums[j] < nums[smallest]:\n            smallest = j\n    nums[i], nums[smallest] = nums[smallest], nums[i]\nprint(nums)',
+  },
+  dups: {
+    id: "dups", kind: "fix", title: "Duplicates, once each",
+    task: <>Report each repeated value <strong>once</strong>, in the order it first repeats. For <code>4 7 4 9 4 7</code> that's <code>[4, 7]</code> — this prints 4 twice. Fix it; a set makes the "have I seen it?" check fast.</>,
+    starter: readNums + 'seen = []\ndups = []\nfor n in nums:\n    if n in seen:\n        dups.append(n)\n    seen.append(n)\nprint("Duplicates:", dups)',
+    tests: [{ inputs: ["4 7 4 9 4 7"], expect: "Numbers: 4 7 4 9 4 7\nDuplicates: [4, 7]" }, { inputs: ["1 2 3"], expect: "Numbers: 1 2 3\nDuplicates: []", hidden: true }, { inputs: ["5 5 5 5"], expect: "Numbers: 5 5 5 5\nDuplicates: [5]", hidden: true }],
+    hints: ["Before appending to dups, check it isn't already there.", "if n in seen and n not in dups:"],
+    solution: readNums + 'seen = set()\ndups = []\nfor n in nums:\n    if n in seen and n not in dups:\n        dups.append(n)\n    seen.add(n)\nprint("Duplicates:", dups)',
+  },
+  merge: {
+    id: "merge", kind: "complete", title: "Merge two sorted lists",
+    task: <>Two lists, each already sorted. Walk both with two positions <code>i</code> and <code>j</code>, always taking the smaller front item; when one runs out, add what's left of the other. This is the heart of merge sort. Fill the blanks.</>,
+    starter: 'a = []\nfor x in input("List A: ").split():\n    a.append(int(x))\nb = []\nfor x in input("List B: ").split():\n    b.append(int(x))\nmerged = []\ni = 0\nj = 0\nwhile i < len(a) and j < len(b):\n    if a[i] <= b[j]:\n        merged.append(a[i])\n        i += 1\n    else:\n        merged.append(___)\n        j += ___\nmerged += a[___:]\nmerged += b[___:]\nprint(merged)',
+    tests: [{ inputs: ["1 4 9", "2 3 10 12"], expect: "List A: 1 4 9\nList B: 2 3 10 12\n[1, 2, 3, 4, 9, 10, 12]" }, { inputs: ["5", "1 2 3"], expect: "List A: 5\nList B: 1 2 3\n[1, 2, 3, 5]", hidden: true }, { inputs: ["2 2", "2"], expect: "List A: 2 2\nList B: 2\n[2, 2, 2]", hidden: true }],
+    forbids: [{ call: "sort" }, { call: "sorted" }],
+    hints: ["merged.append(b[j]) and j += 1", "What's left of a starts at position i: a[i:]"],
+    solution: 'a = []\nfor x in input("List A: ").split():\n    a.append(int(x))\nb = []\nfor x in input("List B: ").split():\n    b.append(int(x))\nmerged = []\ni = 0\nj = 0\nwhile i < len(a) and j < len(b):\n    if a[i] <= b[j]:\n        merged.append(a[i])\n        i += 1\n    else:\n        merged.append(b[j])\n        j += 1\nmerged += a[i:]\nmerged += b[j:]\nprint(merged)',
+  },
+  rle: {
+    id: "rle", kind: "make", title: "Run-length encoding",
+    task: <>Compress text by writing each run of the same letter as the letter and its length: <code>aaabccdddd</code> → <code>a3b1c2d4</code>. Ask <code>Text: </code>, print <code>Encoded: a3b1c2d4</code> and <code>Longest run: d (4)</code> (the first one if there's a tie). Write the algorithm first as <code>#</code> comments.</>,
+    minLines: 14,
+    tests: [rleTest("aaabccdddd"), rleTest("x", { hidden: true }), rleTest("aabbb", { hidden: true }), rleTest("abab", { hidden: true, why: "A letter can come back later as a new run: a1b1a1b1." }), rleTest("zzzzyyyy", { hidden: true, why: "A tie: the first longest run wins — use >, not >=." })],
+    requires: [comments(3), { node: "While" }],
+    hints: ["Keep a position i. From i, move j forward while text[j] is the same letter; the run length is j - i.", "Add text[i] + str(j - i) to the result, then jump: i = j.", "Track the longest run with > so the first one wins ties."],
+    solution: '# start at the first letter\n# move forward while the letter repeats; the run length is how far we moved\n# write the letter and the length, then continue from the next new letter\n# remember the longest run seen so far\ntext = input("Text: ")\nencoded = ""\nbest_letter = ""\nbest_len = 0\ni = 0\nwhile i < len(text):\n    j = i\n    while j < len(text) and text[j] == text[i]:\n        j += 1\n    encoded += text[i] + str(j - i)\n    if j - i > best_len:\n        best_len = j - i\n        best_letter = text[i]\n    i = j\nprint("Encoded:", encoded)\nprint(f"Longest run: {best_letter} ({best_len})")',
+  },
 };
 
-const UNIT_ID = "UnitCT2_C";
-const STAGES = [
-  { id: "spark", label: "Spark", icon: "✨", tag: "Predict, Trace & Spot" },
-  { id: "flame", label: "Flame", icon: "🔥", tag: "Data-Algorithm Bugs" },
-  { id: "forge", label: "Forge", icon: "⚒️", tag: "Assemble the Search" },
-  { id: "temper", label: "Temper", icon: "🗡️", tag: "Write Real Python" },
+export const EXERCISES = EX; // for src/kit/selfTest.js
+
+const QUIZ = [
+  { q: "Binary search on 1,000,000 sorted items needs at most about…", options: ["1,000,000 checks", "500,000 checks", "20 checks", "1 check"], answer: 2, explain: "Halving each time: 2²⁰ ≈ 1,000,000." },
+  { q: "Bubble sort can stop early when…", options: ["The first item is smallest", "A whole pass makes no swaps", "Half the passes are done", "Never"], answer: 1, explain: "No swaps means everything is already in order." },
+  { q: "Why use a set for 'have I seen this?'", options: ["Sets keep order", "Checking x in a set is fast however big it gets", "Sets allow repeats", "Lists can't use in"], answer: 1, explain: "in on a list checks item by item; a set jumps straight there." },
 ];
 
-const mono = { fontFamily: "monospace", fontSize: 12.5, color: C.text, margin: 0, lineHeight: 1.8, whiteSpace: "pre-wrap" };
-
-// Display order for a question's options. A fixed shuffle seeded by the question's
-// own text, so the right answer is not always first, yet the order never jumps
-// between renders or between visits.
-function optionOrder(n, seedText) {
-  let h = 2166136261;
-  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619) >>> 0;
-  const idx = [...Array(n).keys()];
-  for (let i = n - 1; i > 0; i--) {
-    h = Math.imul(h ^ (h >>> 13), 1597334677) >>> 0;
-    const j = h % (i + 1);
-    [idx[i], idx[j]] = [idx[j], idx[i]];
-  }
-  return idx;
-}
-
-function Hints({ hints, shown, onMore }) {
-  return (
-    <div style={{ marginTop: 10 }}>
-      {hints.slice(0, shown).map((h, i) => (
-        <div key={i} style={{ background: C.yellow + "14", border: `1px solid ${C.yellow}44`, borderRadius: 8, padding: "8px 12px", fontSize: 12.5, color: C.muted, lineHeight: 1.6, marginBottom: 6 }}>
-          💡 Hint {i + 1}: {h}
-        </div>
-      ))}
-      {shown < hints.length && (
-        <button onClick={onMore} style={{
-          padding: "6px 12px", borderRadius: 7, fontSize: 12, cursor: "pointer",
-          background: C.card, color: C.yellow, border: `1px solid ${C.yellow}55`,
-        }}>💡 Need a nudge? ({shown}/{hints.length} hints used)</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 1: Spark ──
-function SparkStage({ onPass }) {
-  const questions = [
-    {
-      kind: "mcq",
-      code: "data = [4, 9, 2, 7]\nbiggest = data[0]\nfor m in data:\n    if m > biggest:\n        biggest = m\nprint(biggest)",
-      options: ["4", "7", "9", "2"],
-      answer: 2,
-      hints: ["Seed biggest = 4, then keep whatever is larger.", "The largest value in the list is..."],
-      why: "Best-so-far starts at 4, gets beaten by 9, and 9 is never beaten. Prints 9.",
-    },
-    {
-      kind: "trace",
-      code: 'word = "banana"\nvowels = "aeiou"\nc = 0\nfor ch in word:\n    if ch in vowels:\n        c = c + 1\nprint(c)',
-      expect: "3",
-      prompt: 'Count the vowels the loop tallies for "banana". Type the number.',
-      hints: ['Only a, e, i, o, u count. Look at b-a-n-a-n-a.', "There are three a's and nothing else that's a vowel."],
-      why: '"banana" has three a\'s (all vowels) and no other vowels, so the conditional accumulator reaches 3.',
-    },
-    {
-      kind: "lie",
-      code: "# binary search on a list called data",
-      claims: [
-        "Binary search needs the list to be sorted.",
-        "Binary search halves the remaining range each step.",
-        "Binary search works on unsorted lists too.",
-      ],
-      lieIndex: 2,
-      hints: ["What does binary search assume when it discards a whole half?", "If the data isn't ordered, 'the target must be in the right half' is no longer true."],
-      why: "Claims 1 and 2 are true. The lie: on an unsorted list, discarding a half is invalid — binary search can miss the target entirely. It requires sorted data.",
-    },
-  ];
-  const [solved, setSolved] = useState([]);
-  const [picked, setPicked] = useState({});
-  const [typed, setTyped] = useState({});
-  const [typedWrong, setTypedWrong] = useState({});
-  const [hintCount, setHintCount] = useState({});
-
-  const bumpHint = (qi) =>
-    setHintCount((h) => ({ ...h, [qi]: Math.min((h[qi] || 0) + 1, questions[qi].hints.length) }));
-
-  const pick = (qi, oi) => {
-    if (solved.includes(qi)) return;
-    const q = questions[qi];
-    const correct = q.kind === "lie" ? oi === q.lieIndex : oi === q.answer;
-    if (correct) { setSolved((s) => [...s, qi]); setPicked((p) => ({ ...p, [qi]: null })); }
-    else { setPicked((p) => ({ ...p, [qi]: oi })); bumpHint(qi); }
-  };
-
-  const checkTyped = (qi) => {
-    if (solved.includes(qi)) return;
-    if ((typed[qi] || "").trim() === questions[qi].expect) { setSolved((s) => [...s, qi]); setTypedWrong((w) => ({ ...w, [qi]: false })); }
-    else { setTypedWrong((w) => ({ ...w, [qi]: true })); bumpHint(qi); }
-  };
-
-  const allDone = solved.length === questions.length;
-  const tagFor = (q) => (q.kind === "trace" ? " · TRACE IT" : q.kind === "lie" ? " · SPOT THE LIE" : "");
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Warm up: predict a best-so-far scan, trace a vowel count, and spot the false claim about binary search. ✨
-      </p>
-
-      {questions.map((q, qi) => {
-        const isSolved = solved.includes(qi);
-        return (
-          <div key={qi} style={{ background: C.card, border: `1.5px solid ${isSolved ? C.green : C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ color: C.orange, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>CHALLENGE {qi + 1} OF 3{tagFor(q)}</span>
-              {isSolved && <span style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>✓ solved</span>}
-            </div>
-            <pre style={{ ...mono, background: C.surface, borderRadius: 8, padding: 12, border: `1px solid ${C.border}`, marginBottom: 10 }}>{q.code}</pre>
-
-            {q.kind === "mcq" && (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {optionOrder(q.options.length, q.code).map((oi) => {
-                  const opt = q.options[oi];
-                  let bg = C.surface, border = C.border, col = C.text;
-                  if (isSolved && oi === q.answer) { bg = C.green + "22"; border = C.green; col = C.green; }
-                  else if (picked[qi] === oi) { bg = C.red + "22"; border = C.red; col = C.red; }
-                  return (
-                    <button key={oi} onClick={() => pick(qi, oi)} style={{
-                      padding: "8px 16px", borderRadius: 8, fontFamily: "monospace", fontSize: 12.5,
-                      background: bg, border: `1.5px solid ${border}`, color: col, textAlign: "left",
-                      cursor: isSolved ? "default" : "pointer", transition: "all 0.2s",
-                    }}>{opt}</button>
-                  );
-                })}
-              </div>
-            )}
-
-            {q.kind === "lie" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {optionOrder(q.claims.length, q.code).map((oi) => {
-                  const cl = q.claims[oi];
-                  let bg = C.surface, border = C.border, col = C.text;
-                  if (isSolved && oi === q.lieIndex) { bg = C.red + "18"; border = C.red; col = C.red; }
-                  else if (isSolved) { bg = C.green + "10"; border = C.green + "55"; col = C.muted; }
-                  else if (picked[qi] === oi) { bg = C.yellow + "14"; border = C.yellow; col = C.yellow; }
-                  return (
-                    <button key={oi} onClick={() => pick(qi, oi)} style={{
-                      textAlign: "left", padding: "9px 14px", borderRadius: 8, fontSize: 13, lineHeight: 1.5,
-                      background: bg, border: `1.5px solid ${border}`, color: col,
-                      cursor: isSolved ? "default" : "pointer",
-                    }}>{isSolved && oi === q.lieIndex ? "🤥 " : isSolved ? "✓ " : ""}{cl}</button>
-                  );
-                })}
-              </div>
-            )}
-
-            {q.kind === "trace" && (
-              <div>
-                <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8 }}>{q.prompt}</div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input value={typed[qi] || ""} onChange={(e) => setTyped((t) => ({ ...t, [qi]: e.target.value }))}
-                    onKeyDown={(e) => e.key === "Enter" && checkTyped(qi)} disabled={isSolved} spellCheck={false}
-                    style={{ width: 120, padding: "8px 12px", borderRadius: 8, fontFamily: "monospace", fontSize: 14, background: "#010409", color: isSolved ? C.green : C.text, outline: "none", border: `1.5px solid ${isSolved ? C.green : typedWrong[qi] ? C.red : C.border}` }} />
-                  {!isSolved && (
-                    <button onClick={() => checkTyped(qi)} style={{ padding: "8px 18px", borderRadius: 8, background: C.accentGlow, border: "none", color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Check</button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {isSolved
-              ? <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: C.green + "12", border: `1px solid ${C.green}44`, fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>✓ {q.why}</div>
-              : (hintCount[qi] || 0) > 0 && <Hints hints={q.hints} shown={hintCount[qi] || 0} onMore={() => bumpHint(qi)} />}
-          </div>
-        );
-      })}
-
-      {allDone && (
-        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>✨ Spark caught! Light the Flame →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 2: Flame ──
-function FlameStage({ onPass }) {
-  const bugs = [
-    {
-      intro: "This should print the largest value (-2) but prints 0. Click the buggy line.",
-      lines: ["data = [-5, -2, -9]", "biggest = 0", "for m in data:", "    if m > biggest:", "        biggest = m", "print(biggest)"],
-      buggyLine: 1,
-      lineHints: {
-        0: "The list is fine — all negative, which is exactly the trap.",
-        2: "Looping over the data is correct.",
-        3: "The comparison m > biggest is right for a maximum.",
-        4: "Updating biggest is correct.",
-        5: "The print is fine — the seed value is the problem.",
-      },
-      fixes: ["biggest = data[0]", "biggest = 0.0", "biggest = len(data)"],
-      fixAnswer: 0,
-      fixHints: ["Seeding at 0 assumes some value beats 0 — but every mark here is below 0.", "Start from an actual member of the list, data[0], and it's always beatable-or-correct."],
-      why: "biggest = 0 is never beaten by negative numbers, so 0 is falsely reported. Seed with data[0] and the scan works for any values.",
-    },
-    {
-      intro: "This should swap the two values to [2, 5], but prints [2, 2]. Click the buggy line.",
-      lines: ["data = [5, 2]", "data[0] = data[1]", "data[1] = data[0]", "print(data)"],
-      buggyLine: 1,
-      lineHints: {
-        0: "The starting list is fine.",
-        2: "By the time this runs, data[0] has already been overwritten — the damage was done above.",
-        3: "The print just shows the wrecked list.",
-      },
-      fixes: ["Save data[0] in a temp variable first", "Swap the order of the two assignments", "Write data[1] = data[0] on both lines"],
-      fixAnswer: 0,
-      fixHints: ["data[0] = data[1] destroys the old 5 before line 3 can rescue it.", "temp = data[0] first preserves 5; then data[0] = data[1]; data[1] = temp."],
-      why: "Overwriting data[0] loses the 5, so both slots end up 2. A swap needs a temp to hold the first value before it's clobbered.",
-    },
-  ];
-  const [cur, setCur] = useState(0);
-  const [foundLine, setFoundLine] = useState(false);
-  const [wrongLine, setWrongLine] = useState(null);
-  const [fixPicked, setFixPicked] = useState(null);
-  const [fixedCount, setFixedCount] = useState(0);
-  const [hintCount, setHintCount] = useState(0);
-  const b = bugs[cur];
-  const solvedThis = fixPicked === b.fixAnswer;
-
-  const clickLine = (i) => {
-    if (foundLine) return;
-    if (i === b.buggyLine) { setFoundLine(true); setWrongLine(null); } else setWrongLine(i);
-  };
-  const pickFix = (i) => { if (solvedThis) return; setFixPicked(i); if (i !== b.fixAnswer) setHintCount((h) => Math.min(h + 1, b.fixHints.length)); };
-  const nextBug = () => {
-    setFixedCount((n) => n + 1);
-    if (cur < bugs.length - 1) { setCur(cur + 1); setFoundLine(false); setWrongLine(null); setFixPicked(null); setHintCount(0); }
-  };
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Two classic data bugs: seeding a maximum with 0, and swapping without a temp. Bug
-        {" "}{Math.min(fixedCount + 1, bugs.length)} of {bugs.length}. 🔥
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
-        <div style={{ color: C.orange, fontSize: 12, fontWeight: 600, marginBottom: 10, lineHeight: 1.6 }}>{b.intro}</div>
-        <div style={{ background: C.surface, borderRadius: 8, border: `1px solid ${C.border}`, padding: 8 }}>
-          {b.lines.map((l, i) => {
-            let border = "transparent", bg = "transparent";
-            if (foundLine && i === b.buggyLine) { border = C.green; bg = C.green + "18"; }
-            else if (wrongLine === i) { border = C.red; bg = C.red + "12"; }
-            return (
-              <div key={i} onClick={() => clickLine(i)} style={{
-                fontFamily: "monospace", fontSize: 12.5, lineHeight: 2, padding: "2px 10px",
-                borderRadius: 6, cursor: foundLine ? "default" : "pointer",
-                borderLeft: `3px solid ${border}`, background: bg, color: C.text, whiteSpace: "pre",
-              }}>{i + 1}  {l}</div>
-            );
-          })}
-        </div>
-        {wrongLine !== null && !foundLine && (
-          <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: C.yellow + "14", border: `1px solid ${C.yellow}44`, fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
-            💡 {b.lineHints[wrongLine] || "Not that one — keep hunting!"}
-          </div>
-        )}
-
-        {foundLine && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ color: C.green, fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>✓ Bug located! Now pick the fix:</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {optionOrder(b.fixes.length, b.intro).map((i) => {
-                const f = b.fixes[i];
-                let bg = C.surface, border = C.border, col = C.text;
-                if (solvedThis && i === b.fixAnswer) { bg = C.green + "22"; border = C.green; col = C.green; }
-                else if (fixPicked === i && i !== b.fixAnswer) { bg = C.red + "22"; border = C.red; col = C.red; }
-                return (
-                  <button key={i} onClick={() => pickFix(i)} style={{
-                    textAlign: "left", padding: "9px 14px", borderRadius: 8, fontFamily: "monospace", fontSize: 12.5,
-                    background: bg, border: `1.5px solid ${border}`, color: col, cursor: solvedThis ? "default" : "pointer",
-                  }}>{f}</button>
-                );
-              })}
-            </div>
-            {!solvedThis && hintCount > 0 && (
-              <Hints hints={b.fixHints} shown={hintCount} onMore={() => setHintCount((h) => Math.min(h + 1, b.fixHints.length))} />
-            )}
-            {solvedThis && (
-              <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: C.green + "12", border: `1px solid ${C.green}44`, fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>✓ {b.why}</div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {solvedThis && cur < bugs.length - 1 && (
-        <button onClick={nextBug} style={{ padding: "10px 24px", borderRadius: 8, background: C.accentGlow, border: "none", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Next bug →</button>
-      )}
-      {solvedThis && cur === bugs.length - 1 && (
-        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>🔥 Both bugs extinguished! To the Forge →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 3: Forge — assemble a linear search ──
-function ForgeStage({ onPass }) {
-  const target = [
-    { code: "target = 7", defines: "target_set", needs: [] },
-    { code: "found = -1", defines: "found_set", needs: [] },
-    { code: "for i in range(len(data)):", defines: "loop", needs: ["target_set", "found_set"] },
-    { code: "    if data[i] == target:", defines: "if_open", needs: ["loop"] },
-    { code: "        found = i", defines: "assign", needs: ["if_open"] },
-    { code: "        break", defines: "brk", needs: ["assign"] },
-    { code: "print(found)", defines: null, needs: ["brk"] },
-  ];
-  const MSG = {
-    target_set: "you're searching for target — set what you're looking for first",
-    found_set: "found is the 'not seen yet' sentinel (-1); create it before the loop can set it",
-    loop: "these indented lines are the loop body — the for header must open above them",
-    if_open: "found = i and break only make sense inside the if that matched — open it first",
-    assign: "you can't break out on a match before recording the match with found = i",
-    brk: "print the result after the loop, once break has stopped the search",
-  };
-  const shuffled = [4, 0, 6, 2, 5, 1, 3];
-  const [order, setOrder] = useState(shuffled);
-  const [verdict, setVerdict] = useState(null);
-  const [solved, setSolved] = useState(false);
-
-  const move = (idx, dir) => {
-    if (solved) return;
-    const j = idx + dir;
-    if (j < 0 || j >= order.length) return;
-    const next = [...order];
-    [next[idx], next[j]] = [next[j], next[idx]];
-    setOrder(next); setVerdict(null);
-  };
-
-  const check = () => {
-    const defined = new Set();
-    for (const li of order) {
-      const line = target[li];
-      const missing = line.needs.find((n) => !defined.has(n));
-      if (missing) { setVerdict({ ok: false, msg: `“${line.code.trim()}” can't go there — ${MSG[missing]}.` }); return; }
-      if (line.defines) defined.add(line.defines);
-    }
-    setVerdict({ ok: true, msg: "set target → seed found = -1 → scan → on a match record the index and break → print it. A linear search, forged." });
-    setSolved(true);
-  };
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-        Assemble a linear search that finds the index of <code style={{ color: C.teal }}>target</code> in{" "}
-        <code style={{ color: C.teal }}>data</code>, or leaves -1 if absent. Use ↑↓. Body lines belong under
-        their header. ⚒️
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
-        {order.map((li, idx) => (
-          <div key={li} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", borderRadius: 8, background: solved ? C.green + "10" : C.surface, border: `1px solid ${solved ? C.green + "55" : C.border}`, marginBottom: 6 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <button onClick={() => move(idx, -1)} disabled={solved || idx === 0} style={{ border: "none", background: "transparent", color: idx === 0 ? C.border : C.orange, cursor: idx === 0 || solved ? "default" : "pointer", fontSize: 12, lineHeight: 1, padding: 2 }}>▲</button>
-              <button onClick={() => move(idx, 1)} disabled={solved || idx === order.length - 1} style={{ border: "none", background: "transparent", color: idx === order.length - 1 ? C.border : C.orange, cursor: idx === order.length - 1 || solved ? "default" : "pointer", fontSize: 12, lineHeight: 1, padding: 2 }}>▼</button>
-            </div>
-            <pre style={{ ...mono, fontSize: 12.5 }}>{target[li].code}</pre>
-          </div>
-        ))}
-      </div>
-
-      {!solved && (
-        <button onClick={check} style={{ padding: "10px 24px", borderRadius: 8, background: C.accentGlow, border: "none", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>⚒️ Strike! (check my order)</button>
-      )}
-
-      {verdict && (
-        <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, fontSize: 12.5, lineHeight: 1.6, background: verdict.ok ? C.green + "14" : C.yellow + "14", border: `1px solid ${verdict.ok ? C.green : C.yellow}44`, color: verdict.ok ? C.green : C.muted }}>
-          {verdict.ok ? "✓ " : "💡 "}{verdict.msg}
-        </div>
-      )}
-
-      {solved && (
-        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>⚒️ Forged! Now temper the blade →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Stage 4: Temper — write a conditional accumulator over a list ──
-function TemperStage({ onPass }) {
-  const TESTS = [
-    { pre: "marks = [45, 67, 89, 12]\n", post: "", expect: "2", label: "[45,67,89,12] → 2 pass" },
-    { pre: "marks = [100, 100, 100]\n", post: "", expect: "3", label: "hidden: all pass → 3" },
-    { pre: "marks = [10, 20, 30]\n", post: "", expect: "0", label: "hidden: none pass → 0" },
-  ];
-  const [code, setCode] = useState("# marks is already set for you.\n# print how many are >= 50.\n");
-  const [status, setStatus] = useState("idle");
-  const [message, setMessage] = useState("");
-  const [hintCount, setHintCount] = useState(0);
-  const pyRef = useRef(null);
-  const hints = [
-    "Start count = 0 before the loop. Then walk the list.",
-    "for m in marks: if m >= 50: count = count + 1 — then print(count). If none pass, count stays 0.",
-  ];
-
-  async function getPyodide() {
-    if (pyRef.current) return pyRef.current;
-    if (window.__crucible_pyodide) { pyRef.current = window.__crucible_pyodide; return pyRef.current; }
-    if (!window.loadPyodide) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
-        s.onload = resolve; s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-    const py = await window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
-    window.__crucible_pyodide = py; pyRef.current = py;
-    return py;
-  }
-
-  async function run() {
-    setStatus("loading");
-    setMessage("Heating the forge… (first run downloads real Python, ~6 MB — be patient!)");
-    let py;
-    try { py = await getPyodide(); }
-    catch { setStatus("fallback"); setMessage("Couldn't load the Python engine (slow connection?). No problem — pass the fallback puzzle below instead."); return; }
-    setStatus("running"); setMessage("Running your code against the tests…");
-    // The hidden tests supply `marks` themselves (a different list each time).
-    // If the learner also writes `marks = [...]`, their line runs after ours and
-    // clobbers it, so every test silently counts over the same list — producing
-    // confusing "expected 3 / your output 2" mismatches. Catch that up front.
-    if (/(^|\n)\s*marks\s*=(?!=)/.test(code)) {
-      setStatus("failed");
-      setMessage("Remove the line that sets  marks = [...]  from your code.\nThe list is provided automatically and changes on each hidden test — if you redefine it, your code always runs on the same list.");
-      return;
-    }
-    try {
-      for (const t of TESTS) {
-        py.runPython("import sys, io\nsys.stdout = io.StringIO()");
-        try { py.runPython(t.pre + code + t.post); }
-        catch (e) {
-          const lines = String(e.message || e).trim().split("\n");
-          setStatus("error"); setMessage(`Test "${t.label}" — Python error:\n` + lines[lines.length - 1]);
-          setHintCount((h) => Math.min(h + 1, hints.length)); return;
-        }
-        const out = py.runPython("sys.stdout.getvalue()");
-        if (String(out).trim() !== t.expect) {
-          setStatus("failed");
-          setMessage(`Test "${t.label}" — expected exactly:\n${t.expect}\nyour output:\n${String(out).trim() || "(nothing printed)"}`);
-          setHintCount((h) => Math.min(h + 1, hints.length)); return;
-        }
-      }
-      setStatus("passed");
-      setMessage("All three tests passed — including the all-fail list, which only stays 0 if you seeded count before the loop. A conditional accumulator, tempered.");
-    } catch (e) { setStatus("error"); setMessage("Unexpected error: " + String(e)); }
-  }
-
-  const fbTarget = [
-    { code: "count = 0", defines: "init", needs: [] },
-    { code: "for m in marks:", defines: "loop", needs: ["init"] },
-    { code: "    if m >= 50:", defines: "iff", needs: ["loop"] },
-    { code: "        count = count + 1", defines: "body", needs: ["iff"] },
-    { code: "print(count)", defines: null, needs: ["body"] },
-  ];
-  const [fbOrder, setFbOrder] = useState([3, 0, 4, 1, 2]);
-  const [fbSolved, setFbSolved] = useState(false);
-  const fbMove = (idx, dir) => {
-    const j = idx + dir;
-    if (j < 0 || j >= fbOrder.length || fbSolved) return;
-    const next = [...fbOrder];
-    [next[idx], next[j]] = [next[j], next[idx]];
-    setFbOrder(next);
-  };
-  const fbCheck = () => {
-    const defined = new Set();
-    for (const li of fbOrder) {
-      if (fbTarget[li].needs.find((n) => !defined.has(n))) return;
-      if (fbTarget[li].defines) defined.add(fbTarget[li].defines);
-    }
-    setFbSolved(true);
-  };
-
-  const passed = status === "passed" || fbSolved;
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.7 }}>
-        The final tempering: write a <strong style={{ color: C.text }}>conditional accumulator</strong>. The list{" "}
-        <code style={{ color: C.teal }}>marks</code> is already set; print how many are ≥ 50. 🗡️
-      </p>
-
-      <div style={{ background: C.card, border: `1px solid ${C.orange}55`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
-        <div style={{ color: C.orange, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>📜 YOUR TASK</div>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-          Count how many values in <code style={{ color: C.teal }}>marks</code> are <strong style={{ color: C.text }}>≥ 50</strong>{" "}
-          and print that count. One hidden test has zero passing — so seed your counter before the loop.
-        </div>
-      </div>
-
-      {status !== "fallback" && (
-        <>
-          <textarea value={code} onChange={(e) => setCode(e.target.value)} spellCheck={false} rows={7} style={{
-            width: "100%", boxSizing: "border-box", background: "#010409", color: C.text,
-            border: `1.5px solid ${C.border}`, borderRadius: 10, padding: 12,
-            fontFamily: "monospace", fontSize: 13.5, lineHeight: 1.7, outline: "none", resize: "vertical",
-          }} />
-          <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-            <button onClick={run} disabled={status === "loading" || status === "running"} style={{
-              padding: "10px 24px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 14,
-              background: status === "loading" || status === "running" ? C.card : C.green,
-              color: status === "loading" || status === "running" ? C.muted : "#0D1117",
-              cursor: status === "loading" || status === "running" ? "default" : "pointer",
-            }}>{status === "loading" || status === "running" ? "⏳ Working…" : "▶ Run the tests"}</button>
-            {status === "passed" && <span style={{ color: C.green, fontWeight: 700, fontSize: 13 }}>✓ 3/3 tests passed</span>}
-          </div>
-        </>
-      )}
-
-      {message && (
-        <pre style={{
-          ...mono, marginTop: 12, padding: "10px 14px", borderRadius: 8, fontSize: 12.5,
-          background: status === "passed" ? C.green + "14" : status === "failed" || status === "error" ? C.red + "10" : C.card,
-          border: `1px solid ${status === "passed" ? C.green : status === "failed" || status === "error" ? C.red + "66" : C.border}`,
-          color: status === "passed" ? C.green : C.muted,
-        }}>{message}</pre>
-      )}
-
-      {(status === "failed" || status === "error") && hintCount > 0 && (
-        <Hints hints={hints} shown={hintCount} onMore={() => setHintCount((h) => Math.min(h + 1, hints.length))} />
-      )}
-
-      {status === "fallback" && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, marginTop: 4 }}>
-          {fbOrder.map((li, idx) => (
-            <div key={li} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", borderRadius: 8, background: C.surface, border: `1px solid ${fbSolved ? C.green + "55" : C.border}`, marginBottom: 6 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <button onClick={() => fbMove(idx, -1)} style={{ border: "none", background: "transparent", color: C.orange, cursor: "pointer", fontSize: 12, padding: 2 }}>▲</button>
-                <button onClick={() => fbMove(idx, 1)} style={{ border: "none", background: "transparent", color: C.orange, cursor: "pointer", fontSize: 12, padding: 2 }}>▼</button>
-              </div>
-              <pre style={{ ...mono, fontSize: 12.5 }}>{fbTarget[li].code}</pre>
-            </div>
-          ))}
-          {!fbSolved && <button onClick={fbCheck} style={{ padding: "8px 18px", borderRadius: 8, background: C.accentGlow, border: "none", color: "#fff", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Check order</button>}
-          {fbSolved && <div style={{ color: C.green, fontWeight: 700, fontSize: 13, marginTop: 6 }}>✓ Correct order — tempered the old-fashioned way!</div>}
-        </div>
-      )}
-
-      {passed && (
-        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.orange, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>🗡️ Tempered! Claim your badge →</button>
-      )}
-    </div>
-  );
-}
-
-// ── Badge screen ──
-function BadgeScreen({ claimed, onClaim }) {
-  return (
-    <div style={{ textAlign: "center", padding: 24 }}>
-      <div style={{ fontSize: 64 }}>🔥</div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: C.orange, marginTop: 8 }}>TEMPERED IN THE CT-II CRUCIBLE</div>
-      <div style={{ color: C.muted, fontSize: 14, marginTop: 10, lineHeight: 1.8, maxWidth: 480, margin: "10px auto 0" }}>
-        Predicted a scan, traced a vowel count, spotted the sorted-list assumption of binary search. Caught the
-        seed-with-0 and swap-without-temp bugs. Assembled a linear search, then wrote a conditional accumulator
-        that held even when nothing passed. Algorithms on data, <em>forged into skill</em>.
-      </div>
-      <div style={{ marginTop: 20, padding: 20, borderRadius: 12, display: "inline-block", background: `linear-gradient(135deg, ${C.orange}22, ${C.red}22)`, border: `1px solid ${C.orange}66` }}>
-        <div style={{ fontSize: 32 }}>🏅</div>
-        <div style={{ color: C.text, fontWeight: 700, fontSize: 14, marginTop: 6 }}>Crucible Badge · Computational Thinking II</div>
-        <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Spark ✓ · Flame ✓ · Forge ✓ · Temper ✓</div>
-      </div>
-      <div style={{ color: C.muted, fontSize: 13, marginTop: 18, lineHeight: 1.7 }}>
-        You can command lists, grids and text. Next, you learn to package these algorithms into reusable{" "}
-        <strong style={{ color: C.orange }}>functions</strong> — Module 8. 🔥
-      </div>
-      {!claimed && (
-        <button onClick={onClaim} style={{ marginTop: 20, padding: "12px 28px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.orange}, ${C.red})`, color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>🏅 Claim the badge (records completion)</button>
-      )}
-    </div>
-  );
-}
-
-// ── Main ──
-export default function UnitCT2_C({ student, onUnitComplete, challengeProgress = [], onStageComplete }) {
-  const persisted = STAGES.filter((s) => challengeProgress.includes(`${UNIT_ID}@${s.id}`)).map((s) => s.id);
-  const [doneStages, setDoneStages] = useState(persisted);
-  const [active, setActive] = useState(() => {
-    const firstOpen = STAGES.findIndex((s) => !persisted.includes(s.id));
-    return firstOpen === -1 ? STAGES.length : firstOpen;
-  });
-
-  const isUnlocked = (idx) => idx === 0 || doneStages.includes(STAGES[idx - 1].id);
-  const [claimed, setClaimed] = useState(challengeProgress.includes(UNIT_ID));
-
-  const passStage = (idx) => {
-    const stage = STAGES[idx];
-    if (!doneStages.includes(stage.id)) { setDoneStages((p) => [...p, stage.id]); onStageComplete && onStageComplete(`${UNIT_ID}@${stage.id}`); }
-    setActive(idx + 1);
-  };
-
-  const claimBadge = () => { setClaimed(true); onUnitComplete && onUnitComplete(); };
-
-  const stageBody = [
-    <SparkStage key="s" onPass={() => passStage(0)} />,
-    <FlameStage key="f" onPass={() => passStage(1)} />,
-    <ForgeStage key="g" onPass={() => passStage(2)} />,
-    <TemperStage key="t" onPass={() => passStage(3)} />,
-  ];
-
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif", color: C.text, paddingBottom: 40 }}>
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.orange}44`, padding: "14px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${C.orange}, ${C.red})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🔥</div>
-        <div>
-          <div style={{ fontSize: 12, color: C.orange, letterSpacing: 1, fontWeight: 700 }}>COMPUTATIONAL THINKING II › THE CRUCIBLE</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>Where knowledge is forged into skill</div>
-        </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: C.muted }}>{doneStages.length} / {STAGES.length} stages</div>
-      </div>
-
-      <div style={{ height: 3, background: C.border }}>
-        <div style={{ height: "100%", width: `${(doneStages.length / STAGES.length) * 100}%`, background: `linear-gradient(90deg, ${C.orange}, ${C.red})`, transition: "width 0.4s ease" }} />
-      </div>
-
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ background: C.orange + "10", border: `1px solid ${C.orange}33`, borderRadius: 10, padding: "10px 16px", marginBottom: 18, fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-          ⚔️ <strong style={{ color: C.orange }}>Optional — counts toward the course certificate.</strong> Your lesson
-          progress is already safe. But stages unlock one by one, hints replace answers, and only the worthy
-          earn the badge. Forge your algorithms-on-data skills. Ready?
-        </div>
-
-        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: C.surface, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexWrap: "wrap" }}>
-          {STAGES.map((s, i) => {
-            const done = doneStages.includes(s.id);
-            const unlocked = isUnlocked(i);
-            const isActive = active === i;
-            return (
-              <button key={s.id} onClick={() => unlocked && setActive(i)} disabled={!unlocked} style={{
-                flex: 1, minWidth: 100, padding: "10px 6px", borderRadius: 7,
-                background: isActive ? `linear-gradient(135deg, ${C.orange}, ${C.red})` : "transparent",
-                border: "none", color: isActive ? "#0D1117" : unlocked ? C.text : C.muted,
-                cursor: unlocked ? "pointer" : "not-allowed", fontSize: 12,
-                fontWeight: isActive ? 800 : 500, opacity: unlocked ? 1 : 0.5,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 2, transition: "all 0.2s",
-              }}>
-                <span style={{ fontSize: 15 }}>{done ? "✅" : unlocked ? s.icon : "🔒"}</span>
-                <span>{s.label}</span>
-                <span style={{ fontSize: 9.5, opacity: 0.8 }}>{s.tag}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ background: C.surface, borderRadius: 12, padding: "24px 20px", border: `1px solid ${C.border}`, minHeight: 300 }}>
-          {active >= STAGES.length
-            ? <BadgeScreen claimed={claimed} onClaim={claimBadge} />
-            : isUnlocked(active)
-              ? stageBody[active]
-              : <div style={{ textAlign: "center", color: C.muted, padding: 40 }}>🔒 Locked — pass the previous stage first.</div>}
-        </div>
-      </div>
-    </div>
-  );
+export default function UnitCT2_C(props) {
+  return <CrucibleShell {...props} unitId="UnitCT2_C" module="Computational Thinking II" title="The Crucible: Classic Algorithms" spark={[EX.spark1, EX.spark2]} flame={[EX.selection, EX.dups]} forge={[EX.merge]} temper={[EX.rle]} quiz={QUIZ} />;
 }

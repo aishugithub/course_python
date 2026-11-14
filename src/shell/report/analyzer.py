@@ -133,13 +133,33 @@ def analyse(files):
             for child in ast.iter_child_nodes(parent):
                 child._parent = parent
 
+        # Input with conversion may be one line, int(input(...)) or
+        # float(input(...).strip()), or two: x = input(...) then int(x).
+        # Note every name assigned from an input() call so the conversion
+        # line and the input line both count.
+        def has_input(expr):
+            return any(isinstance(n, ast.Call) and call_name(n) == (None, "input") for n in ast.walk(expr))
+
+        input_assigns = {}
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None and has_input(node.value):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                for t in targets:
+                    if isinstance(t, ast.Name):
+                        input_assigns.setdefault(t.id, []).append(node)
+
         for node in ast.walk(tree):
             # Exp 1
             if isinstance(node, ast.Call):
                 owner, name = call_name(node)
-                if owner is None and name in ("int", "float") and node.args and isinstance(node.args[0], ast.Call) \
-                        and call_name(node.args[0]) == (None, "input"):
-                    add(fid, "input_conv", node, name + "(input(...))")
+                if owner is None and name in ("int", "float") and node.args:
+                    arg = node.args[0]
+                    if has_input(arg):
+                        add(fid, "input_conv", node, name + "(input(...))")
+                    elif isinstance(arg, ast.Name) and arg.id in input_assigns:
+                        add(fid, "input_conv", node, f"{name}({arg.id}) after {arg.id} = input(...)")
+                        for a in input_assigns[arg.id]:
+                            add(fid, "input_conv", a, f"{arg.id} = input(...), converted with {name}()")
             if isinstance(node, ast.BinOp) and isinstance(node.op, ARITH):
                 add(fid, "arith", node)
             if isinstance(node, ast.AugAssign) and isinstance(node.op, ARITH):

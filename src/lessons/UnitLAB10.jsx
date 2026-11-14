@@ -28,11 +28,11 @@ import { useState, useRef } from "react";
 
 // ── Brand palette — identical tokens across every lab unit ──
 const C = {
-  bg: "#0D1117", surface: "#161B22", card: "#1C2333",
-  accent: "#58A6FF", accentGlow: "#1F6FEB",
-  green: "#3FB950", yellow: "#D29922", purple: "#BC8CFF",
-  red: "#F85149", orange: "#F0883E", teal: "#39D0D8",
-  text: "#E6EDF3", muted: "#8B949E", border: "#30363D",
+  bg: "#F1EEE6", surface: "#FFFFFF", card: "#FAF8F3",
+  accent: "#1F5FAD", accentGlow: "#16294A",
+  green: "#1F7A4D", yellow: "#A86B12", purple: "#6D4BC4",
+  red: "#B0322F", orange: "#C2651A", teal: "#0E7C86",
+  text: "#16294A", muted: "#40506A", border: "#E7E0D2",
 };
 
 const UNIT_ID = "UnitLAB10";
@@ -178,7 +178,7 @@ function ProgHeader({ prog }) {
       <div style={{ color: C.teal, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{prog.title}</div>
       <div style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6, marginTop: 4 }}>🎯 {prog.aim}</div>
       {neededPkgs(prog).length > 0 && (
-        <div style={{ marginTop: 8, background: "#0A0E14", border: `1px solid ${C.yellow}55`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+        <div style={{ marginTop: 8, background: "#FFFDF8", border: `1px solid ${C.yellow}55`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
           📥 <strong style={{ color: C.yellow }}>Running this on your own PC?</strong> Activate your venv first, then install once:
           <div style={{ fontFamily: "monospace", color: C.green, marginTop: 4 }}>pip install {neededPkgs(prog).join(" ")}</div>
           <div style={{ fontSize: 11, marginTop: 2 }}>In Jupyter/Colab use <code style={{ color: C.text }}>%pip install {neededPkgs(prog).join(" ")}</code>. Here in the browser it's already set up for you.</div>
@@ -254,7 +254,7 @@ function AlgorithmStage({ prog, onPass, onSkip }) {
       )}
       {!solved && hints > 0 && <Hints hints={[prog.algoHint]} shown={hints} onMore={() => {}} />}
       {solved && (
-        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.teal, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>
+        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.teal, border: "none", color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>
           Algorithm done ✓ — draw the flowchart (optional) →
         </button>
       )}
@@ -286,7 +286,7 @@ function FlowNode({ type, text, tone }) {
   );
 }
 
-const TONE = { terminator: "#3FB950", io: "#58A6FF", output: "#58A6FF", process: "#BC8CFF", decision: "#F0883E" };
+const TONE = { terminator: "#1F7A4D", io: "#1F5FAD", output: "#1F5FAD", process: "#6D4BC4", decision: "#C2651A" };
 
 // ─────────────────────────────────────────────────────────────
 //  STAGE ② — FLOWCHART: assemble the jumbled shapes top→bottom.
@@ -368,7 +368,7 @@ function FlowchartStage({ prog, onPass, onSkip }) {
       )}
       {!solved && hints > 0 && <Hints hints={[prog.flowHint]} shown={hints} onMore={() => {}} />}
       {solved && (
-        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.teal, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>
+        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.teal, border: "none", color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>
           Flowchart done ✓ — write & run the program →
         </button>
       )}
@@ -492,7 +492,7 @@ function ProgramStage({ prog, onPass }) {
           : "Replace every ____ with the right code, then run it. Your program is tested twice — the hidden run changes the data, so no shortcuts. ▶"}
       </p>
 
-      <div style={{ background: "#010409", border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", marginBottom: 12, overflowX: "auto" }}>
+      <div style={{ background: "#FFFDF8", border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", marginBottom: 12, overflowX: "auto" }}>
         {prog.codeLines.map((line, li) => (
           <div key={li} style={{ fontFamily: "monospace", fontSize: 13, lineHeight: 2.1, whiteSpace: "pre", display: "flex", alignItems: "center", flexWrap: "wrap" }}>
             {line.map((seg, si) => {
@@ -532,14 +532,14 @@ function ProgramStage({ prog, onPass }) {
         {prog.selfCheck ? (
           <button onClick={markSelfChecked} disabled={status === "selfdone"} style={{
             padding: "10px 24px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 14,
-            background: status === "selfdone" ? C.card : C.green, color: status === "selfdone" ? C.muted : "#0D1117",
+            background: status === "selfdone" ? C.card : C.green, color: status === "selfdone" ? C.muted : "#FFFFFF",
             cursor: status === "selfdone" ? "default" : "pointer",
           }}>{status === "selfdone" ? "✓ marked done" : "✓ I ran it and matched the expected output"}</button>
         ) : (
           <button onClick={run} disabled={status === "loading" || status === "running" || status === "passed"} style={{
             padding: "10px 24px", borderRadius: 8, border: "none", fontWeight: 700, fontSize: 14,
             background: status === "loading" || status === "running" ? C.card : status === "passed" ? C.card : C.green,
-            color: status === "loading" || status === "running" || status === "passed" ? C.muted : "#0D1117",
+            color: status === "loading" || status === "running" || status === "passed" ? C.muted : "#FFFFFF",
             cursor: status === "loading" || status === "running" || status === "passed" ? "default" : "pointer",
           }}>{status === "loading" || status === "running" ? "⏳ Working…" : "▶ Run the tests"}</button>
         )}
@@ -566,7 +566,7 @@ function ProgramStage({ prog, onPass }) {
       )}
 
       {passed && (
-        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.teal, border: "none", color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>
+        <button onClick={onPass} style={{ width: "100%", padding: 14, borderRadius: 10, background: C.teal, border: "none", color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer", marginTop: 12 }}>
           Program done ✓ — continue →
         </button>
       )}
@@ -598,7 +598,7 @@ function RecordScreen({ student, submitted, onSubmit, doneStages = [] }) {
       </div>
       {!submitted ? (
         <div style={{ marginTop: 20 }}>
-          <button onClick={onSubmit} style={{ padding: "12px 28px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.teal}, ${C.accent})`, color: "#0D1117", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+          <button onClick={onSubmit} style={{ padding: "12px 28px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.teal}, ${C.accent})`, color: "#FFFFFF", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
             ✅ Submit to my lab record
           </button>
         </div>
@@ -677,7 +677,7 @@ export default function UnitLAB10({ student, onUnitComplete, challengeProgress =
               <button key={s.id} onClick={() => unlocked && setActive(i)} disabled={!unlocked} style={{
                 flex: 1, minWidth: 92, padding: "9px 6px", borderRadius: 7,
                 background: isActive ? `linear-gradient(135deg, ${C.teal}, ${C.accent})` : "transparent",
-                border: "none", color: isActive ? "#0D1117" : unlocked ? C.text : C.muted,
+                border: "none", color: isActive ? "#FFFFFF" : unlocked ? C.text : C.muted,
                 cursor: unlocked ? "pointer" : "not-allowed", fontSize: 11.5,
                 fontWeight: isActive ? 800 : 500, opacity: unlocked ? 1 : 0.5,
                 display: "flex", flexDirection: "column", alignItems: "center", gap: 2, transition: "all 0.2s",
