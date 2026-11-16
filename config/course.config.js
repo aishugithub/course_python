@@ -70,8 +70,8 @@ const COURSE_CONFIG = {
   // where a teacher registers and is emailed the set-up guide.
   // registerUrl is used by the original site only: the Web app address of
   // Teacher Adoption/AdoptionReceiver.gs, which saves the registration.
-  // (It is the script's second deployment. The first one, in adopters/signal-url.txt,
-  // is the address the usage signal goes to; both write to the same Sheet.)
+  // (The same address as in adopters/signal-url.txt, where the usage signal goes.   @adopters:strip-line
+  // If the receiver is ever deployed at a new address, change both together.)   @adopters:strip-line
   adoption: {
     registerUrl:  "https://script.google.com/macros/s/AKfycbyYh_kcoxzoHocsDogFaSC8tOWUN6zB_mNkmUowFuAAW-0heyu5g2MMi4HxZrKJZgyE/exec",   // @adopters:replace-with registerUrl:  "",
     contactEmail: "foothold.aishwarya@gmail.com",
