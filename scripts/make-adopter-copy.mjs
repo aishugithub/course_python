@@ -3,8 +3,8 @@
 //
 //    node scripts/make-adopter-copy.mjs [destination] [--no-build]
 //
-//  destination defaults to ../foothold-python (its own git repository,
-//  pushed to github.com/aishugithub/foothold-python, marked as a template).
+//  destination defaults to ../foothold-courses-python (its own git repository,
+//  pushed to github.com/foothold-courses/python, marked as a template).
 //
 //  What it does:
 //    1. Takes ONLY files tracked by git (so local student data, backups and
@@ -25,7 +25,7 @@ import { execFileSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const args = process.argv.slice(2);
-const DEST = path.resolve(args.find(a => !a.startsWith('--')) || path.join(ROOT, '..', 'foothold-python'));
+const DEST = path.resolve(args.find(a => !a.startsWith('--')) || path.join(ROOT, '..', 'foothold-courses-python'));
 const BUILD = !args.includes('--no-build');
 const DRAFT = args.includes('--draft');   // local check only: allows a missing signal address
 
@@ -141,7 +141,7 @@ if (BUILD) {
   if (madeLink) fs.symlinkSync(path.join(ROOT, 'node_modules'), link, 'junction');
   try {
     execFileSync(process.execPath, [path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'build', '--outDir', path.join(DEST, 'dist'), '--emptyOutDir', '--logLevel', 'warn'],
-      { cwd: DEST, stdio: 'inherit', env: { ...process.env, SITE_BASE: '/foothold-python/' } });
+      { cwd: DEST, stdio: 'inherit', env: { ...process.env, SITE_BASE: '/python/' } });
     built = 'site builds';
   } catch (e) {
     fail('the copy does not build (see the errors above)');

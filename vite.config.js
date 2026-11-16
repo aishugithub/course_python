@@ -69,5 +69,5 @@ function footholdManifest() {
 // needs no change here. The fallback is used only for local builds.
 export default defineConfig({
   plugins: [react(), footholdManifest()],
-  base: process.env.SITE_BASE || '/course_python/',   // @adopters:replace-with base: process.env.SITE_BASE || '/foothold-python/',
+  base: process.env.SITE_BASE || '/course_python/',   // @adopters:replace-with base: process.env.SITE_BASE || '/python/',
 })

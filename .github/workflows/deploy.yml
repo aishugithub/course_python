@@ -24,6 +24,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # The template itself is not a course site: only teachers' copies of it publish.
+    if: github.repository != 'foothold-courses/python'
     steps:
       # v6+ of the official actions run on Node 24 (Node 20 was deprecated on
       # runners in 2026 — older majors print deprecation warnings)

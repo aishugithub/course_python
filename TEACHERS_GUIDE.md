@@ -25,7 +25,7 @@ and progress.
 
 ## Part 1 — Get your copy (5 minutes)
 
-1. Open **github.com/aishugithub/foothold-python** and choose **Use this template →
+1. Open **github.com/foothold-courses/python** and choose **Use this template →
    Create a new repository**. Name it, for example, `python-course`. Keep it **Public**
    (free GitHub Pages needs that). The site's address follows the name automatically;
    there is nothing to edit.
