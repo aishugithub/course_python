@@ -48,7 +48,11 @@ const EXCLUDE = [
 ];
 
 // Must not appear anywhere in the copy.
-const FORBIDDEN = [/SRIHER/i, /Sri Ramachandra/i, /SRFET/, /MED23CL202/i, /Nandakumar/i, /AKfycb/, /sriher-logo/i, /@adopters:/];
+const FORBIDDEN = [/SRIHER/i, /Sri Ramachandra/i, /SRFET/, /MED23CL202/i, /Nandakumar/i, /sriher-logo/i, /@adopters:/];
+// The original course's own backend (student records) must never reach a copy.
+// (The adoption receiver's address is allowed: it is meant to be in every copy.)
+const LIVE_BACKEND_ID = (fs.readFileSync(path.join(ROOT, 'config', 'gas.config.js'), 'utf8').match(/macros\/s\/([\w-]+)\/exec/) || [])[1];
+if (LIVE_BACKEND_ID) FORBIDDEN.push(new RegExp(LIVE_BACKEND_ID));
 // The original site's address may appear only where it is the credit link.
 const ORIGINAL_URL = /aishugithub\.github\.io\/course_python/;
 const ORIGINAL_URL_OK = new Set(['config/course.config.js', 'LICENSE.md', 'README.md', 'TEACHERS_GUIDE.md']);
