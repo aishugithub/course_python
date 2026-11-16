@@ -25,12 +25,15 @@ and progress.
 
 ## Part 1 — Get your copy (5 minutes)
 
-1. Open **github.com/foothold-courses/python** and choose **Use this template →
-   Create a new repository**. Name it, for example, `python-course`. Keep it **Public**
-   (free GitHub Pages needs that). The site's address follows the name automatically;
-   there is nothing to edit.
-2. **Settings → Actions → General → Workflow permissions →** choose
-   **Read and write permissions** → Save.
+In the links below, put your GitHub username in place of `USERNAME` and your
+repository's name in place of `REPO`.
+
+1. Open **https://github.com/foothold-courses/python/generate**. Owner: you. Name it, for
+   example, `python-course`. Keep it **Public** (free GitHub Pages needs that). Press
+   **Create repository**. The site's address follows the name automatically; there is
+   nothing to edit.
+2. Open **https://github.com/USERNAME/REPO/settings/actions**, scroll to **Workflow
+   permissions**, choose **Read and write permissions** → **Save**.
 
 ## Part 2 — Set up the record book (10 minutes)
 
@@ -51,8 +54,8 @@ Sign in to Google with the account that should hold your class records.
    refuses to run on a Sheet that already has students, so it can never wipe a class.
 3. **Deploy → New deployment →** the gear icon **→ Web app.** Set *Execute as* **Me** and
    *Who has access* **Anyone**. Deploy, then copy the **Web app URL** (it ends in `/exec`).
-4. In your GitHub repository, open `config/gas.config.js`, press the pencil icon, and
-   paste that URL in place of `PASTE_YOUR_WEB_APP_URL_HERE` (keep the quotes). Press
+4. Open **https://github.com/USERNAME/REPO/edit/main/config/gas.config.js** and paste
+   that URL in place of `PASTE_YOUR_WEB_APP_URL_HERE` (keep the quotes). Press
    **Commit changes**.
 
 > Whenever `Code.gs` changes later, use **Deploy → Manage deployments → Edit → New
@@ -60,18 +63,21 @@ Sign in to Google with the account that should hold your class records.
 
 ## Part 3 — Switch the site on (5 minutes)
 
-1. Committing the file in Part 2 starts a build. Open the **Actions** tab and wait for
-   the green tick (about 2 minutes). A red cross on the very first run, from before
+1. Committing the file in Part 2 starts a build. Open
+   **https://github.com/USERNAME/REPO/actions** and wait for the green tick (about 2
+   minutes). A red cross on the very first run, from before
    Part 1 step 2, is normal; the newest run is the one that counts.
-2. **Settings → Pages → Branch:** choose **`gh-pages`** → Save.
-3. Your course is live at `https://YOUR-GITHUB-NAME.github.io/python-course/`.
+2. Open **https://github.com/USERNAME/REPO/settings/pages** → **Deploy from a branch** →
+   Branch **`gh-pages`**, folder **/ (root)** → **Save**.
+3. Your course is live at `https://USERNAME.github.io/REPO/` after a minute or two.
 
 Open it, choose **Sign In / Register**, create an account, and finish one exercise.
 A row should appear in the `Progress` tab of your Sheet.
 
 **Prefer to be guided?** Open a new chat with Claude (a free or paid account), attach
-`SETUP_WITH_CLAUDE.md` from your repository, and say *start*. Claude takes you through
-these same steps one at a time and helps if anything looks different on your screen.
+`SETUP_WITH_CLAUDE.md` from your repository, and say *start*. Claude shows you this
+checklist with your own direct links. Follow it yourself, or let Claude take you through
+it one step at a time; either way it helps if anything looks different on your screen.
 
 ---
 
