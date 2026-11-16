@@ -1,5 +1,6 @@
 import COURSE_CONFIG from '../../config/course.config.js';
 import { LIGHT as D, FONT, MONO } from './brand.js';
+import { TeacherStrip, TEACHERS_LINK, TEACHERS_LINK_PROPS } from './Teachers.jsx';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Foothold Landing page — DARK BRAND EDITION
@@ -73,6 +74,9 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
 
   return (
     <div style={{ minHeight: '100vh', background: D.bgDeep, fontFamily: FONT, color: D.ink }}>
+
+      {/* ── For teachers: one line on top, leading to the page for teachers ── */}
+      <TeacherStrip />
 
       {/* ── Hero: mark, wordmark, motto, tagline, the two entry buttons ── */}
       <div style={{ padding: '64px 24px 48px', textAlign: 'center', maxWidth: 780, margin: '0 auto' }}>
@@ -216,33 +220,32 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
         </Card>
       </div>
 
-      {/* ── For teachers: run your own copy. Shown only when the registration
-             form link is set in course.config.js (adoption.formUrl). ── */}
-      {COURSE_CONFIG.adoption?.formUrl && (
+      {/* ── For teachers: run your own copy. Shown on every copy of the course.
+             The button opens the page for teachers (details and registration
+             form), which lives on the original site: see Teachers.jsx. ── */}
+      {TEACHERS_LINK && (
         <div style={{ maxWidth: 780, margin: '0 auto', padding: '0 24px 64px' }}>
           <Card style={{ borderLeft: `4px solid ${D.blue}` }}>
             <Kicker>For teachers</Kicker>
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 10px', color: D.ink }}>
-              Teach with Foothold — on your own site, with your own students
+              Teach with Foothold: your own site, your own students
             </h2>
             <p style={{ color: D.inkSoft, fontSize: 15.5, lineHeight: 1.7, margin: 0 }}>
-              You can run your own copy of this course, free: your web address, your class
-              list, your students' progress in your own Google Sheet. Hide the modules you
-              don't need, add lessons of your own, and follow your class in a ready-made dashboard.
-              Setting it up takes about 30 minutes and needs no programming: you just follow the steps.
+              Foothold is free for any teacher to adopt. You run your own copy of this course:
+              your web address, your students' progress in your own Google Sheet, and a
+              ready-made dashboard that shows how your class is doing. Hide the modules you
+              do not need and add lessons of your own. Setting it up takes about 30 minutes
+              and needs no programming: you just follow the steps.
             </p>
-            <ul style={{ color: D.inkSoft, fontSize: 15, lineHeight: 1.8, margin: '14px 0 0', paddingLeft: 20 }}>
-              <li><strong style={{ color: D.ink }}>1. Register</strong> with the short form below.</li>
+            <ul style={{ color: D.inkSoft, fontSize: 15, lineHeight: 1.8, margin: '14px 0 0', paddingLeft: 20, listStyle: 'none' }}>
+              <li><strong style={{ color: D.ink }}>1. Register</strong> with a short form.</li>
               <li><strong style={{ color: D.ink }}>2. Check your inbox.</strong> The step-by-step guide is emailed to you within a few minutes.</li>
-              <li><strong style={{ color: D.ink }}>3. Follow the guide</strong> — and write to us if you get stuck. We help you set it up.</li>
+              <li><strong style={{ color: D.ink }}>3. Follow the guide</strong>, and write to us if you get stuck. We help you set it up.</li>
             </ul>
-            <p style={{ color: D.inkMuted, fontSize: 13.5, lineHeight: 1.6, margin: '14px 0 0' }}>
-              All we ask in return: keep the line “{COURSE_CONFIG.credit.text}” on your site.
-            </p>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 22 }}>
-              <a href={COURSE_CONFIG.adoption.formUrl} target="_blank" rel="noopener noreferrer"
+              <a {...TEACHERS_LINK_PROPS}
                 style={{ ...outlineBtn, padding: '12px 24px', fontSize: 15, textDecoration: 'none', display: 'inline-block' }}>
-                Register as a teacher →
+                See how it works and register →
               </a>
             </div>
           </Card>

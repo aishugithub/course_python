@@ -4,6 +4,7 @@ import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
 import Certificate from './Certificate.jsx';
 import ActiveTimer from './ActiveTimer.jsx';
+import Teachers, { TEACHERS_PAGE_ON, TEACHERS_HASH } from './Teachers.jsx';
 import LabCertificate from './LabCertificate.jsx';   // @adopters:strip-line
 import { fetchProgress, saveProgress, saveProgressMany, submitFeedback } from './api.js';
 import { getGuestProgress, saveGuestProgress, clearGuestProgress } from './guestProgress.js';
@@ -50,11 +51,16 @@ const LESSONS = import.meta.glob('../lessons/*.jsx');
 //   …/course_python/                  landing page
 //   …/course_python/#/dashboard       the dashboard
 //   …/course_python/#/unit/Unit6_1    one lesson
+//   …/course_python/#/teachers        the page for teachers (on the original site;
+//                                     a teacher's copy links to the original's page)
 // (# addresses need no server support, so they work on GitHub Pages.)
 function readAddress() {
   const m = window.location.hash.match(/^#\/unit\/([A-Za-z0-9_.]+)$/);
   if (m) return { unit: m[1] };
-  return { dashboard: window.location.hash === '#/dashboard' };
+  return {
+    dashboard: window.location.hash === '#/dashboard',
+    teachers: TEACHERS_PAGE_ON && window.location.hash === TEACHERS_HASH,
+  };
 }
 function goTo(hash) {
   if (window.location.hash !== hash) window.location.hash = hash;
@@ -83,6 +89,9 @@ export default function App() {
   const studentRef = useRef(null);      // same, for who is signed in
   const activeUnitRef = useRef(null);   // the address listener needs the current value
   const [notice, setNotice] = useState('');   // one-line message shown on the sign-in page
+  // The page for teachers sits on top of whatever view the visitor was in, so
+  // "Back to the course" returns them to exactly that (landing or dashboard).
+  const [teachersOpen, setTeachersOpen] = useState(() => !!readAddress().teachers);
 
   // Units the server did not take (no network, expired sign-in) are kept on
   // this device and sent again here, the next time the server answers.
@@ -132,8 +141,11 @@ export default function App() {
       setView('dashboard');
     }
     if (where.unit) handleSelectUnit(where.unit);
+    if (where.teachers) logEvent('teachers_page_open', { userId: saved?.rollNo || '' });
     const onAddress = () => {
       const now = readAddress();
+      setTeachersOpen(!!now.teachers);
+      if (now.teachers) logEvent('teachers_page_open', { userId: studentRef.current?.rollNo || '' });
       if (now.unit) {
         if (now.unit !== activeUnitRef.current) {
           setView(v => (v === 'landing' ? 'dashboard' : v));
@@ -153,8 +165,9 @@ export default function App() {
 
   // The browser tab names the lesson that is open.
   useEffect(() => {
-    document.title = activeUnit && UNIT_TITLES[activeUnit] ? `${UNIT_TITLES[activeUnit]} — Foothold Python` : SITE_TITLE;
-  }, [activeUnit]);
+    document.title = teachersOpen ? 'Foothold for teachers — run the course for your own class'
+      : activeUnit && UNIT_TITLES[activeUnit] ? `${UNIT_TITLES[activeUnit]} — Foothold Python` : SITE_TITLE;
+  }, [activeUnit, teachersOpen]);
 
   studentRef.current = student;
 
@@ -406,6 +419,10 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  if (teachersOpen) {
+    return <Teachers onBack={() => goTo(view === 'landing' ? '' : '#/dashboard')} />;
   }
 
   if (view === 'landing') {

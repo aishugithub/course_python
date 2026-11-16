@@ -45,7 +45,7 @@ const EXCLUDE = [
   /^src\/shell\/report\//, /^src\/shell\/LabCertificate\.jsx$/, /^src\/shell\/labCompletion\.js$/,
   /^src\/lessons\/UnitLAB/, /^src\/lessons_legacy\//,
   /^public\/miniproject-guide\.html$/, /^public\/fonts\/report\//, /^public\/brand\/sriher-logo\.png$/,
-  /^public\/sitemap\.xml$/, /^SETUP_CHECKLIST\.md$/, /^README\.md$/,
+  /^public\/sitemap\.xml$/, /^public\/teachers\//, /^SETUP_CHECKLIST\.md$/, /^README\.md$/,
 ];
 
 // Must not appear anywhere in the copy.

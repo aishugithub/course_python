@@ -192,6 +192,11 @@ In return:
   code or answers. You can read the code: `.github/adoption-signal.mjs` and
   `sendWeeklySignal()` in `Code.gs`.
 
+**A line for other teachers.** Your site shows one line at the top of the landing page
+and the dashboard, and a short card on the landing page, telling other teachers that
+they can run Foothold for their own class too. It links to the original course. A
+student can close the line on the dashboard.
+
 Stuck, or want to tell us how it went? Write to **foothold.aishwarya@gmail.com**.
 
 ---

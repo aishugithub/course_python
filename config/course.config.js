@@ -64,10 +64,16 @@ const COURSE_CONFIG = {
   },
   // @adopters:strip-end
 
-  // "For teachers" section on the landing page. It appears only once formUrl
-  // holds the link to the registration Google Form; leave it "" to keep it hidden.
+  // "For teachers": the strip on top of the landing page and the dashboard, and
+  // the card on the landing page. They show on every copy of the course and lead
+  // to the page for teachers on the original site (its address ends #/teachers),
+  // where a teacher registers and is emailed the set-up guide.
+  // registerUrl is used by the original site only: the Web app address of
+  // Teacher Adoption/AdoptionReceiver.gs, which saves the registration.
   adoption: {
-    formUrl: "",
+    registerUrl:  "https://script.google.com/macros/s/AKfycbytTHeU5aPOKr0zvirvRrYuC0l4WlOvanQsJudh7Occ2VpqfGU9sR0csygJorDIlMSY/exec",   // @adopters:replace-with registerUrl:  "",
+    contactEmail: "foothold.aishwarya@gmail.com",
+    licenceUrl:   "https://github.com/foothold-courses/python/blob/main/LICENSE.md",
   },
 
   hook: {

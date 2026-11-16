@@ -3,6 +3,7 @@ import COURSE_CONFIG from '../../config/course.config.js';
 import { LIGHT as D, FONT, MONO } from './brand.js';
 import { labUnitDone } from './labCompletion.js';   // @adopters:replace-with const labUnitDone = (unitId, done) => done.has(unitId);
 import MANIFEST from 'virtual:foothold-manifest';   // programs to write, per unit (built by vite.config.js)
+import { TeacherStrip } from './Teachers.jsx';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Foothold Dashboard — ACCORDION EDITION, DARK BRAND
@@ -168,6 +169,10 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
                    transition: background 0.15s, border-color 0.15s, transform 0.15s; }
         .fh-unit:hover { background: ${D.surfaceRaised}; transform: translateX(4px); }
       `}</style>
+
+      {/* ── For teachers: one line on top, on every copy of the course. A learner
+             can close it for good on this device. ── */}
+      <TeacherStrip dismissible />
 
       {/* ── Header: brand mark + wordmark left, guest/student box right ── */}
       <div style={{ background: D.surface, borderBottom: `1px solid ${D.border}`, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
