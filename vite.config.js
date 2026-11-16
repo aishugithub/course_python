@@ -64,8 +64,10 @@ function footholdManifest() {
   }
 }
 
-// ⚠️ Change ONLY this line per course — must match your GitHub repo name
+// The site's path on GitHub Pages is the repository's name. The deploy workflow
+// passes it in (SITE_BASE), so a teacher who names their copy anything at all
+// needs no change here. The fallback is used only for local builds.
 export default defineConfig({
   plugins: [react(), footholdManifest()],
-  base: '/course_python/',
+  base: process.env.SITE_BASE || '/course_python/',   // @adopters:replace-with base: process.env.SITE_BASE || '/foothold-python/',
 })

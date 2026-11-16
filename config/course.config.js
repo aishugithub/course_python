@@ -23,6 +23,24 @@ const COURSE_CONFIG = {
   subtitle:    "From zero to Pythonista",
   batch:       "2025",
 
+  // "original" is the author's own site; a teacher's copy says "copy".
+  // A copy shows the credit line below on its landing page and does not show
+  // the author's research note (its learners' data goes to the teacher only).
+  edition:     "original",   // @adopters:replace-with edition:     "copy",
+
+  // Licence condition: every copy keeps this line, linked, on its landing page.
+  credit: {
+    text: "Foothold Python course by Aishwarya S.",
+    url:  "https://aishugithub.github.io/course_python/",
+  },
+
+  // Who signs the course certificate. Teachers: put your own name and role here.
+  certificate: {
+    signer:     "Aishwarya S.",   // @adopters:replace-with signer:     "Your Name",
+    signerRole: "Course author · Sri Ramachandra Faculty of Engineering and Technology",   // @adopters:replace-with signerRole: "Course teacher · Your Institution",
+  },
+
+  // @adopters:strip-start (institution-only: e-Lab certificate and report builder)
   // e-Lab certificate (MED23CL202). Full completion (10 experiments + 5 mini
   // projects + feedback) always unlocks the Certificate of Completion. Students
   // who finish at least `participationMinPct` % of the 15 items (+ feedback) get
@@ -44,6 +62,7 @@ const COURSE_CONFIG = {
     faculty:      "Ms. Aishwarya S",
     hod:          "Dr. Nandakumar Venkatesan",   // Head of the Department, on the bonafide certificate
   },
+  // @adopters:strip-end
 
   // "For teachers" section on the landing page. It appears only once formUrl
   // holds the link to the registration Google Form; leave it "" to keep it hidden.
@@ -348,8 +367,7 @@ const COURSE_CONFIG = {
       // JSON payload through onUnitComplete -> App.jsx -> analytics.js's new
       // `detail` param -> Code.gs's new Events sheet "Detail" column, so the
       // score is recoverable per-student, not just a completion timestamp.
-      // Hidden for the MED23CL202 batch (not part of their lab requirement).
-      // Remove `hidden` to bring the synthesis challenge back.
+      // Hidden for now. Remove `hidden` to bring the synthesis challenge back.
       moduleId:    "FT",
       hidden:      true,
       label:       "FINAL ASCENT",
@@ -367,8 +385,7 @@ const COURSE_CONFIG = {
       // Crucibles). A learner picks ONE track and grows one program through five
       // checkpoints tied to modules: 1 core (M4–6) · 2 organise (M7–8) ·
       // 3 survive (M9) · 4 model (M10) · 5 analyse & chart (M12–13).
-      // Filenames: UnitMP_<TRACK>.jsx. The old medical tracks live inside the
-      // hidden LAB module and are untouched.
+      // Filenames: UnitMP_<TRACK>.jsx.
       moduleId:    "MP",
       label:       "MINI PROJECT",
       moduleTitle: "Mini-Projects — Pick a Track",
@@ -385,6 +402,7 @@ const COURSE_CONFIG = {
           blurb: "Results in, points table out: tie-breakers, a saved table, Team and League classes and a goals chart." },
       ],
     },
+    // @adopters:strip-start (institution-only lab record module)
     {
       // ── PYTHON LAB (MED23CL202) — the e-observation record ──
       // Separate supplementary track. Every experiment unit is optional:true
@@ -435,6 +453,7 @@ const COURSE_CONFIG = {
           blurb: "Analysis & charts, forged through your track: filter and summarise your records into numbers worth plotting. The last brick of your capstone." },
       ],
     },
+    // @adopters:strip-end
     {
       // ── FINISH LINE — end-of-course feedback + certificate gate ──
       // One optional unit (excluded from the completion % like the Crucible/FT

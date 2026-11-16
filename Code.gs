@@ -46,13 +46,13 @@ function routeAction(body) {
     case 'getProgress':  return handleGetProgress(body);
     case 'logEvent':     return handleLogEvent(body);
     case 'feedback':     return handleFeedback(body);
-    case 'reportLoad':        return withSession(body, handleReportLoad);
-    case 'reportSave':        return withSession(body, handleReportSave);
-    case 'reportUploadImage': return withSession(body, handleReportUploadImage);
-    case 'reportGetImage':    return withSession(body, handleReportGetImage);
-    case 'reportDeleteImage': return withSession(body, handleReportDeleteImage);
-    case 'reportSubmit':      return withSession(body, handleReportSubmit);
-    case 'progressDates':     return withSession(body, handleProgressDates);
+    case 'reportLoad':        return withSession(body, handleReportLoad);   // @adopters:strip-line
+    case 'reportSave':        return withSession(body, handleReportSave);   // @adopters:strip-line
+    case 'reportUploadImage': return withSession(body, handleReportUploadImage);   // @adopters:strip-line
+    case 'reportGetImage':    return withSession(body, handleReportGetImage);   // @adopters:strip-line
+    case 'reportDeleteImage': return withSession(body, handleReportDeleteImage);   // @adopters:strip-line
+    case 'reportSubmit':      return withSession(body, handleReportSubmit);   // @adopters:strip-line
+    case 'progressDates':     return withSession(body, handleProgressDates);   // @adopters:strip-line
     default:             return { success: false, message: 'Unknown action' };
   }
 }
@@ -208,7 +208,7 @@ function handleLogin(body) {
 
 // ------------------------------------------------------------
 // Self-registration for the public, worldwide version of the
-// course (as opposed to professor-provisioned SRFET students,
+// course (as opposed to teacher-provisioned students,
 // who are added to the Students sheet by hand and use handleLogin
 // above). Here the "username" a learner logs in with IS their
 // email address, and the password is one they invent for this
@@ -310,8 +310,14 @@ function handleGetProgress(body) {
   return { success: true, completedUnits: units };
 }
 
+// Run ONCE, on a new, empty Sheet. It refuses to run on a Sheet that already
+// holds students or progress, so it can never wipe a class by accident.
 function setupSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hasRows = (name, allowed) => { const sh = ss.getSheetByName(name); return sh && sh.getLastRow() > allowed; };
+  if (hasRows('Students', 2) || hasRows('Progress', 1)) {
+    throw new Error('setupSheets stopped: this Sheet already has students or progress, and running it would erase them. Nothing was changed.');
+  }
   let students = ss.getSheetByName('Students');
   if (!students) students = ss.insertSheet('Students');
   students.clearContents();
@@ -321,9 +327,11 @@ function setupSheets() {
   if (!progress) progress = ss.insertSheet('Progress');
   progress.clearContents();
   progress.appendRow(['RollNo', 'CourseId', 'UnitId', 'CompletedAt']);
+  installWeeklySignal();
   return 'Sheets created successfully!';
 }
 
+// @adopters:strip-start (institution-only: mini-project report builder)
 // ------------------------------------------------------------
 // Mini-project report builder (MED23CL202). Added 2026-10-17.
 //
@@ -343,12 +351,18 @@ function setupSheets() {
 // from the editor and accept the new permission, then redeploy.
 // ------------------------------------------------------------
 
-const SESSION_DAYS = 30;
 const REPORT_FOLDER_NAME = 'Foothold Mini-Project Reports';
 const MAX_DRAFT_CHARS = 2000000;
 const MAX_IMAGE_BYTES = 1500000;
 const MAX_IMAGES = 40;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+// @adopters:strip-end
+
+// ------------------------------------------------------------
+// Sign-in sessions. Sign-in hands out a session token (Sessions sheet);
+// progress is read and written for the token's owner only.
+// ------------------------------------------------------------
+const SESSION_DAYS = 30;
 
 function sheetWithHeader(name, header) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -397,6 +411,7 @@ function withSession(body, handler) {
   return handler(body, rollNo);
 }
 
+// @adopters:strip-start (institution-only: mini-project report builder)
 function reportRootFolder() {
   const props = PropertiesService.getScriptProperties();
   const id = props.getProperty('REPORT_FOLDER_ID');
@@ -582,4 +597,53 @@ function handleReportSubmit(body, rollNo) {
     cell(s.certificate), cell(s.minutesPerStep), cell(s.pastedShare),
   ]);
   return { success: true };
+}
+// @adopters:strip-end
+
+// ------------------------------------------------------------
+// Usage signal (licence section 4). Once a week this copy sends the course
+// author three counts, so the author knows how many classes use the course:
+//   students registered · students active this week · units completed this week
+// plus this copy's random install id and its site address (if the class
+// dashboard knows it). NO student data is ever sent: no names, emails, roll
+// numbers, passwords, code or answers. Read sendWeeklySignal() below to check.
+// setupSheets() switches it on; installWeeklySignal() does it on its own.
+// ------------------------------------------------------------
+const ADOPTION_SIGNAL_URL = '';   // @adopters:replace-with const ADOPTION_SIGNAL_URL = '{{SIGNAL_URL}}';
+
+function installWeeklySignal() {
+  if (!ADOPTION_SIGNAL_URL) return 'No signal address set: nothing installed.';
+  ScriptApp.getProjectTriggers()
+    .filter(function (t) { return t.getHandlerFunction() === 'sendWeeklySignal'; })
+    .forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('sendWeeklySignal').timeBased().everyWeeks(1).onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(6).create();
+  sendWeeklySignal();
+  return 'Weekly usage signal switched on.';
+}
+
+function weeklyCounts() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const rows = function (name) { const sh = ss.getSheetByName(name); return sh ? sh.getDataRange().getValues().slice(1) : []; };
+  const since = Date.now() - 7 * 24 * 3600 * 1000;
+  const recent = function (v) { const t = new Date(v).getTime(); return !isNaN(t) && t >= since; };
+  const registered = rows('Students').filter(function (r) { return String(r[0]).trim() && String(r[0]) !== '2024CS001'; }).length;
+  const active = {};
+  rows('Events').forEach(function (r) { if (r[2] && recent(r[0])) active[String(r[2])] = true; });
+  const units = rows('Progress').filter(function (r) { return recent(r[3]) && String(r[2]).indexOf('@') < 0; }).length;
+  return { registered: registered, activeThisWeek: Object.keys(active).length, unitsThisWeek: units };
+}
+
+function sendWeeklySignal() {
+  if (!ADOPTION_SIGNAL_URL) return;
+  const props = PropertiesService.getScriptProperties();
+  let install = props.getProperty('INSTALL_ID');
+  if (!install) { install = Utilities.getUuid(); props.setProperty('INSTALL_ID', install); }
+  const c = weeklyCounts();
+  const payload = {
+    type: 'weekly', install: install, site: props.getProperty('FOOTHOLD_SITE_URL') || '',
+    registered: c.registered, activeThisWeek: c.activeThisWeek, unitsThisWeek: c.unitsThisWeek,
+  };
+  try {
+    UrlFetchApp.fetch(ADOPTION_SIGNAL_URL, { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true, followRedirects: false });
+  } catch (e) { /* never let the signal disturb the course */ }
 }

@@ -4,23 +4,25 @@ import Login from './Login.jsx';
 import Dashboard from './Dashboard.jsx';
 import Certificate from './Certificate.jsx';
 import ActiveTimer from './ActiveTimer.jsx';
-import LabCertificate from './LabCertificate.jsx';
+import LabCertificate from './LabCertificate.jsx';   // @adopters:strip-line
 import { fetchProgress, saveProgress, saveProgressMany, submitFeedback } from './api.js';
 import { getGuestProgress, saveGuestProgress, clearGuestProgress } from './guestProgress.js';
 import { loadSession, storeSession, clearSession, cachedProgress, cacheProgress, unsentUnits, addUnsent, clearUnsent } from './session.js';
 import { logEvent } from './analytics.js';
 import { certificateStatus } from './completion.js';
-import { labCertificateStatus } from './labCompletion.js';
+import { labCertificateStatus } from './labCompletion.js';   // @adopters:strip-line
 import COURSE_CONFIG from '../../config/course.config.js';
 import { LIGHT as DARK, FONT } from './brand.js';
 
+// @adopters:strip-start (institution-only: report builder and e-Lab certificate)
 // The report builder loads only when opened, so the dashboard stays light.
 const ReportBuilder = lazy(() => import('./report/ReportBuilder.jsx'));
 // The report card shows when course.config.js says so (or in local testing, see .claude/mock_gas).
-const REPORT_OPEN = !!COURSE_CONFIG.miniProjectReport?.open || import.meta.env.VITE_REPORT_OPEN === '1';
 // e-Lab (MED23CL202) certificate card + auto-redirect. Off since 2026-11-12;
 // set labCertificate.show to true in the config to bring it back.
-const LAB_CERT_ON = COURSE_CONFIG.labCertificate?.show !== false;
+// @adopters:strip-end
+const REPORT_OPEN = !!COURSE_CONFIG.miniProjectReport?.open || import.meta.env.VITE_REPORT_OPEN === '1';   // @adopters:strip-line
+const LAB_CERT_ON = COURSE_CONFIG.labCertificate?.show !== false;   // @adopters:strip-line
 
 // Loading screens now use the DARK shell palette (see brand.js): landing,
 // dashboard and login are all dark-and-on-brand, and the lessons are dark too,
@@ -308,6 +310,7 @@ export default function App() {
     setActiveUnit(null); setLessonComponent(null);
     activeUnitRef.current = null;
     goTo('#/dashboard');
+    // @adopters:strip-start
     // e-Lab Record: when this submission completes the last requirement (all ten
     // experiments + all five mini-project crucibles + the feedback) — or the final
     // crucible is submitted with everything done — go straight to the e-Lab certificate.
@@ -317,6 +320,7 @@ export default function App() {
         setView('labCertificate');
       }
     }
+    // @adopters:strip-end
   }
 
   // Crucible (challenge unit) stage completions. Stages persist as
@@ -359,6 +363,7 @@ export default function App() {
   // Certificate component re-verifies eligibility against the Sheet itself.
   function handleOpenCertificate() { setView('certificate'); }
 
+  // @adopters:strip-start
   // The LAB certificate is its own view too, opened from the Dashboard's separate
   // lab-certificate banner. LabCertificate re-verifies the lab track against the Sheet.
   // Also reachable from inside the final mini-project crucible, so close any open lesson first.
@@ -368,6 +373,7 @@ export default function App() {
   // Dashboard's report card. It saves to Drive through Code.gs with the
   // session token from sign-in, so it is for signed-in students only.
   function handleOpenReport() { closeLesson(); setView('report'); }
+  // @adopters:strip-end
 
   function closeLesson() {
     activeUnitRef.current = null;
@@ -414,6 +420,7 @@ export default function App() {
     return <Certificate student={student} onBack={() => setView('dashboard')} />;
   }
 
+  // @adopters:strip-start
   if (view === 'labCertificate') {
     return <LabCertificate student={student} onBack={() => setView('dashboard')} />;
   }
@@ -425,6 +432,7 @@ export default function App() {
       </Suspense>
     );
   }
+  // @adopters:strip-end
 
   if (loadingLesson) return <LoadingScreen message="Loading lesson…" />;
   if (savingProgress) return <LoadingScreen message="Saving your progress… this can take a few seconds." />;
@@ -473,8 +481,8 @@ export default function App() {
             challengeProgress={completedUnits}
             onStageComplete={handleStageComplete}
             onSubmitFeedback={handleSubmitFeedback}
-            labCertStatus={LAB_CERT_ON ? labCertificateStatus(completedUnits) : null}
-            onOpenLabCertificate={handleOpenLabCertificate}
+            labCertStatus={LAB_CERT_ON ? labCertificateStatus(completedUnits) : null /* @adopters:strip-line */}
+            onOpenLabCertificate={handleOpenLabCertificate /* @adopters:strip-line */}
           />
         </Suspense>
       </div>
@@ -490,9 +498,9 @@ export default function App() {
       onSignOff={handleSignOff}
       certStatus={certificateStatus(completedUnits)}
       onOpenCertificate={handleOpenCertificate}
-      labCertStatus={LAB_CERT_ON ? labCertificateStatus(completedUnits) : null}
-      onOpenLabCertificate={handleOpenLabCertificate}
-      onOpenReport={REPORT_OPEN ? handleOpenReport : undefined}
+      labCertStatus={LAB_CERT_ON ? labCertificateStatus(completedUnits) : null /* @adopters:strip-line */}
+      onOpenLabCertificate={handleOpenLabCertificate /* @adopters:strip-line */}
+      onOpenReport={REPORT_OPEN ? handleOpenReport : undefined /* @adopters:strip-line */}
     />
   );
 }

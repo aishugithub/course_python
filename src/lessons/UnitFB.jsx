@@ -5,6 +5,7 @@
 // sheet) in addition to the usual `onUnitComplete`. Follows the standard Foothold
 // lesson shell (dark palette, header, progress bar, tab strip, content card).
 import { useState } from "react";
+import COURSE_CONFIG from "../../config/course.config.js";
 
 const C = {
   bg: "#F1EEE6", surface: "#FFFFFF", card: "#FAF8F3",
@@ -183,9 +184,9 @@ export default function UnitFB({ student, onUnitComplete, onSubmitFeedback }) {
           <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", marginBottom: 18 }}>
             <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 3, accentColor: C.accent }} />
             <span style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.6 }}>
-              I agree that my anonymous, aggregated answers may be used to improve the course and may appear,
-              without any identifying information, in academic research about the teaching method. (Optional; your
-              feedback is saved either way.)
+              {COURSE_CONFIG.edition === "copy"
+                ? "I agree that my teacher may use my answers, without my name, to improve this course. (Optional; your feedback is saved either way.)"
+                : "I agree that my anonymous, aggregated answers may be used to improve the course and may appear, without any identifying information, in academic research about the teaching method. (Optional; your feedback is saved either way.)"}
             </span>
           </label>
           <button onClick={handleSubmit} disabled={sending} style={{

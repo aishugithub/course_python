@@ -1,12 +1,12 @@
 # Foothold for Teachers — run this Python course for your own students
 
 Foothold is a free, self-paced Python course for absolute beginners. Students type real
-Python in the browser from the first lesson (about 460 small programs, checked
+Python in the browser from the first lesson (about 470 small programs, checked
 instantly). This guide shows you how to run **your own copy**: your web address, your
 students, your Google Sheet. Nobody else can see your students' data.
 
-**What you need:** a GitHub account, a Google account, and about 45 minutes.
-You do not need to know web programming.
+**What you need:** a GitHub account, a Google account, and about 30 minutes.
+No programming is needed: you only follow the steps below.
 
 **What it costs:** nothing. GitHub Pages hosts the site; a Google Sheet stores sign-ins
 and progress.
@@ -23,17 +23,13 @@ and progress.
 
 ---
 
-## Part 1 — Get your copy (10 minutes)
+## Part 1 — Get your copy (5 minutes)
 
-1. Open the Foothold repository on GitHub and choose **Use this template → Create a new
-   repository**. Name it, for example, `python-course`. Keep it **Public** (free GitHub
-   Pages needs that).
-2. In your new repository, edit two files (the pencil icon on GitHub is enough):
-   - `vite.config.js` — set `base` to your repository name, with slashes:
-     `base: '/python-course/'`
-   - `package.json` — set `homepage` to
-     `https://YOUR-GITHUB-NAME.github.io/python-course`
-3. **Settings → Actions → General → Workflow permissions →** choose
+1. Open **github.com/aishugithub/foothold-python** and choose **Use this template →
+   Create a new repository**. Name it, for example, `python-course`. Keep it **Public**
+   (free GitHub Pages needs that). The site's address follows the name automatically;
+   there is nothing to edit.
+2. **Settings → Actions → General → Workflow permissions →** choose
    **Read and write permissions** → Save.
 
 ## Part 2 — Set up the record book (15 minutes)
@@ -44,12 +40,15 @@ and progress.
    Then add a second script file (the **+** next to *Files* → *Script*), name it
    `ClassDashboard`, and paste the whole of `ClassDashboard.gs` into it. Save.
 3. In the Apps Script editor, pick the function **`setupSheets`** and press **Run**.
-   Accept the permission request. This creates the `Students` and `Progress` tabs.
-   **Run it once only: it clears those two tabs.**
+   Accept the permission requests. Google lists what the script may do: use this
+   Sheet, run once a week, and connect to an external service (that is the weekly usage
+   signal, see *Credit and the usage signal* below). This creates the `Students` and
+   `Progress` tabs. Run it once. It refuses to run on a Sheet that already has
+   students, so it can never wipe a class.
 4. **Deploy → New deployment → Web app.** Set *Execute as* **Me** and *Who has access*
    **Anyone**. Deploy, then copy the **Web app URL**.
-5. In your repository, open `config/gas.config.js` and paste that URL in place of the
-   existing one.
+5. In your repository, open `config/gas.config.js` and paste that URL in place of
+   `PASTE_YOUR_WEB_APP_URL_HERE`.
 
 > Whenever `Code.gs` changes later, use **Deploy → Manage deployments → Edit → New
 > version**. That keeps the same URL.
@@ -87,8 +86,8 @@ from the course percentage. Remove the line and it is back; nothing is deleted.
 **Reorder modules.** Move the whole `{ … }` block of a module up or down.
 
 **The certificate.** A learner earns it by clearing all ten Crucibles and submitting the
-feedback form. The signature and institution printed on it are in
-`src/shell/Certificate.jsx`; change them to yours.
+feedback form. The name and role printed on it are under `certificate` in
+`config/course.config.js`; put in your own.
 
 **Do not rename a `unitId`.** Students' saved progress is stored under it.
 
@@ -157,14 +156,22 @@ original repository over yours. Your settings file and your Sheet are not affect
 
 ---
 
-## Credit
+## Credit and the usage signal
 
-You are welcome to use, adapt and teach from Foothold. In return, please keep the line
-**"Built on Foothold by Aishwarya S."** with a link to the original course, visible on
-your landing page.
+You are welcome to use, adapt and teach from Foothold under its licence (`LICENSE.md`).
+In return:
 
-Tell us you are using it — it helps the research behind the course, and we will help you
-get set up: **[registration link to be added]**
+- **Keep the credit line** **"Foothold Python course by Aishwarya S."**, linked to the
+  original course. Your landing page already shows it at the bottom.
+- **Keep the usage signal on.** It lets the author know how many classes use the course.
+  Each time your site is published, it sends your site's address, repository name and
+  course title. Once a week, your Sheet sends three counts: students registered,
+  students active that week and units completed that week, with a random id for your
+  copy. **No student data is ever sent**: no names, emails, roll numbers, passwords,
+  code or answers. You can read the code: `.github/adoption-signal.mjs` and
+  `sendWeeklySignal()` in `Code.gs`.
+
+Stuck, or want to tell us how it went? Write to **foothold.aishwarya@gmail.com**.
 
 ---
 
@@ -172,7 +179,7 @@ get set up: **[registration link to be added]**
 
 | What you see | Likely cause | Fix |
 |---|---|---|
-| Blank page after publishing | `base` in `vite.config.js` does not match the repository name | Correct it; include both slashes |
+| Blank page or 404 after publishing | GitHub Pages is not switched on yet | Part 3, step 2 |
 | Red cross in the Actions tab | Workflow permissions still read-only | Part 1, step 3 |
 | "Network error" on sign-in | Wrong or old Web app URL, or access is not "Anyone" | Part 2, steps 4–5 |
 | "This page is out of date" | The browser has an old copy of the site | Refresh with Ctrl+F5 |

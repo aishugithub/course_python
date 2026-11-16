@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import COURSE_CONFIG from '../../config/course.config.js';
 import { LIGHT as D, FONT, MONO } from './brand.js';
-import { labUnitDone } from './labCompletion.js';
+import { labUnitDone } from './labCompletion.js';   // @adopters:replace-with const labUnitDone = (unitId, done) => done.has(unitId);
 import MANIFEST from 'virtual:foothold-manifest';   // programs to write, per unit (built by vite.config.js)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -277,6 +277,7 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
           </div>
         )}
 
+        {/* @adopters:strip-start (institution-only banners) */}
         {/* ── Lab certificate banner (SEPARATE from the course certificate) ──
             Only for the MED23CL202 Python Lab track. Blue-accented to set it apart
             from the amber course certificate above. For guests: a sign-in nudge
@@ -361,6 +362,8 @@ export default function Dashboard({ student, completedUnits, onSelectUnit, onReq
             )}
           </div>
         )}
+
+        {/* @adopters:strip-end */}
 
         {/* Modules 1–3 are background (no code yet). Someone who wants to start
             typing Python straight away gets a one-click jump to Unit 4.1. */}

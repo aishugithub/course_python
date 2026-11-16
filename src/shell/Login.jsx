@@ -18,7 +18,7 @@ const C = {
 const ON_ACCENT = '#111A2E';
 
 export default function Login({ onLogin, onBack, notice }) {
-  // 'signin' = existing account (SRFET roll number OR a previously
+  // 'signin' = existing account (a roll number the teacher added OR a previously
   // registered email). 'register' = brand-new public account.
   const [mode, setMode] = useState('signin');
 

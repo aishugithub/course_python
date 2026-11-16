@@ -164,6 +164,16 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
             a new concept arrives only once you have exactly what you need to understand it,
             with just enough support to carry you the rest of the way on your own.
           </p>
+          {COURSE_CONFIG.edition === 'copy' ? (
+          <p style={{
+            color: D.inkSoft, fontSize: 14.5, lineHeight: 1.7, margin: '18px 0 0',
+            paddingTop: 16, borderTop: `1px solid ${D.border}`,
+          }}>
+            <strong style={{ color: D.ink }}>About this site:</strong> this copy of the course is run
+            by your teacher. Your sign-in and progress are kept in your teacher's own records and are
+            not sent to anyone else.
+          </p>
+          ) : (
           <p style={{
             color: D.inkSoft, fontSize: 14.5, lineHeight: 1.7, margin: '18px 0 0',
             paddingTop: 16, borderTop: `1px solid ${D.border}`,
@@ -179,6 +189,7 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
             make the course better for the next learner; results are only ever reported
             for groups, never for a named person.
           </p>
+          )}
         </Card>
       </div>
 
@@ -217,8 +228,8 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
             <p style={{ color: D.inkSoft, fontSize: 15.5, lineHeight: 1.7, margin: 0 }}>
               You can run your own copy of this course, free: your web address, your class
               list, your students' progress in your own Google Sheet. Hide the modules you
-              don't need, add lessons of your own, and keep a lab record for your class.
-              Setting it up takes about 45 minutes and needs no web programming.
+              don't need, add lessons of your own, and follow your class in a ready-made dashboard.
+              Setting it up takes about 30 minutes and needs no programming: you just follow the steps.
             </p>
             <ul style={{ color: D.inkSoft, fontSize: 15, lineHeight: 1.8, margin: '14px 0 0', paddingLeft: 20 }}>
               <li><strong style={{ color: D.ink }}>1. Register</strong> with the short form below.</li>
@@ -226,7 +237,7 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
               <li><strong style={{ color: D.ink }}>3. Follow the guide</strong> — and write to us if you get stuck. We help you set it up.</li>
             </ul>
             <p style={{ color: D.inkMuted, fontSize: 13.5, lineHeight: 1.6, margin: '14px 0 0' }}>
-              All we ask in return: keep the line “Built on Foothold” on your site.
+              All we ask in return: keep the line “{COURSE_CONFIG.credit.text}” on your site.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 22 }}>
               <a href={COURSE_CONFIG.adoption.formUrl} target="_blank" rel="noopener noreferrer"
@@ -241,6 +252,13 @@ export default function Landing({ onExploreGuest, onGoToLogin }) {
       {/* ── Footer ── */}
       <div style={{ textAlign: 'center', color: D.inkMuted, fontSize: 12.5, paddingBottom: 44, fontFamily: MONO }}>
         Your progress is saved on this device automatically. Sign in anytime to keep it across devices.
+        {/* Licence condition: a teacher's copy keeps this credit line, linked to the original. */}
+        <div style={{ marginTop: 10 }}>
+          <a href={COURSE_CONFIG.credit.url} target="_blank" rel="noopener noreferrer"
+            style={{ color: D.inkMuted, textDecoration: 'underline' }}>
+            {COURSE_CONFIG.credit.text}
+          </a>
+        </div>
       </div>
     </div>
   );

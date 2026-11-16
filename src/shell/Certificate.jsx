@@ -164,8 +164,8 @@ export default function Certificate({ student, onBack }) {
             <div>
               <div style={{ fontSize: 14, fontWeight: 700 }}>{today}</div>
               <div style={{ color: B.slate, fontSize: 12.5, marginTop: 2 }}>Date of completion</div>
-              <div style={{ fontSize: 14, fontWeight: 700, marginTop: 14 }}>Aishwarya S.</div>
-              <div style={{ color: B.slate, fontSize: 12.5, marginTop: 2, maxWidth: 340 }}>Course author · Sri Ramachandra Faculty of Engineering and Technology</div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginTop: 14 }}>{COURSE_CONFIG.certificate.signer}</div>
+              <div style={{ color: B.slate, fontSize: 12.5, marginTop: 2, maxWidth: 340 }}>{COURSE_CONFIG.certificate.signerRole}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ color: B.bronze, fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em' }}>CERTIFICATE ID</div>

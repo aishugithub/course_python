@@ -16,6 +16,11 @@ concurrency:
   group: gh-pages-deploy
   cancel-in-progress: false
 
+# Usage signal (licence section 4): where a teacher's copy reports that it was
+# published. Empty on the original site, so nothing is sent from there.
+env:
+  ADOPTION_SIGNAL_URL: ''   # @adopters:replace-with ADOPTION_SIGNAL_URL: '{{SIGNAL_URL}}'
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -35,9 +40,20 @@ jobs:
 
       - name: Build
         run: npx vite build
+        env:
+          # The site lives at /<repository name>/ on GitHub Pages, whatever the repository is called.
+          SITE_BASE: /${{ github.event.repository.name }}/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+
+      # Tells the course author that this copy was published: the site's address,
+      # the repository name and the course title. No student data exists here to
+      # send: it lives only in the teacher's Google Sheet. See .github/adoption-signal.mjs.
+      - name: Usage signal (no student data)
+        if: env.ADOPTION_SIGNAL_URL != ''
+        continue-on-error: true
+        run: node .github/adoption-signal.mjs
