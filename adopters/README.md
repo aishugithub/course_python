@@ -11,6 +11,12 @@ takes about 30 minutes.
 
 **Start here:** [TEACHERS_GUIDE.md](TEACHERS_GUIDE.md)
 
+**Or let Claude guide you:** open a new chat at claude.ai, attach
+[SETUP_WITH_CLAUDE.md](SETUP_WITH_CLAUDE.md) and type *start*. Claude takes you through
+the same steps one at a time; you do the clicks. If your Claude account can add Skills,
+you can instead upload [claude-skill/foothold-setup.zip](claude-skill/foothold-setup.zip)
+once and just say "help me set up Foothold".
+
 What you get:
 
 - the whole course: lessons, exercises, challenges and mini-project tracks;

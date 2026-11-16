@@ -32,36 +32,46 @@ and progress.
 2. **Settings → Actions → General → Workflow permissions →** choose
    **Read and write permissions** → Save.
 
-## Part 2 — Set up the record book (15 minutes)
+## Part 2 — Set up the record book (10 minutes)
 
-1. Create a new, empty Google Sheet. Name it, for example, `Python course records`.
-2. In the Sheet: **Extensions → Apps Script**. Delete what is there, paste the whole of
-   `Code.gs` from your repository, and save.
-   Then add a second script file (the **+** next to *Files* → *Script*), name it
-   `ClassDashboard`, and paste the whole of `ClassDashboard.gs` into it. Save.
-3. In the Apps Script editor, pick the function **`setupSheets`** and press **Run**.
-   Accept the permission requests. Google lists what the script may do: use this
-   Sheet, run once a week, and connect to an external service (that is the weekly usage
-   signal, see *Credit and the usage signal* below). This creates the `Students` and
-   `Progress` tabs. Run it once. It refuses to run on a Sheet that already has
-   students, so it can never wipe a class.
-4. **Deploy → New deployment → Web app.** Set *Execute as* **Me** and *Who has access*
-   **Anyone**. Deploy, then copy the **Web app URL**.
-5. In your repository, open `config/gas.config.js` and paste that URL in place of
-   `PASTE_YOUR_WEB_APP_URL_HERE`.
+Sign in to Google with the account that should hold your class records.
+
+1. Open this link and press **Make a copy**:
+   **https://docs.google.com/spreadsheets/d/1317jn76PiYFnZikqy4JLZTyl3JRIn9NTUZ4SjMSo4Qc/copy**
+   You get your own Sheet with both scripts already attached (`Code.gs` and
+   `ClassDashboard.gs`); there is nothing to paste. Rename it, for example
+   `Python course records`.
+2. In your copy: **Extensions → Apps Script**. In the toolbar, pick the function
+   **`setupSheets`** and press **Run**. Google asks for permission: choose your account,
+   then **Advanced → Go to Foothold course records (unsafe) → Allow**. ("Unsafe" only
+   means Google has not reviewed this script; it is the script in your own Sheet.)
+   Google lists what the script may do: use this Sheet, run once a week, and connect to
+   an external service (that is the weekly usage signal, see *Credit and the usage
+   signal* below). This creates the `Students` and `Progress` tabs. Run it once. It
+   refuses to run on a Sheet that already has students, so it can never wipe a class.
+3. **Deploy → New deployment →** the gear icon **→ Web app.** Set *Execute as* **Me** and
+   *Who has access* **Anyone**. Deploy, then copy the **Web app URL** (it ends in `/exec`).
+4. In your GitHub repository, open `config/gas.config.js`, press the pencil icon, and
+   paste that URL in place of `PASTE_YOUR_WEB_APP_URL_HERE` (keep the quotes). Press
+   **Commit changes**.
 
 > Whenever `Code.gs` changes later, use **Deploy → Manage deployments → Edit → New
 > version**. That keeps the same URL.
 
 ## Part 3 — Switch the site on (5 minutes)
 
-1. Saving the files in Part 1 and 2 starts a build. Open the **Actions** tab and wait for
-   the green tick (about 2 minutes).
+1. Committing the file in Part 2 starts a build. Open the **Actions** tab and wait for
+   the green tick (about 2 minutes). A red cross on the very first run, from before
+   Part 1 step 2, is normal; the newest run is the one that counts.
 2. **Settings → Pages → Branch:** choose **`gh-pages`** → Save.
 3. Your course is live at `https://YOUR-GITHUB-NAME.github.io/python-course/`.
 
 Open it, choose **Sign In / Register**, create an account, and finish one exercise.
 A row should appear in the `Progress` tab of your Sheet.
+
+**Prefer to be guided?** Open a new chat with Claude (a free or paid account), attach
+`SETUP_WITH_CLAUDE.md` from your repository, and say *start*. Claude takes you through
+these same steps one at a time and helps if anything looks different on your screen.
 
 ---
 
@@ -186,7 +196,7 @@ Stuck, or want to tell us how it went? Write to **foothold.aishwarya@gmail.com**
 |---|---|---|
 | Blank page or 404 after publishing | GitHub Pages is not switched on yet | Part 3, step 2 |
 | Red cross in the Actions tab | Workflow permissions still read-only | Part 1, step 3 |
-| "Network error" on sign-in | Wrong or old Web app URL, or access is not "Anyone" | Part 2, steps 4–5 |
+| "Network error" on sign-in | Wrong or old Web app URL, or access is not "Anyone" | Part 2, steps 3–4 |
 | "This page is out of date" | The browser has an old copy of the site | Refresh with Ctrl+F5 |
 | Sign-in works but nothing is saved | `Code.gs` was changed but not redeployed as a new version | See the note under Part 2 |
 | "Loading Python" never finishes | The school network blocks `cdn.jsdelivr.net` | Ask IT to allow it |

@@ -22,6 +22,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import zlibSync from 'node:zlib';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
 const args = process.argv.slice(2);
@@ -123,6 +124,44 @@ for (const rel of files) {
   write(rel, text);
 }
 write('README.md', fs.readFileSync(path.join(ROOT, 'adopters', 'README.md'), 'utf8'));
+
+// The guided set-up as a Claude Skill, built from SETUP_WITH_CLAUDE.md so the two never drift.
+{
+  const guide = fs.readFileSync(path.join(ROOT, 'SETUP_WITH_CLAUDE.md'), 'utf8');
+  const m = guide.match(/<!-- setup-guide-start -->\r?\n([\s\S]*?)<!-- setup-guide-end -->/);
+  if (!m) fail('SETUP_WITH_CLAUDE.md is missing its setup-guide-start/end markers');
+  const skill = [
+    '---',
+    'name: foothold-setup',
+    'description: Guides a teacher, one step at a time, through putting their own copy of the free Foothold Python course online (GitHub template, Google Sheet record book, web app, GitHub Pages) and personalising it. Use when the teacher asks to set up, install or adopt Foothold, or types a resume code such as FH-2.',
+    '---',
+    '',
+    m[1].trim(),
+    '',
+  ].join('\n');
+  write('claude-skill/foothold-setup/SKILL.md', skill);
+  write('claude-skill/foothold-setup.zip', zipStore([['foothold-setup/SKILL.md', Buffer.from(skill, 'utf8')]]));
+}
+
+// Minimal .zip writer (stored, no compression) — enough for a one-file skill.
+function zipStore(entries) {
+  const { crc32 } = zlibSync;
+  const locals = [], centrals = [];
+  let offset = 0;
+  for (const [name, data] of entries) {
+    const n = Buffer.from(name, 'utf8'), crc = crc32(data) >>> 0;
+    const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0x0800, 6);
+    lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(data.length, 18); lh.writeUInt32LE(data.length, 22); lh.writeUInt16LE(n.length, 26);
+    const ch = Buffer.alloc(46); ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0x0800, 8);
+    ch.writeUInt32LE(crc, 16); ch.writeUInt32LE(data.length, 20); ch.writeUInt32LE(data.length, 24); ch.writeUInt16LE(n.length, 28); ch.writeUInt32LE(offset, 42);
+    locals.push(lh, n, data); centrals.push(ch, n);
+    offset += lh.length + n.length + data.length;
+  }
+  const cd = Buffer.concat(centrals);
+  const end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, cd, end]);
+}
 
 // 3. Checks.
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap(d =>
