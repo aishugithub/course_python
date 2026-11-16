@@ -14,15 +14,35 @@
 //  matches the lessons your students see.
 // ============================================================
 
+// Adds the Foothold menu to the Sheet each time the Sheet is opened.
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Foothold')
-    .addItem('Open class dashboard', 'showClassDashboard')
+    .addItem('Open class dashboard', 'openClassDashboard')
     .addToUi();
+  console.log("The Foothold menu is now in your Google Sheet. Go to the Sheet's browser tab "
+    + '(reload it if the menu is not there) and choose  Foothold → Open class dashboard.');
 }
 
-function showClassDashboard() {
+// The menu item: the Sheet is already in front of the teacher, so just open it.
+function openClassDashboard() {
   const html = HtmlService.createHtmlOutput(CLASS_DASHBOARD_HTML).setWidth(1280).setHeight(760);
   SpreadsheetApp.getUi().showModalDialog(html, 'Foothold — class dashboard');
+}
+
+// For pressing Run in the Apps Script editor. Google always shows the dashboard
+// inside the SHEET's browser tab, never in the editor, so this also says where
+// to look: a message in the editor's log and a pop-up note on the Sheet.
+function showClassDashboard() {
+  const where = "👉 Switch to your Google Sheet's browser tab: the class dashboard is open there, not in this editor. "
+    + 'Next time, open it straight from the Sheet: menu  Foothold → Open class dashboard.';
+  try {
+    openClassDashboard();
+    SpreadsheetApp.getActiveSpreadsheet().toast('Your class dashboard is open. Next time use the menu Foothold → Open class dashboard.', 'Foothold', 15);
+    console.log('✅ The class dashboard has opened. ' + where);
+  } catch (e) {
+    console.log('The dashboard opens inside your Google Sheet, and the Sheet is not open right now. '
+      + 'Open the Sheet in another browser tab, reload it, and choose  Foothold → Open class dashboard.');
+  }
 }
 
 function rowsOf(name) {

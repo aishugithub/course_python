@@ -108,6 +108,11 @@ feedback form. The name and role printed on it are under `certificate` in
 Reload the Sheet and a new menu appears: **Foothold → Open class dashboard**. It reads
 your Sheet and shows:
 
+> **Open it from the Sheet's menu, not from the Apps Script editor.** If you press
+> *Run* in the editor, the dashboard still opens, but in the Sheet's browser tab, not in
+> the editor, so it looks as if nothing happened. The editor's log then tells you to
+> switch to the Sheet's tab.
+
 - **Students** — course progress, units covered, programs written, Crucibles cleared,
   active time and last active date for each student. Click a student to see every unit
   and exactly which programs are still to be written.
