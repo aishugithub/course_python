@@ -64,11 +64,11 @@ export function onStatus(fn) {
   return () => listeners.delete(fn);
 }
 
-export function runPython(code, { inputs = [], post = "", requires = [], forbids = [], setup = "", timeoutMs = 5000, onPhase } = {}) {
+export function runPython(code, { inputs = [], post = "", requires = [], forbids = [], setup = "", seed = null, timeoutMs = 5000, onPhase } = {}) {
   if (!worker) spawn();
   const id = nextId++;
   return new Promise((resolve) => {
     pending.set(id, { resolve, timeoutMs, onPhase, timer: null });
-    worker.postMessage({ id, code, inputs, post, requires, forbids, setup });
+    worker.postMessage({ id, code, inputs, post, requires, forbids, setup, seed });
   });
 }

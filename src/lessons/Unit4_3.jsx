@@ -223,7 +223,7 @@ export default function Unit4_3(props) {
       blocks: [
         <P><code>input("question ")</code> shows the question, waits for the user to type and press Enter, then hands the typed text to your program. Type into the prompt below:</P>,
         <InputBasics />,
-        <Note color={T.blue} icon="💡">In these exercises the tests do the typing for you. The expected output shows the whole conversation: the question, the typed answer, then what your program prints.</Note>,
+        <Note color={T.blue} icon="💡">When you press <strong>▶ Run</strong>, you are the user: your program stops at <code>input()</code> and waits, and you type the answer in the output panel. When you press <strong>✓ Check my answer</strong>, the tests do the typing for you. The expected output shows that whole conversation: the question, the typed answer, then what your program prints.</Note>,
         EX.hello,
         EX.meet,
       ],

@@ -1,7 +1,9 @@
 // ── Foothold Python runner (Web Worker) ──
 // Runs learner code with Pyodide off the main thread, so an infinite loop
 // can be killed (worker.terminate) without freezing the lesson.
-// Protocol: { id, code, inputs[], checks{requires,forbids}, post } → { id, ...result }
+// Protocol: { id, code, inputs[], checks{requires,forbids}, post, seed? } → { id, ...result }
+// A program that calls input() with no input left stops with a "NeedsInput" error:
+// Check reports it; Run shows a box, then runs again with the learner's answer added.
 
 const PYODIDE_URL = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
 importScripts(PYODIDE_URL + "pyodide.js");
@@ -86,17 +88,20 @@ def _fh_static(src, requires, forbids):
             problems.append(r.get("msg", "Uses something this exercise does not allow."))
     return problems
 
-def _fh_run(src, inputs, post, requires, forbids, setup=""):
+def _fh_run(src, inputs, post, requires, forbids, setup="", seed=None):
     out = _FhOut()
     feed = list(inputs or [])
     used = [0]
+    echo = []   # [start, end] positions in the output of each input typed in for the learner
     def fake_input(prompt=""):
         out.write(str(prompt))
         if not feed:
             raise _FhNoInput()
         v = feed.pop(0)
         used[0] += 1
+        a = out.tell()
         out.write(str(v) + "\n")
+        echo.append([a, a + len(str(v))])
         return str(v)
     # _fh_shown(): how many plotly figures the program displayed (for post checks)
     g = {"__name__": "__main__", "input": fake_input, "_fh_shown": lambda: len(_fh_html)}
@@ -108,6 +113,14 @@ def _fh_run(src, inputs, post, requires, forbids, setup=""):
             # a previous test's setup may have patched random.randint — start clean
             import importlib
             importlib.reload(sys.modules["random"])
+        if seed is not None:
+            # Run is interactive: the program is run again from the top each time the
+            # learner answers an input(). A fixed seed keeps its random numbers the
+            # same across those re-runs (the secret number must not change mid-game).
+            import random as _fh_random
+            _fh_random.seed(seed)
+            if "numpy" in sys.modules:
+                sys.modules["numpy"].random.seed(seed)
         if setup:
             # e.g. fix random.randint so a test knows the "secret" number
             exec(setup, {"__name__": "__fh_setup__"})
@@ -158,6 +171,7 @@ def _fh_run(src, inputs, post, requires, forbids, setup=""):
 
     return json.dumps({
         "stdout": out.getvalue(),
+        "echo": echo,
         "error": err,
         "unusedInputs": len(feed),
         "static": _fh_static(src, requires, forbids),
@@ -176,7 +190,7 @@ const ready = (async () => {
 })().catch((e) => postMessage({ type: "loadError", message: String(e) }));
 
 self.onmessage = async (e) => {
-  const { id, code, inputs = [], post = "", requires = [], forbids = [], setup = "" } = e.data;
+  const { id, code, inputs = [], post = "", requires = [], forbids = [], setup = "", seed = null } = e.data;
   try {
     await ready;
     if (!py) throw new Error("Python failed to load");
@@ -199,7 +213,7 @@ self.onmessage = async (e) => {
     }
     postMessage({ id, type: "started" });
     const fn = py.globals.get("_fh_run");
-    const res = fn(code, py.toPy(inputs), post, py.toPy(requires), py.toPy(forbids), setup);
+    const res = fn(code, py.toPy(inputs), post, py.toPy(requires), py.toPy(forbids), setup, seed);
     fn.destroy();
     postMessage({ id, type: "result", ...JSON.parse(res) });
   } catch (err) {

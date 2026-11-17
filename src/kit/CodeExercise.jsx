@@ -36,14 +36,70 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
 
-function Terminal({ run }) {
+// ▶ Run is the learner's own experiment: when the program calls input(), it
+// stops and the learner types the answer in the output panel. ✓ Check is the
+// examiner: the tests' inputs are typed in for the learner.
+//
+// The runner echoes each answer into the output. Colour those answers, so the
+// learner can tell what was typed from what the program printed. (Positions
+// count characters the way Python does, hence Array.from.)
+function withTyped(stdout, echo) {
+  if (!echo?.length) return stdout;
+  const ch = Array.from(stdout), parts = [];
+  let at = 0;
+  echo.forEach(([a, b], i) => {
+    if (a < at || b > ch.length) return;
+    parts.push(ch.slice(at, a).join(""));
+    parts.push(<span key={i} style={{ color: T.termIn, fontWeight: 700 }}>{ch.slice(a, b).join("")}</span>);
+    at = b;
+  });
+  parts.push(ch.slice(at).join(""));
+  return parts;
+}
+
+// The box the learner types into while their program waits at input().
+function AskBox({ onAnswer, disabled }) {
+  const [v, setV] = useState("");
+  return (
+    <>
+      <input autoFocus value={v} disabled={disabled} onChange={(e) => setV(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAnswer(v); } }}
+        aria-label="Your program is waiting: type your answer here"
+        spellCheck={false} autoCapitalize="off" autoCorrect="off" autoComplete="off"
+        style={{ font: "inherit", fontWeight: 700, color: T.termIn, background: "rgba(255,255,255,.08)", border: `1.5px solid ${T.termIn}`, borderRadius: 4, padding: "1px 6px", width: "11em", maxWidth: "60%", outline: "none" }} />
+      <button onClick={() => onAnswer(v)} disabled={disabled}
+        style={{ font: "inherit", fontSize: 12, fontWeight: 700, marginLeft: 6, padding: "2px 8px", borderRadius: 4, border: "none", background: T.termIn, color: T.navy, cursor: disabled ? "default" : "pointer" }}>Enter ↵</button>
+    </>
+  );
+}
+
+// ask: { n, busy, rest[], onAnswer(values[]) } while a Run waits at input().
+function Terminal({ run, asks = false, ask = null }) {
   if (!run) return (
-    <div style={{ color: "#8EA0BF", fontFamily: CODE_FONT, fontSize: 13 }}>Output appears here when you press ▶ Run.</div>
+    <div style={{ color: "#8EA0BF", fontFamily: CODE_FONT, fontSize: 13 }}>
+      Output appears here when you press ▶ Run.{asks ? " When your program asks a question, you type the answer here." : ""}
+    </div>
   );
   return (
     <>
-      {run.stdout && <pre style={{ margin: 0, fontFamily: CODE_FONT, fontSize: 13.5, lineHeight: 1.55, whiteSpace: "pre-wrap", color: T.termText }}>{run.stdout}</pre>}
-      {!run.stdout && !run.error && !run.images?.length && !run.html?.length && (
+      {(run.stdout || ask) && (
+        <pre style={{ margin: 0, fontFamily: CODE_FONT, fontSize: 13.5, lineHeight: 1.55, whiteSpace: "pre-wrap", color: T.termText }}>
+          {withTyped(run.stdout, run.echo)}
+          {ask && <AskBox key={ask.n} disabled={ask.busy} onAnswer={(v) => ask.onAnswer([v])} />}
+        </pre>
+      )}
+      {ask && (
+        <div style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.5, color: "#B9C4D8" }}>
+          ⌨️ Your program is waiting for you. Type an answer and press Enter.
+          {ask.rest.length > 0 && (
+            <button onClick={() => ask.onAnswer(ask.rest)} disabled={ask.busy}
+              style={{ marginLeft: 8, fontFamily: "inherit", fontSize: 12.5, padding: "2px 8px", borderRadius: 4, border: `1px solid ${T.termIn}`, background: "transparent", color: T.termIn, cursor: "pointer" }}>
+              or use the test input: {ask.rest.join(", ")}
+            </button>
+          )}
+        </div>
+      )}
+      {!run.stdout && !ask && !run.error && !run.images?.length && !run.html?.length && (
         <div style={{ color: "#8EA0BF", fontFamily: CODE_FONT, fontSize: 13 }}>(the program ran but printed nothing)</div>
       )}
       {run.images?.map((b64, i) => (
@@ -84,6 +140,9 @@ export default function CodeExercise({ spec, solved = false, onPass, storageKey 
   const [busy, setBusy] = useState(null); // null | "run" | "check"
   const [phase, setPhase] = useState("");
   const [lastRun, setLastRun] = useState(null);
+  const [session, setSession] = useState(null); // a Run that is waiting at input(): { code, seed, typed[] }
+  const [shownBy, setShownBy] = useState(null); // whose output the panel shows: "run" | "check"
+  const termRef = useRef(null);
   const [verdict, setVerdict] = useState(null); // { ok, items[], coach }
   const [fails, setFails] = useState(0);
   const [hintsShown, setHintsShown] = useState(0);
@@ -95,6 +154,8 @@ export default function CodeExercise({ spec, solved = false, onPass, storageKey 
   useEffect(() => { warmUp(); return onStatus(setPyStatus); }, []);
   useEffect(() => { setPassed((p) => p || solved); }, [solved]);
   useEffect(() => { store.set(key, code); }, [key, code]);
+  // keep the waiting input box in view when the output is long
+  useEffect(() => { if (session && termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, [session, lastRun]);
 
   const tests = spec.tests || [];
   const sampleInputs = tests[0]?.inputs || [];
@@ -102,26 +163,40 @@ export default function CodeExercise({ spec, solved = false, onPass, storageKey 
   const canSolution = spec.solution && fails >= Math.max(2, hints.length + 1);
   const predict = spec.kind === "predict";
 
-  const exec = (inputs) => runPython(code, {
-    inputs, post: spec.post || "", requires: spec.requires || [], forbids: spec.forbids || [],
-    setup: tests[0]?.setup ?? spec.setup ?? "",
-    timeoutMs: spec.timeoutMs || 5000, onPhase: setPhase,
-  });
+  // One step of an interactive Run. Python in the browser cannot pause in the
+  // middle of a program, so each answer runs the same code again from the top
+  // with every answer given so far; the learner sees one continuous conversation.
+  // s = { code (as it was when Run was pressed), seed, typed[] }
+  const step = async (s) => {
+    setBusy("run"); setVerdict(null);
+    const res = await runPython(s.code, {
+      inputs: s.typed, seed: s.seed, post: spec.post || "", requires: spec.requires || [], forbids: spec.forbids || [],
+      setup: tests[0]?.setup ?? spec.setup ?? "",
+      timeoutMs: spec.timeoutMs || 5000, onPhase: setPhase,
+    });
+    const waiting = res.error?.type === "NeedsInput";
+    if (res.error && !waiting) errorsSeen.current.push(res.error.type);
+    setLastRun(waiting ? { ...res, error: null } : res);
+    setSession(waiting ? s : null); setShownBy("run"); setBusy(null); setPhase("");
+  };
 
-  const run = async () => {
+  const run = () => {
     if (busy) return;
-    setBusy("run"); setVerdict(null); runs.current++;
-    const res = await exec(sampleInputs);
-    if (res.error) errorsSeen.current.push(res.error.type);
-    setLastRun(res); setBusy(null); setPhase("");
+    runs.current++;
+    step({ code, seed: Math.floor(Math.random() * 1e9), typed: [] });
+  };
+
+  const answer = (values) => {
+    if (busy || !session) return;
+    step({ ...session, typed: [...session.typed, ...values] });
   };
 
   const check = async () => {
     if (busy) return;
-    setBusy("check"); runs.current++;
+    setBusy("check"); setSession(null); runs.current++;
     const { ok, items, coach: errCoach, first, errors } = await grade(spec, code, { onPhase: setPhase });
     errorsSeen.current.push(...errors);
-    setLastRun(first); setVerdict({ ok, items, coach: errCoach }); setBusy(null); setPhase("");
+    setLastRun(first); setShownBy("check"); setVerdict({ ok, items, coach: errCoach }); setBusy(null); setPhase("");
     if (ok) {
       if (!passed) {
         setPassed(true);
@@ -160,6 +235,16 @@ export default function CodeExercise({ spec, solved = false, onPass, storageKey 
                 {predict ? `TRACE THIS PROGRAM${spec.inputs?.length ? ` — THE USER TYPES ${spec.inputs.map((x) => `"${x}"`).join(", ")}` : ""}` : spec.showLabel || "TYPE THIS — DON'T COPY"}
               </div>
               <pre style={{ margin: 0, fontFamily: CODE_FONT, fontSize: 14, lineHeight: 1.6, background: T.surface, border: `1px dashed ${T.borderStrong}`, borderRadius: 8, padding: "10px 12px", color: T.text, userSelect: "none", whiteSpace: "pre-wrap" }}>{predict ? spec.code : spec.show}</pre>
+            </div>
+          )}
+
+          {!predict && sampleInputs.length > 0 && (
+            <div style={{ marginTop: 12, background: tint(T.blue, "10"), border: `1px solid ${tint(T.blue, "44")}`, borderRadius: 8, padding: "8px 12px", fontSize: 13.5, color: T.text, lineHeight: 1.55 }}>
+              ⌨️ <strong>▶ Run:</strong> you are the user. When your program asks, type any answer you like in the output panel.
+              <br />
+              <strong>✓ Check my answer:</strong> the test input{" "}
+              {sampleInputs.map((x, i) => <span key={i}>{i > 0 && ", then "}<code style={{ fontFamily: CODE_FONT, fontWeight: 700 }}>{x}</code></span>)}{" "}
+              is typed in for you{tests.slice(1).some((t) => t.inputs?.length) ? ", and other inputs are tried too" : ""}.
             </div>
           )}
 
@@ -212,7 +297,7 @@ export default function CodeExercise({ spec, solved = false, onPass, storageKey 
             {!predict && <button onClick={run} disabled={!!busy || pyStatus === "failed"} style={btn(T.navy, "#fff", !!busy)}>{busy === "run" ? "Running…" : "▶ Run"}</button>}
             <button onClick={check} disabled={!!busy || pyStatus === "failed"} style={btn(T.green, "#fff", !!busy)}>{busy === "check" ? "Checking…" : predict ? "✓ Check my prediction" : "✓ Check my answer"}</button>
             {spec.starter !== undefined && code !== (spec.starter || "") && (
-              <button onClick={() => { setCode(spec.starter || ""); setLastRun(null); setVerdict(null); }} style={{ ...btn("transparent", T.slate), border: `1px solid ${T.border}`, fontWeight: 600 }}>↺ Reset</button>
+              <button onClick={() => { setCode(spec.starter || ""); setLastRun(null); setSession(null); setVerdict(null); }} style={{ ...btn("transparent", T.slate), border: `1px solid ${T.border}`, fontWeight: 600 }}>↺ Reset</button>
             )}
             <span style={{ fontSize: 12, color: T.muted, marginLeft: "auto" }}>
               {pyStatus === "loading" && !busy && "⏳ Loading Python (first time takes ~10 s)…"}
@@ -221,13 +306,19 @@ export default function CodeExercise({ spec, solved = false, onPass, storageKey 
             </span>
           </div>
 
-          <div style={{ marginTop: 10, background: T.termBg, borderRadius: 10, padding: "10px 14px", minHeight: 70, maxHeight: 340, overflow: "auto" }}>
+          <div ref={termRef} style={{ marginTop: 10, background: T.termBg, borderRadius: 10, padding: "10px 14px", minHeight: 70, maxHeight: 340, overflow: "auto" }}>
             <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: 1.4, color: "#8EA0BF", marginBottom: 6 }}>
-              {predict ? "PYTHON'S OUTPUT" : `OUTPUT${sampleInputs.length ? ` · test input: ${sampleInputs.join(", ")}` : ""}`}
+              {predict ? "PYTHON'S OUTPUT" : "OUTPUT"}
+              {!predict && lastRun?.echo?.length > 0 && (
+                <span style={{ color: T.termIn }}>
+                  {shownBy === "check" ? ` · TEST INPUT, TYPED IN FOR YOU: ${sampleInputs.join(", ")}` : " · YOU TYPED THE INPUT"}
+                </span>
+              )}
             </div>
             {predict && !lastRun
               ? <div style={{ color: "#8EA0BF", fontFamily: CODE_FONT, fontSize: 13 }}>Python's real output appears here once your prediction is right.</div>
-              : <Terminal run={lastRun} />}
+              : <Terminal run={lastRun} asks={!predict && sampleInputs.length > 0}
+                  ask={session && { n: session.typed.length, busy: !!busy, rest: sampleInputs.slice(session.typed.length), onAnswer: answer }} />}
           </div>
 
           {runCoach && <div style={{ marginTop: 10 }}><CoachCard c={runCoach} /></div>}
